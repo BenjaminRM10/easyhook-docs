@@ -1,0 +1,3 @@
+{
+  "rewrites": [{ "source": "/((?!content/|assets/|easyhook-logo.png).*)", "destination": "/index.html" }]
+}
