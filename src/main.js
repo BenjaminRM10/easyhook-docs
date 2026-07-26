@@ -10,11 +10,17 @@ const pages = [
   { group: "Eventos", slug: "webhooks", label: "Webhooks" },
   { group: "Integraciones", slug: "n8n", label: "n8n" },
   { group: "Integraciones", slug: "ai-agents", label: "Agentes y MCP" },
+  { group: "Integraciones", slug: "agent-skill", label: "Skill para agentes" },
   { group: "Integraciones", slug: "chatwoot", label: "Chatwoot" },
 ];
 
 const app = document.querySelector("#app");
-const state = { page: currentSlug(), theme: localStorage.getItem("easyhook-docs-theme") || "light", mobileOpen: false };
+const savedTheme = localStorage.getItem("easyhook-docs-theme");
+const state = {
+  page: currentSlug(),
+  theme: savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light",
+  mobileOpen: false,
+};
 document.documentElement.dataset.theme = state.theme;
 
 marked.use({
@@ -72,8 +78,8 @@ function bindShell() {
     event.preventDefault();
     navigate(link.dataset.page);
   }));
-  document.querySelector("[data-menu]")?.addEventListener("click", () => { state.mobileOpen = true; shell(); loadPage(); });
-  document.querySelector("[data-close]")?.addEventListener("click", () => { state.mobileOpen = false; shell(); loadPage(); });
+  document.querySelector("[data-menu]")?.addEventListener("click", () => setMobileMenu(true));
+  document.querySelector("[data-close]")?.addEventListener("click", () => setMobileMenu(false));
   document.querySelectorAll("[data-theme]").forEach((button) => button.addEventListener("click", toggleTheme));
   document.querySelectorAll("[data-search]").forEach((button) => button.addEventListener("click", openSearch));
   document.querySelector("[data-search-close]")?.addEventListener("click", () => document.querySelector("#search-dialog").close());
@@ -81,12 +87,25 @@ function bindShell() {
 }
 
 function navigate(slug) {
+  if (!pages.some((page) => page.slug === slug)) return;
   state.page = slug;
-  state.mobileOpen = false;
+  setMobileMenu(false);
   history.pushState({}, "", `/${slug}`);
-  shell();
+  updateNavigation();
   loadPage();
   scrollTo({ top: 0 });
+}
+
+function setMobileMenu(open) {
+  state.mobileOpen = open;
+  document.querySelector(".sidebar")?.classList.toggle("open", open);
+  document.querySelector(".scrim")?.classList.toggle("visible", open);
+}
+
+function updateNavigation() {
+  document.querySelectorAll("[data-page]").forEach((link) => {
+    link.classList.toggle("active", link.dataset.page === state.page);
+  });
 }
 
 async function loadPage() {
@@ -130,8 +149,13 @@ function toggleTheme() {
   state.theme = state.theme === "dark" ? "light" : "dark";
   localStorage.setItem("easyhook-docs-theme", state.theme);
   document.documentElement.dataset.theme = state.theme;
-  shell();
-  loadPage();
+  document.querySelectorAll("[data-theme]").forEach((button) => {
+    button.innerHTML = iconSvg(state.theme === "dark" ? Sun : Moon);
+  });
+  document.querySelector('meta[name="theme-color"]')?.setAttribute(
+    "content",
+    state.theme === "dark" ? "#0b1020" : "#ffffff",
+  );
 }
 
 async function openSearch() {
@@ -150,7 +174,12 @@ async function runSearch(query) {
   target.querySelectorAll("[data-result]").forEach((button) => button.addEventListener("click", () => { document.querySelector("#search-dialog").close(); navigate(button.dataset.result); }));
 }
 
-window.addEventListener("popstate", () => { state.page = currentSlug(); shell(); loadPage(); });
+window.addEventListener("popstate", () => {
+  state.page = currentSlug();
+  setMobileMenu(false);
+  updateNavigation();
+  loadPage();
+});
 window.addEventListener("keydown", (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openSearch(); } });
 
 shell();

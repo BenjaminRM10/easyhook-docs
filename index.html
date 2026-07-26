@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Documentación oficial de Easyhook: API de mensajería, webhooks, WhatsApp Coexistence, n8n, Chatwoot y agentes." />
     <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" type="image/png" href="/easyhook-icon.png" />
+    <link rel="apple-touch-icon" href="/easyhook-icon.png" />
+    <script>
+      (() => {
+        const theme = localStorage.getItem("easyhook-docs-theme");
+        document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
+      })();
+    </script>
     <title>Easyhook Docs</title>
   </head>
   <body>

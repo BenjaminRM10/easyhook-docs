@@ -385,6 +385,7 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
 | `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp vs Messenger/Instagram. WhatsApp supports scheduled `at`. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Send WhatsApp text after read, human-like delay, typing indicator, and reply. |
+| `POST` | `/v1/messages/reply` | `messages:write` | Reply to a specific inbound WhatsApp message using Meta message context. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark an inbound WhatsApp message as read. |
 | `POST` | `/v1/messages/typing` | `messages:write` | Show WhatsApp typing indicator for an inbound message. |
 | `POST` | `/v1/messages/media` | `messages:write` | Send media. WhatsApp supports `media_name`, Meta media `id`, public `link`, and scheduled `at`; Messenger/Instagram support `id` or public `link`. |
@@ -632,7 +633,7 @@ Request:
   "metadata": {
     "external_customer_id": "cus_123"
   },
-  "expires_in_seconds": 259200
+  "expires_in_seconds": 3600
 }
 ```
 
@@ -644,7 +645,7 @@ Parameters:
 | `return_url` | no | HTTPS URL where the hosted page can send the customer after completion. |
 | `language` | no | `es` or `en`. Defaults to `es`. |
 | `metadata` | no | JSON object echoed back in onboarding webhooks. |
-| `expires_in_seconds` | no | Lifetime from `300` seconds to `604800` seconds. Defaults to 72 hours. |
+| `expires_in_seconds` | no | Lifetime from `300` to `3600` seconds. Defaults to one hour. |
 
 Response:
 
@@ -672,7 +673,7 @@ Response:
 }
 ```
 
-When the customer completes Meta embedded signup on the hosted page, Easyhook stores the connected WABA and phone under the organization that owns the API key. Subscribe to `onboarding.*` webhooks to receive completion events in your app.
+When the customer completes Meta embedded signup on the hosted page, Easyhook stores the connected WABA and phone under the organization that owns the API key. Subscribe to `onboarding.*` webhooks to receive completion events in your app. A successful session is consumed immediately and cannot be opened or completed a second time.
 
 The hosted Easyhook page uses these token-scoped support endpoints internally:
 
@@ -689,7 +690,7 @@ To create the same hosted session and immediately send its URL from a WhatsApp n
 POST /v1/onboarding/sessions/send
 ```
 
-It accepts `from`, `to`, `signup_mode`, `language`, `return_url`, `metadata`, `expires_in_seconds`, and an optional custom `body`. Sending free-form text requires an open 24-hour customer-service window. The response contains both the onboarding session and the sent message result.
+It accepts `from`, `to`, `signup_mode`, `language`, `return_url`, `metadata`, and `expires_in_seconds`. Easyhook always sends a localized message containing the generated URL; custom message bodies are rejected so an integration cannot accidentally omit the link. Sending free-form text requires an open 24-hour customer-service window. The response contains both the onboarding session and the sent message result.
 
 ### Hosted Onboarding Examples
 
@@ -1105,6 +1106,24 @@ curl -X POST https://api.easyhook.dev/v1/consent \
 Allowed `mode` values: `opt_in`, `opt_out`.
 
 `opt_in` sends `easyhook_consent_preferences_opt_in`. `opt_out` sends `easyhook_consent_preferences_opt_out`.
+
+The WABA must have consent enabled and the recipient must have an open
+customer-service window. A successful response means Meta accepted the Flow:
+
+```json
+{
+  "ok": true,
+  "accepted": true,
+  "delivery_status": "pending",
+  "wamid": "wamid.xxx",
+  "flow_id": "3526052014216027",
+  "flow_token": "opt_in_xxx"
+}
+```
+
+This does not prove that the device displayed the Flow. Subscribe to
+`status.*` and use the returned `wamid` to observe `sent`, `delivered`, `read`,
+or `failed`.
 
 ### Record Consent Manually
 

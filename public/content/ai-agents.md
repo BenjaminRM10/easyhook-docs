@@ -176,6 +176,7 @@ invalidate successfully imported events.
 | --- | --- |
 | Validate key | `GET /v1/me` |
 | Send text | `POST /v1/messages/text` |
+| Reply to a WhatsApp message | `POST /v1/messages/reply` |
 | Send multichannel text | `POST /v1/messages/send` |
 | Send humanized WhatsApp text | `POST /v1/messages/humanized-text` |
 | Send media | `POST /v1/messages/media` |
@@ -197,6 +198,7 @@ video, or document header type; document media may also set `filename`.
 | Manage Flows | `/v1/flows` |
 | Manage consent | `/v1/consent` and `/v1/consent/*` |
 | Hosted customer onboarding | `POST /v1/onboarding/sessions` |
+| Create and send onboarding URL | `POST /v1/onboarding/sessions/send` |
 | Manage webhook subscriptions | `/v1/webhooks` |
 
 Read the corresponding section in `public-api.md` before implementing an
