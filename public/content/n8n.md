@@ -68,12 +68,18 @@ For scheduled text, media, or templates, add:
 
 Use resource **Cancel Scheduled Message** when you need to cancel a send before processing begins. Reconciliation remains available through the Easyhook API and webhooks.
 
-### Send Read Or Typing
+Under **WhatsApp Only** you can also create an onboarding link, create and send
+that link, choose WhatsApp Coexistence or WhatsApp API, send the consent Flow,
+and add or remove reactions.
+
+### Send Read, Typing, Or Reaction
 
 - Resource: `WhatsApp Only`
-- Operation: `Send Read Receipt` or `Send Typing Indicator`
+- Operation: `Send Read Receipt`, `Send Typing Indicator`, or `Send Reaction`
 - From: your WhatsApp sender number
 - Inbound Message ID: the inbound WhatsApp `wamid`
+
+For reactions, select the recipient and emoji. Leave the emoji empty to remove the current reaction.
 
 ### Send Reusable Media
 

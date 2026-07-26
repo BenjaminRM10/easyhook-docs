@@ -32,10 +32,26 @@ curl -X POST https://api.easyhook.dev/v1/onboarding/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "signup_mode": "coexistence",
-    "customer_name": "Cliente",
     "language": "es",
     "return_url": "https://app.example.com/channels"
   }'
 ```
 
 Suscríbete a `onboarding.*` para recibir el resultado sin consultar repetidamente la sesión.
+
+Para crear la sesión y enviar el enlace en una sola llamada:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/onboarding/sessions/send \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "5218661479075",
+    "to": "5215660069997",
+    "signup_mode": "coexistence",
+    "language": "es"
+  }'
+```
+
+`signup_mode` acepta `coexistence` o `cloud_api`. El envío del enlace como texto
+requiere una ventana de atención abierta.

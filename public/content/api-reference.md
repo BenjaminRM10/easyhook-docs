@@ -410,9 +410,10 @@ Recommended customer API endpoints:
 | `GET` | `/v1/consent/config?from=...` | `flows:read` | Read WABA consent configuration. Also accepts `waba_id` or `phone_id`. |
 | `PATCH` | `/v1/consent/config` | `flows:write` | Update WABA consent copy and custom keywords. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent/enable` | `flows:write` | Create/publish default opt-in and opt-out Flows and enable WABA consent. Accepts `from`, `phone_id`, or `waba_id`. |
-| `POST` | `/v1/consent/send-flow` | `messages:write` | Send the default opt-in or opt-out Flow. |
-| `POST` | `/v1/consent` | `messages:write` | Record externally collected opt-in/opt-out evidence. |
+| `POST` | `/v1/consent` | `messages:write` | Record consent evidence, or send the default opt-in/opt-out Flow when `mode` is provided. |
 | `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted WhatsApp onboarding session owned by the API key tenant. |
+| `POST` | `/v1/onboarding/sessions/send` | `onboarding:write` | Create an onboarding session and send its URL from an authorized WhatsApp number. |
+| `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on a WhatsApp message. |
 | `GET` | `/v1/webhooks` | any valid key | List webhook subscriptions owned by the API-key organization. |
 | `GET` | `/v1/webhooks/options?provider=...&scope_type=...` | any valid key | Discover compatible providers, event filters, scopes, and public sender identifiers. |
 | `POST` | `/v1/webhooks` | any valid key | Create a webhook subscription; its HMAC/auth secret is returned once. |
@@ -427,7 +428,7 @@ Recommended customer API endpoints:
 
 Portal/admin endpoints exist for onboarding, API-key management, webhook management, and Meta webhook ingestion. They are listed near the end of this document so customers can recognize them, but new product integrations should use the recommended endpoints above.
 
-There is currently no public endpoint for sending a WhatsApp reaction. Easyhook receives and normalizes reactions from customers and WhatsApp Business App coexistence, but outbound reactions are not part of the V1 customer API.
+Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
 
 ## Conversations And Recent Messages
 
@@ -625,8 +626,6 @@ Request:
 
 ```json
 {
-  "customer_name": "Dr. Daniel Rodriguez",
-  "customer_email": "owner@example.com",
   "signup_mode": "cloud_api",
   "return_url": "https://app.example.com/settings/whatsapp",
   "language": "es",
@@ -641,8 +640,6 @@ Parameters:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `customer_name` | no | Optional reference for the person/customer receiving the link. The owning organization is resolved from the API key. |
-| `customer_email` | no | Optional customer email for your own correlation. |
 | `signup_mode` | no | `cloud_api` for a regular WhatsApp Business API connection, or `coexistence` for WhatsApp Business App coexistence. Defaults to `cloud_api`. |
 | `return_url` | no | HTTPS URL where the hosted page can send the customer after completion. |
 | `language` | no | `es` or `en`. Defaults to `es`. |
@@ -663,8 +660,6 @@ Response:
       "slug": "appcreatorbr"
     },
     "signup_mode": "cloud_api",
-    "customer_name": "Dr. Daniel Rodriguez",
-    "customer_email": "owner@example.com",
     "language": "es",
     "return_url": "https://app.example.com/settings/whatsapp",
     "metadata": {
@@ -688,6 +683,14 @@ The hosted Easyhook page uses these token-scoped support endpoints internally:
 
 Customer applications normally create a session and redirect the user to the returned Easyhook `url`; they should not recreate the hosted page's token completion flow.
 
+To create the same hosted session and immediately send its URL from a WhatsApp number owned by the API-key organization, use:
+
+```http
+POST /v1/onboarding/sessions/send
+```
+
+It accepts `from`, `to`, `signup_mode`, `language`, `return_url`, `metadata`, `expires_in_seconds`, and an optional custom `body`. Sending free-form text requires an open 24-hour customer-service window. The response contains both the onboarding session and the sent message result.
+
 ### Hosted Onboarding Examples
 
 curl:
@@ -697,8 +700,6 @@ curl -X POST https://api.easyhook.dev/v1/onboarding/sessions \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_name": "Dazujo Clinica Dental",
-    "customer_email": "owner@example.com",
     "signup_mode": "cloud_api",
     "return_url": "https://app.example.com/settings/whatsapp",
     "metadata": { "external_customer_id": "cus_123" }
@@ -715,8 +716,6 @@ const res = await fetch("https://api.easyhook.dev/v1/onboarding/sessions", {
     "content-type": "application/json",
   },
   body: JSON.stringify({
-    customer_name: "Dazujo Clinica Dental",
-    customer_email: "owner@example.com",
     signup_mode: "cloud_api",
     return_url: "https://app.example.com/settings/whatsapp",
     metadata: { external_customer_id: "cus_123" },
@@ -738,8 +737,6 @@ response = requests.post(
         "Content-Type": "application/json",
     },
     json={
-        "customer_name": "Dazujo Clinica Dental",
-        "customer_email": "owner@example.com",
         "signup_mode": "cloud_api",
         "return_url": "https://app.example.com/settings/whatsapp",
         "metadata": {"external_customer_id": "cus_123"},
@@ -1089,13 +1086,13 @@ curl -X PATCH https://api.easyhook.dev/v1/consent/config \
 Endpoint:
 
 ```http
-POST /v1/consent/send-flow
+POST /v1/consent
 ```
 
 Requires `messages:write`. This is a WhatsApp Flow message, so it requires an open 24-hour customer service window.
 
 ```bash
-curl -X POST https://api.easyhook.dev/v1/consent/send-flow \
+curl -X POST https://api.easyhook.dev/v1/consent \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1384,7 +1381,7 @@ curl -X POST https://api.easyhook.dev/v1/messages/media \
 ### Send A Consent Flow
 
 ```bash
-curl -X POST https://api.easyhook.dev/v1/consent/send-flow \
+curl -X POST https://api.easyhook.dev/v1/consent \
   -H "Authorization: Bearer $EASYHOOK_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
@@ -1589,7 +1586,21 @@ Normalized webhook fragment:
 }
 ```
 
-Easyhook V1 does not currently expose `POST /v1/messages/reaction`; read and typing endpoints do not send reactions.
+Send a reaction:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/reaction \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "5218661479075",
+    "to": "5215660069997",
+    "message_id": "wamid...",
+    "emoji": "👍"
+  }'
+```
+
+Use an empty `emoji` to remove the current reaction.
 
 WhatsApp circular video notes currently reach Cloud API as `message.unsupported` with error `131051` and `unsupported.type: video_note`. Meta does not include a media id or downloadable URL in that payload. Easyhook preserves this subtype in customer webhooks and shows a fallback in the portal, but cannot store or play the video file until Meta exposes it through Cloud API.
 
