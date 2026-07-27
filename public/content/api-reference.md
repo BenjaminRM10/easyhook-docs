@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-07-24
+Last updated: 2026-07-26
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -250,6 +250,7 @@ Main `Easyhook` operations:
 | Message | Send Text | `POST /v1/messages/text` |
 | Message | Send Text + Humanized Delivery | `POST /v1/messages/humanized-text` |
 | Message | Send Read Receipt | `POST /v1/messages/read` |
+| Message | Reply to WhatsApp Message | `POST /v1/messages/reply` |
 | Message | Send Typing Indicator | `POST /v1/messages/typing` |
 | Message | Send Media | `POST /v1/messages/media` |
 | Message | Send Template | `POST /v1/messages/template` |
@@ -383,10 +384,11 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages?from=...` | `messages:read` | Read recent inbound and outbound WhatsApp messages with one contact. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp vs Messenger/Instagram. WhatsApp supports scheduled `at`. |
+| `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp, Messenger, Instagram, or Telegram. WhatsApp supports scheduled `at`. |
+| `POST` | `/v1/messages/email` | `messages:write` | Send a new Gmail message or reply inside an existing Gmail thread. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Send WhatsApp text after read, human-like delay, typing indicator, and reply. |
-| `POST` | `/v1/messages/reply` | `messages:write` | Reply to a specific inbound WhatsApp message using Meta message context. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark an inbound WhatsApp message as read. |
+| `POST` | `/v1/messages/reply` | `messages:write` | Send a contextual WhatsApp text reply using the original `message_id`. |
 | `POST` | `/v1/messages/typing` | `messages:write` | Show WhatsApp typing indicator for an inbound message. |
 | `POST` | `/v1/messages/media` | `messages:write` | Send media. WhatsApp supports `media_name`, Meta media `id`, public `link`, and scheduled `at`; Messenger/Instagram support `id` or public `link`. |
 | `POST` | `/v1/messages/template` | `messages:write` | Send or schedule approved WhatsApp templates. |
@@ -423,13 +425,161 @@ Recommended customer API endpoints:
 | `POST` | `/v1/webhooks/{id}/replay` | any valid key | Retry failed delivery batches, optionally filtered by `sync_id`. |
 | `POST` | `/v1/webhooks/{id}/history-replays` | any valid key | Re-send stored messages or contacts for `phone_id` using `replay_type`. |
 | `GET` | `/v1/webhooks/{id}/history-replays/{replay_id}` | any valid key | Read persistent History replay progress. |
-| `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger or Instagram text through a connected channel. |
-| `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger or Instagram media by existing attachment id or public link. |
+| `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger, Instagram, or Telegram text through a connected channel. |
+| `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger, Instagram, or Telegram media by existing attachment id or public link. |
 | `POST` | `/v1/messages/channel/media/upload` | `messages:write` | Upload media to Easyhook temporarily and send it through Messenger or Instagram. |
 
 Portal/admin endpoints exist for onboarding, API-key management, webhook management, and Meta webhook ingestion. They are listed near the end of this document so customers can recognize them, but new product integrations should use the recommended endpoints above.
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
+
+## Gmail
+
+Gmail is represented as a normal Easyhook channel. The organization API key
+selects the organization and `from` must be the exact connected Gmail address.
+Incoming email is stored in the shared Inbox and delivered through customer
+webhooks as `message.received`. Messages sent from Gmail outside Easyhook are
+stored as outbound events without creating a second customer conversation.
+
+Send a new plain-text email:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/email \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "soporte@example.com",
+    "to": "cliente@example.net",
+    "subject": "Seguimiento",
+    "body": "Hola, damos seguimiento a tu solicitud."
+  }'
+```
+
+Use `html` when rich email is required. Supplying both `body` and `html`
+creates a multipart message with a plain-text fallback:
+
+```json
+{
+  "from": "soporte@example.com",
+  "to": "cliente@example.net",
+  "subject": "Tu solicitud está lista",
+  "body": "Tu solicitud está lista.",
+  "html": "<p>Tu solicitud está <strong>lista</strong>.</p>"
+}
+```
+
+Reply inside an existing thread with the values received in the inbound
+webhook:
+
+```json
+{
+  "from": "soporte@example.com",
+  "to": "cliente@example.net",
+  "subject": "Re: Seguimiento",
+  "body": "Gracias por confirmar.",
+  "thread_id": "18f4...",
+  "in_reply_to": "<original-message-id@example.net>",
+  "references": "<original-message-id@example.net>"
+}
+```
+
+The normalized Gmail message fields are:
+
+| Field | Description |
+| --- | --- |
+| `message.text` | Plain-text body or a safe text fallback derived from HTML. |
+| `message.subject` | Email subject. |
+| `message.html` | Original HTML body when present. Treat it as untrusted content. |
+| `message.thread_id` | Gmail thread ID used for replies. |
+| `message.message_id_header` | RFC Message-ID used by `in_reply_to`. |
+| `message.in_reply_to` | RFC reply header from the received message. |
+| `message.references` | RFC references chain. |
+
+Google sends Gmail changes through Pub/Sub. Easyhook acknowledges the Pub/Sub
+request immediately, resolves changes with `users.history.list`, deduplicates
+messages by Gmail message ID, and advances the stored history cursor only after
+processing succeeds. Gmail watches expire, so Easyhook schedules an automatic
+renewal 24 hours before each expiration. The admin-only
+`POST /v1/channels/gmail/watch/renew-all` endpoint remains available for
+operations and recovery.
+
+### Google Cloud configuration
+
+1. Enable the Gmail API and Pub/Sub API.
+2. Configure the OAuth redirect URI as
+   `https://api.easyhook.dev/v1/channels/gmail/oauth/callback`.
+3. Create a Pub/Sub topic and grant
+   `gmail-api-push@system.gserviceaccount.com` the Pub/Sub Publisher role on
+   that topic.
+4. Create a push subscription whose URL is
+   `https://api.easyhook.dev/v1/channels/gmail/webhook?token=YOUR_RANDOM_TOKEN`.
+5. Set `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`,
+   `GOOGLE_OAUTH_STATE_SECRET`, `GMAIL_PUBSUB_TOPIC`, and
+   `GMAIL_PUBSUB_VERIFICATION_TOKEN` in the backend.
+6. Verify that Easyhook Cloud Tasks is configured. Each successful Gmail
+   connection schedules its next watch renewal automatically.
+
+Easyhook requests `openid`, `userinfo.email`, `userinfo.profile`, and
+`gmail.modify`. The restricted Gmail scope is used to receive mail, send
+replies, preserve threads, and maintain message state in the shared Easyhook
+Inbox. Easyhook does not use Gmail data for advertising. The first Gmail
+release supports plain text, HTML, new messages, and threaded replies. Email
+attachments are not yet exposed through the public API.
+
+Disconnecting a Gmail channel from **Organization** stops its Gmail watch,
+revokes the stored OAuth grant, and removes the encrypted credential from
+Easyhook.
+
+### Google verification recording
+
+Record one continuous, silent screen capture with short on-screen labels:
+
+1. Sign in to Easyhook and open **Connect > Gmail**.
+2. Click **Connect Gmail** and show the Google consent screen, including the
+   account and requested Gmail permission.
+3. Complete consent and show the connected Gmail account in Easyhook.
+4. Send a message from an external address to the connected Gmail account.
+5. Show the same sender, subject, and body arriving in the Easyhook Inbox.
+6. Reply from Easyhook and show the reply in the same thread in Gmail.
+7. Send a new email through `POST /v1/messages/email` and show it arriving at
+   the recipient.
+
+Suggested restricted-scope justification:
+
+> Easyhook is a multichannel messaging API and shared inbox. The
+> `gmail.modify` scope is required so an account owner can connect Gmail,
+> receive and read messages in Easyhook, send new messages and threaded
+> replies, and maintain message state. Gmail data is isolated by organization,
+> encrypted in transit and at rest, and is not used for advertising.
+
+## Telegram
+
+Connect a Telegram bot from **Connect > Telegram** using the token created by
+BotFather. Easyhook validates the token, stores it in the encrypted tenant
+secret vault, and configures a Telegram webhook protected by Telegram's
+`X-Telegram-Bot-Api-Secret-Token` header.
+
+After connection, use the standard text endpoint:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/text \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "@my_easyhook_bot",
+    "to": "123456789",
+    "body": "Hola desde Easyhook"
+  }'
+```
+
+Telegram images, video, audio, and documents can be sent through
+`POST /v1/messages/media` with a public `link`. Incoming Telegram updates are
+normalized to the same `message.received` contract used by the other channels.
+Incoming media currently includes Telegram file metadata; automatic file
+storage and a public Easyhook download URL are not part of the first release.
+
+Disconnecting a Telegram channel removes its protected Telegram webhook before
+Easyhook deletes the encrypted bot token.
 
 ## Conversations And Recent Messages
 
@@ -633,7 +783,7 @@ Request:
   "metadata": {
     "external_customer_id": "cus_123"
   },
-  "expires_in_seconds": 3600
+  "expires_in_seconds": 259200
 }
 ```
 
@@ -673,7 +823,7 @@ Response:
 }
 ```
 
-When the customer completes Meta embedded signup on the hosted page, Easyhook stores the connected WABA and phone under the organization that owns the API key. Subscribe to `onboarding.*` webhooks to receive completion events in your app. A successful session is consumed immediately and cannot be opened or completed a second time.
+When the customer completes Meta embedded signup on the hosted page, Easyhook stores the connected WABA and phone under the organization that owns the API key. Subscribe to `onboarding.*` webhooks to receive completion events in your app. Sessions expire after at most one hour and are consumed after the first successful completion.
 
 The hosted Easyhook page uses these token-scoped support endpoints internally:
 
@@ -690,7 +840,7 @@ To create the same hosted session and immediately send its URL from a WhatsApp n
 POST /v1/onboarding/sessions/send
 ```
 
-It accepts `from`, `to`, `signup_mode`, `language`, `return_url`, `metadata`, and `expires_in_seconds`. Easyhook always sends a localized message containing the generated URL; custom message bodies are rejected so an integration cannot accidentally omit the link. Sending free-form text requires an open 24-hour customer-service window. The response contains both the onboarding session and the sent message result.
+It accepts `from`, `to`, `signup_mode`, `language`, `return_url`, `metadata`, and `expires_in_seconds`. Easyhook sends a localized fixed message that always contains the generated URL. Custom `body` values are rejected to prevent sending a message without the link. Sending free-form text requires an open 24-hour customer-service window. The response contains both the onboarding session and the sent message result.
 
 ### Hosted Onboarding Examples
 
@@ -1111,23 +1261,7 @@ Allowed `mode` values: `opt_in`, `opt_out`.
 
 `opt_in` sends `easyhook_consent_preferences_opt_in`. `opt_out` sends `easyhook_consent_preferences_opt_out`.
 
-The WABA must have consent enabled and the recipient must have an open
-customer-service window. A successful response means Meta accepted the Flow:
-
-```json
-{
-  "ok": true,
-  "accepted": true,
-  "delivery_status": "pending",
-  "wamid": "wamid.xxx",
-  "flow_id": "3526052014216027",
-  "flow_token": "opt_in_xxx"
-}
-```
-
-This does not prove that the device displayed the Flow. Subscribe to
-`status.*` and use the returned `wamid` to observe `sent`, `delivered`, `read`,
-or `failed`.
+The WABA must have consent enabled and the customer-service window must be open. A successful response includes `accepted: true`, `delivery_status: "pending"`, and a `wamid`: this means Meta accepted the Flow request, not that the device displayed it. Subscribe to `status.*` and correlate by `wamid` to observe `sent`, `delivered`, `read`, or `failed`.
 
 ### Record Consent Manually
 
@@ -1624,6 +1758,24 @@ curl -X POST https://api.easyhook.dev/v1/messages/reaction \
 ```
 
 Use an empty `emoji` to remove the current reaction.
+
+Send a contextual text reply:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/reply \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "5218661479075",
+    "to": "5215660069997",
+    "message_id": "wamid.HBg...",
+    "body": "Respuesta relacionada con este mensaje"
+  }'
+```
+
+`message_id` must be the original WhatsApp message ID. Easyhook verifies that
+`from` belongs to the API-key organization and sends Meta's message context so
+WhatsApp displays the quoted reply.
 
 WhatsApp circular video notes currently reach Cloud API as `message.unsupported` with error `131051` and `unsupported.type: video_note`. Meta does not include a media id or downloadable URL in that payload. Easyhook preserves this subtype in customer webhooks and shows a fallback in the portal, but cannot store or play the video file until Meta exposes it through Cloud API.
 

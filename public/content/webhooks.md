@@ -1,13 +1,14 @@
 # Easyhook Webhooks
 
-Last updated: 2026-07-24
+Last updated: 2026-07-26
 
-Easyhook sends one compact JSON object per event. The format is shared by WhatsApp, Messenger, and Instagram.
+Easyhook sends one compact JSON object per event. The format is shared by
+WhatsApp, Messenger, Instagram, Telegram, and Gmail.
 
 ## Principles
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
-- `channel` is always `whatsapp`, `messenger`, or `instagram`.
+- `channel` is `whatsapp`, `messenger`, `instagram`, `telegram`, or `gmail`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
 - Provider-specific details used for debugging remain in the `X-Easyhook-Provider-Event` header.
@@ -100,7 +101,7 @@ Creation fields:
 | --- | --- | --- |
 | `name` | yes | Human-readable subscription name. |
 | `url` | yes | Public HTTPS destination. HTTP and invalid URLs are rejected. |
-| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, or `*`. Defaults to WhatsApp. |
+| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, or `*`. Defaults to WhatsApp. |
 | `events` | no | Event filters. Empty behaves as `*`. Obtain compatible choices from `/v1/webhooks/options`. |
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
@@ -143,7 +144,7 @@ Available scopes:
 { "type": "channel", "from": "instagram_alias" }
 ```
 
-For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger or Instagram alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
+For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger, Instagram, Telegram, or Gmail alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
 
 WhatsApp scope numbers follow the same international normalization as the
 message API: E.164 or digits-only with a country calling code, common visual
@@ -157,7 +158,7 @@ curl "https://api.easyhook.dev/v1/webhooks/options?provider=whatsapp&scope_type=
   -H "Authorization: Bearer $EASYHOOK_API_KEY"
 ```
 
-`provider` accepts `whatsapp`, `messenger`, `instagram`, or `*`. `scope_type` accepts `organization`, `waba`, `phone`, or `channel`. The response filters incompatible combinations and returns `providers`, `events`, `scope_types`, and `scope_identifiers`. Connected-account values are public numbers or aliases that can be sent as `scope.from`.
+`provider` accepts `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, or `*`. `scope_type` accepts `organization`, `waba`, `phone`, or `channel`. The response filters incompatible combinations and returns `providers`, `events`, `scope_types`, and `scope_identifiers`. Connected-account values are public numbers or aliases that can be sent as `scope.from`.
 
 Replay up to 100 failed deliveries. Omit `sync_id` to replay the oldest failed deliveries for the hook:
 
@@ -177,6 +178,8 @@ Providers:
 - `whatsapp`
 - `messenger`
 - `instagram`
+- `telegram`
+- `gmail`
 - `*`
 
 Common event filters:

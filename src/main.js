@@ -6,6 +6,7 @@ import "./styles.css";
 const pages = [
   { group: "Primeros pasos", slug: "getting-started", label: "Empezar" },
   { group: "Primeros pasos", slug: "onboarding", label: "Conectar WhatsApp" },
+  { group: "Primeros pasos", slug: "channels", label: "Canales" },
   { group: "API", slug: "api-reference", label: "Referencia completa" },
   { group: "Eventos", slug: "webhooks", label: "Webhooks" },
   { group: "Integraciones", slug: "n8n", label: "n8n" },
