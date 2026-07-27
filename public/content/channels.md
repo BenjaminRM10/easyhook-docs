@@ -16,6 +16,8 @@ Telegram funciona mediante bots.
 
 Easyhook valida el bot, cifra el token y configura automáticamente el webhook
 con un secreto independiente. No debes crear otro webhook en Telegram.
+Telegram no tiene una ventana de servicio de 24 horas en Easyhook. El bot puede
+responder o enviar mensajes en cualquier momento permitido por Telegram.
 
 Envía texto con el endpoint estándar:
 
@@ -43,6 +45,10 @@ webhook protegido de Telegram y después borra el token cifrado.
 Todos los proveedores de correo usan el mismo endpoint, payload, Inbox y
 webhooks. Puedes cambiar de Gmail a Outlook o a un servidor IMAP/SMTP sin
 reescribir la integración que envía mensajes.
+
+La ventana de servicio de 24 horas es una política de mensajería de Meta y no
+se aplica al correo. Gmail, Outlook e IMAP/SMTP pueden enviar mensajes en
+cualquier momento, sujeto únicamente a las políticas y límites del proveedor.
 
 ### Gmail
 

@@ -520,6 +520,10 @@ Customer API email sends are billed as one outbound operation. Incoming email
 and webhook delivery are free. Sends made directly from the Easyhook portal
 are not customer API operations and are not charged.
 
+The WhatsApp 24-hour customer-service window does not apply to email or
+Telegram. Gmail, Outlook, IMAP/SMTP, and Telegram sends are allowed at any
+time permitted by their respective providers.
+
 ### Gmail
 
 Google sends Gmail changes through Pub/Sub. Easyhook acknowledges the Pub/Sub
