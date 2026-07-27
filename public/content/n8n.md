@@ -2,9 +2,11 @@
 
 Verified n8n community node for using Easyhook.
 
-Easyhook is a lightweight messaging API for WhatsApp Business Platform and other Meta messaging channels. This node focuses on the workflows developers normally automate:
+Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
+Gmail, Outlook, and generic IMAP/SMTP email.
 
 - `Message Action` groups cross-channel text and media actions.
+- `Send Email` uses one operation for Gmail, Outlook, and IMAP/SMTP.
 - `WhatsApp Only` groups templates, Flows, consent, onboarding links, read receipts, and typing indicators.
 - Use standard or humanized WhatsApp text delivery
 - Schedule messages with Easyhook's `at` parameter
@@ -71,6 +73,22 @@ Use resource **Cancel Scheduled Message** when you need to cancel a send before 
 Under **WhatsApp Only** you can also create an onboarding link, create and send
 that link, choose WhatsApp Coexistence or WhatsApp API, send the consent Flow,
 and add or remove reactions.
+
+### Send Email
+
+- Resource: `Message Action`
+- Operation: `Send Email`
+- From: select a connected Gmail, Outlook, or IMAP/SMTP address
+- To: recipient email
+- Subject: message subject
+- Body: plain-text content
+- HTML: optional rich body
+
+To reply, map `message.id` from the Easyhook Trigger into **Reply To Message
+ID**. You can also map `message.thread_id`, `message.in_reply_to`, and
+`message.references` when explicit thread headers are needed. All three email
+providers use `POST /v1/messages/email`; a workflow does not need
+provider-specific branches.
 
 ### Send Read, Typing, Or Reaction
 
@@ -220,6 +238,12 @@ Useful event scopes:
 - `account_update.*`: WhatsApp account updates
 - `media.*`: media lifecycle events, when enabled in Easyhook
 - `message.text`, `message.image`, `status.failed`: narrower event filters matching the Easyhook portal
+
+For email workflows select `Gmail`, `Outlook`, or `Email (IMAP/SMTP)` as the
+trigger provider and `message.*`. Incoming email exposes `message.subject`,
+`message.text`, optional `message.html`, `message.thread_id`, and RFC reply
+headers. One webhook request creates one n8n execution; normal non-sync events
+produce one item.
 
 Messenger and Instagram hooks are configured in the Easyhook portal with the provider filter. In n8n you can also label a trigger as `messenger.message.*` or `instagram.message.*` for workflow clarity.
 

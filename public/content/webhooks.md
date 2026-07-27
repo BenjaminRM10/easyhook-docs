@@ -1,14 +1,15 @@
 # Easyhook Webhooks
 
-Last updated: 2026-07-26
+Last updated: 2026-07-27
 
 Easyhook sends one compact JSON object per event. The format is shared by
-WhatsApp, Messenger, Instagram, Telegram, and Gmail.
+WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, and IMAP/SMTP email.
 
 ## Principles
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
-- `channel` is `whatsapp`, `messenger`, `instagram`, `telegram`, or `gmail`.
+- `channel` is `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
+  `outlook`, or `imap_smtp`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
 - Provider-specific details used for debugging remain in the `X-Easyhook-Provider-Event` header.
@@ -56,6 +57,31 @@ The same event from Messenger or Instagram only changes `channel` and the provid
 }
 ```
 
+Email providers use the same event with email-specific fields:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "outlook",
+  "account": { "id": "support@example.com", "name": "Support" },
+  "contact": { "id": "customer@example.net", "name": "Customer" },
+  "message": {
+    "id": "provider-message-id",
+    "type": "text",
+    "text": "I need help",
+    "subject": "Order 1048",
+    "html": "<p>I need <strong>help</strong></p>",
+    "thread_id": "provider-thread-id",
+    "message_id_header": "<message@example.net>",
+    "timestamp": "2026-07-27T16:37:02.000Z"
+  }
+}
+```
+
+`channel` can instead be `gmail` or `imap_smtp`. Treat `message.html` as
+untrusted input and render it only after sanitization or inside a sandbox.
+
 ## Public Subscription API
 
 The API key determines the organization. Never send `tenant_id`.
@@ -101,7 +127,7 @@ Creation fields:
 | --- | --- | --- |
 | `name` | yes | Human-readable subscription name. |
 | `url` | yes | Public HTTPS destination. HTTP and invalid URLs are rejected. |
-| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, or `*`. Defaults to WhatsApp. |
+| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, or `*`. Defaults to WhatsApp. |
 | `events` | no | Event filters. Empty behaves as `*`. Obtain compatible choices from `/v1/webhooks/options`. |
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
@@ -144,7 +170,7 @@ Available scopes:
 { "type": "channel", "from": "instagram_alias" }
 ```
 
-For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger, Instagram, Telegram, or Gmail alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
+For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger, Instagram, Telegram, Gmail, Outlook, or IMAP/SMTP alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
 
 WhatsApp scope numbers follow the same international normalization as the
 message API: E.164 or digits-only with a country calling code, common visual
@@ -158,7 +184,12 @@ curl "https://api.easyhook.dev/v1/webhooks/options?provider=whatsapp&scope_type=
   -H "Authorization: Bearer $EASYHOOK_API_KEY"
 ```
 
-`provider` accepts `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, or `*`. `scope_type` accepts `organization`, `waba`, `phone`, or `channel`. The response filters incompatible combinations and returns `providers`, `events`, `scope_types`, and `scope_identifiers`. Connected-account values are public numbers or aliases that can be sent as `scope.from`.
+`provider` accepts `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
+`outlook`, `imap_smtp`, or `*`. `scope_type` accepts `organization`, `waba`,
+`phone`, or `channel`. The response filters incompatible combinations and
+returns `providers`, `events`, `scope_types`, and `scope_identifiers`.
+Connected-account values are public numbers or aliases that can be sent as
+`scope.from`.
 
 Replay up to 100 failed deliveries. Omit `sync_id` to replay the oldest failed deliveries for the hook:
 
@@ -180,6 +211,8 @@ Providers:
 - `instagram`
 - `telegram`
 - `gmail`
+- `outlook`
+- `imap_smtp`
 - `*`
 
 Common event filters:
@@ -341,6 +374,12 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `to` | string | Provider identifier of the recipient. |
 | `type` | string | `text`, `interactive`, `image`, `audio`, `video`, `document`, `file`, `sticker`, `reaction`, `unsupported`, or a future provider type. |
 | `text` | string | Text body for `text` and normalized interactive replies. |
+| `subject` | string | Email subject for Gmail, Outlook, and IMAP/SMTP. |
+| `html` | string | Original email HTML when present. Treat as untrusted content. |
+| `thread_id` | string | Provider thread identifier. |
+| `message_id_header` | string | RFC Message-ID header. |
+| `in_reply_to` | string | RFC parent Message-ID. |
+| `references` | string | RFC references chain. |
 | `media` | object | Normalized media metadata described below. |
 | `reaction` | object | Target message and emoji. |
 | `referral` | object | Click-to-WhatsApp/provider referral context. |

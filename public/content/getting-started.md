@@ -1,6 +1,6 @@
 # Empieza con Easyhook
 
-Conecta WhatsApp Business, Telegram o Gmail, genera una API key y envía tu
+Conecta WhatsApp Business, Telegram o correo, genera una API key y envía tu
 primer mensaje sin mantener por separado la infraestructura de cada proveedor.
 
 ## 1. Crea una organización
@@ -46,7 +46,7 @@ Abre **Webhooks** para registrar un endpoint propio, o instala el nodo **Easyhoo
 
 ## Siguiente paso
 
-- Conecta [Telegram o Gmail](/channels).
+- Conecta [Telegram, Gmail, Outlook u otro correo](/channels).
 - Consulta la [referencia completa de la API](/api-reference).
 - Revisa el [contrato normalizado de webhooks](/webhooks).
 - Instala la integración de [n8n](/n8n), [Chatwoot](/chatwoot) o [MCP para agentes](/ai-agents).

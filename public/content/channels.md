@@ -1,9 +1,9 @@
 # Canales
 
-Easyhook reúne WhatsApp, Messenger, Instagram, Telegram y Gmail bajo una misma
-organización, API key, wallet, Inbox y sistema de webhooks. Cada envío usa el
-campo `from` para resolver el canal correcto dentro de la organización dueña de
-la API key.
+Easyhook reúne WhatsApp, Messenger, Instagram, Telegram y correo bajo una misma
+organización, API key, wallet, Inbox y sistema de webhooks. El correo puede
+conectarse mediante Gmail, Outlook o IMAP/SMTP. Cada envío usa `from` para
+resolver el canal correcto dentro de la organización dueña de la API key.
 
 ## Telegram
 
@@ -38,7 +38,13 @@ El almacenamiento automático y un enlace de descarga de Easyhook se agregarán
 en una fase posterior. Al desconectar el canal, Easyhook elimina primero el
 webhook protegido de Telegram y después borra el token cifrado.
 
-## Gmail
+## Correo
+
+Todos los proveedores de correo usan el mismo endpoint, payload, Inbox y
+webhooks. Puedes cambiar de Gmail a Outlook o a un servidor IMAP/SMTP sin
+reescribir la integración que envía mensajes.
+
+### Gmail
 
 Gmail aparece como un canal de correo dentro del Inbox compartido.
 
@@ -83,6 +89,35 @@ Al desconectar Gmail desde **Organización**, Easyhook detiene las
 notificaciones de Gmail, revoca la autorización OAuth y elimina la credencial
 cifrada.
 
+### Outlook
+
+1. En Easyhook abre **Conectar > Outlook**.
+2. Inicia sesión con Microsoft y autoriza el acceso solicitado.
+3. Microsoft regresa al portal y la dirección queda disponible como remitente.
+
+Easyhook usa Microsoft Graph para recibir correo nuevo, enviar mensajes y
+responder dentro del mensaje original. Las suscripciones de Graph se renuevan
+automáticamente. Para una respuesta exacta, envía `reply_to_message_id` con el
+`message.id` recibido por webhook o visible en el Inbox.
+
+### IMAP/SMTP
+
+Usa esta opción para proveedores diferentes de Gmail y Outlook.
+
+1. Abre **Conectar > Otro correo (IMAP/SMTP)**.
+2. Ingresa la dirección, los servidores IMAP y SMTP, puertos, usuario y
+   contraseña de aplicación.
+3. Easyhook verifica ambas conexiones antes de guardar el canal.
+
+Easyhook exige TLS o STARTTLS con certificados válidos y bloquea servidores
+locales, privados y de metadata. En muchos proveedores debes crear una
+contraseña de aplicación; no uses tu contraseña principal cuando el proveedor
+ofrezca esa alternativa.
+
+La recepción consulta únicamente mensajes nuevos posteriores a la conexión,
+cada minuto. Easyhook no importa automáticamente el buzón anterior. Las
+respuestas conservan `Message-ID`, `In-Reply-To` y `References`.
+
 ### Video para la revisión de Google
 
 Graba un solo flujo continuo:
@@ -105,8 +140,9 @@ Texto breve para justificar `gmail.modify`:
 ## Webhooks multicanal
 
 En **Webhooks** puedes suscribirte a toda la organización o a un canal
-específico. Selecciona `telegram` o `gmail` como proveedor y `message.*` para
-recibir mensajes nuevos. El JSON mantiene el mismo contrato normalizado:
+específico. Selecciona `telegram`, `gmail`, `outlook` o `imap_smtp` y
+`message.*` para recibir mensajes nuevos. El JSON mantiene el mismo contrato
+normalizado:
 
 ```json
 {

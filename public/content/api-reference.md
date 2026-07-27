@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-07-26
+Last updated: 2026-07-27
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -385,7 +385,7 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
 | `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp, Messenger, Instagram, or Telegram. WhatsApp supports scheduled `at`. |
-| `POST` | `/v1/messages/email` | `messages:write` | Send a new Gmail message or reply inside an existing Gmail thread. |
+| `POST` | `/v1/messages/email` | `messages:write` | Send or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Send WhatsApp text after read, human-like delay, typing indicator, and reply. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark an inbound WhatsApp message as read. |
 | `POST` | `/v1/messages/reply` | `messages:write` | Send a contextual WhatsApp text reply using the original `message_id`. |
@@ -433,13 +433,13 @@ Portal/admin endpoints exist for onboarding, API-key management, webhook managem
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
 
-## Gmail
+## Email: Gmail, Outlook, And IMAP/SMTP
 
-Gmail is represented as a normal Easyhook channel. The organization API key
-selects the organization and `from` must be the exact connected Gmail address.
+Email is represented as a normal Easyhook channel. The organization API key
+selects the organization and `from` must be the exact connected address.
 Incoming email is stored in the shared Inbox and delivered through customer
-webhooks as `message.received`. Messages sent from Gmail outside Easyhook are
-stored as outbound events without creating a second customer conversation.
+webhooks as `message.received`. Gmail, Outlook, and generic IMAP/SMTP accounts
+share the same public send contract.
 
 Send a new plain-text email:
 
@@ -477,23 +477,50 @@ webhook:
   "to": "cliente@example.net",
   "subject": "Re: Seguimiento",
   "body": "Gracias por confirmar.",
+  "reply_to_message_id": "provider-message-id",
   "thread_id": "18f4...",
   "in_reply_to": "<original-message-id@example.net>",
   "references": "<original-message-id@example.net>"
 }
 ```
 
-The normalized Gmail message fields are:
+`reply_to_message_id` is recommended. For Outlook it performs a native
+Microsoft Graph reply. For Gmail, Easyhook resolves the original Gmail message
+and preserves its thread and RFC headers. For IMAP/SMTP, it is treated as the
+original RFC Message-ID. `thread_id`, `in_reply_to`, and `references` remain
+available for explicit reconciliation.
+
+Request fields:
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `from` | yes | Exact connected email address owned by the API-key organization. |
+| `to` | yes | Recipient email address. |
+| `subject` | yes for a new message | Subject. Replies may reuse or provide `Re:` subject text. |
+| `body` | yes unless `html` is present | Plain-text body and HTML fallback. |
+| `html` | no | HTML body. It is sent as multipart when `body` is also present. |
+| `reply_to_message_id` | no | Provider message ID from the inbound event. Preferred reply selector. |
+| `thread_id` | no | Provider thread ID. |
+| `in_reply_to` | no | RFC Message-ID of the parent. |
+| `references` | no | RFC references chain. |
+
+The normalized email message fields are:
 
 | Field | Description |
 | --- | --- |
 | `message.text` | Plain-text body or a safe text fallback derived from HTML. |
 | `message.subject` | Email subject. |
 | `message.html` | Original HTML body when present. Treat it as untrusted content. |
-| `message.thread_id` | Gmail thread ID used for replies. |
+| `message.thread_id` | Provider thread ID used for replies. |
 | `message.message_id_header` | RFC Message-ID used by `in_reply_to`. |
 | `message.in_reply_to` | RFC reply header from the received message. |
 | `message.references` | RFC references chain. |
+
+Customer API email sends are billed as one outbound operation. Incoming email
+and webhook delivery are free. Sends made directly from the Easyhook portal
+are not customer API operations and are not charged.
+
+### Gmail
 
 Google sends Gmail changes through Pub/Sub. Easyhook acknowledges the Pub/Sub
 request immediately, resolves changes with `users.history.list`, deduplicates
@@ -529,6 +556,26 @@ attachments are not yet exposed through the public API.
 Disconnecting a Gmail channel from **Organization** stops its Gmail watch,
 revokes the stored OAuth grant, and removes the encrypted credential from
 Easyhook.
+
+### Outlook
+
+Outlook connects with Microsoft OAuth using `Mail.ReadWrite`, `Mail.Send`, and
+basic identity scopes. Easyhook creates a Microsoft Graph change subscription,
+validates its random `clientState`, queues each notification, and renews the
+subscription before expiration. Disconnecting deletes the Graph subscription,
+revokes the local grant, and removes the encrypted credential.
+
+### Generic IMAP/SMTP
+
+Generic email verifies IMAP receive access and SMTP send access before saving
+the channel. TLS or STARTTLS is mandatory, certificate verification is enabled,
+and private/reserved hosts are rejected after DNS resolution. Easyhook starts
+from the current IMAP UID and polls every 60 seconds, so only messages received
+after connection are imported. Disconnecting stops polling and deletes the
+encrypted credentials.
+
+Attachments are not yet exposed through the public email API. Received HTML is
+untrusted input; sanitize it or render it in a sandboxed document.
 
 ### Google verification recording
 
