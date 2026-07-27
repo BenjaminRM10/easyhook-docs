@@ -997,7 +997,11 @@ Success response:
 For business-initiated template messages, Easyhook requires WABA consent to be enabled and the contact to have opt-in recorded in Easyhook. If the WABA is not enabled, Easyhook returns:
 
 ```json
-{ "error": "consent_not_enabled", "required_action": "enable_waba_consent" }
+{
+  "error": "consent_not_enabled",
+  "message": "Consent is not enabled for this WhatsApp Business Account.",
+  "required_action": "enable_waba_consent"
+}
 ```
 
 If the WABA is enabled but the contact has not opted in, Easyhook returns:

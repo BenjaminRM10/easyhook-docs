@@ -56,7 +56,7 @@ function shell() {
     <header class="mobile-header">
       <button class="icon-button" data-menu aria-label="Abrir navegación">${iconSvg(Menu)}</button>
       <div class="mobile-brand"><img src="/easyhook-icon.png" alt="" /><strong>Easyhook Docs</strong></div>
-      <button class="icon-button" data-theme aria-label="Cambiar tema">${iconSvg(state.theme === "dark" ? Sun : Moon)}</button>
+      <button class="icon-button" data-theme-toggle aria-label="Cambiar tema">${iconSvg(state.theme === "dark" ? Sun : Moon)}</button>
     </header>
     <aside class="sidebar ${state.mobileOpen ? "open" : ""}">
       <div class="brand"><img src="/easyhook-icon.png" alt="" /><strong>Easyhook <span>Docs</span></strong></div>
@@ -66,7 +66,7 @@ function shell() {
     </aside>
     <div class="scrim ${state.mobileOpen ? "visible" : ""}" data-close></div>
     <main class="content-shell">
-      <div class="topbar"><button class="search-button compact" data-search>${iconSvg(Search)}<span>Buscar documentación</span><kbd>⌘ K</kbd></button><button class="icon-button" data-theme aria-label="Cambiar tema">${iconSvg(state.theme === "dark" ? Sun : Moon)}</button></div>
+      <div class="topbar"><button class="search-button compact" data-search>${iconSvg(Search)}<span>Buscar documentación</span><kbd>⌘ K</kbd></button><button class="icon-button" data-theme-toggle aria-label="Cambiar tema">${iconSvg(state.theme === "dark" ? Sun : Moon)}</button></div>
       <div class="reader"><article id="doc"><div class="loading">Cargando documentación...</div></article><aside id="toc"></aside></div>
     </main>
     <dialog id="search-dialog"><div class="search-dialog-head">${iconSvg(Search)}<input autofocus placeholder="Buscar en la documentación" /><button class="icon-button" data-search-close>${iconSvg(X)}</button></div><div class="search-results"></div></dialog>`;
@@ -80,7 +80,7 @@ function bindShell() {
   }));
   document.querySelector("[data-menu]")?.addEventListener("click", () => setMobileMenu(true));
   document.querySelector("[data-close]")?.addEventListener("click", () => setMobileMenu(false));
-  document.querySelectorAll("[data-theme]").forEach((button) => button.addEventListener("click", toggleTheme));
+  document.querySelectorAll("button[data-theme-toggle]").forEach((button) => button.addEventListener("click", toggleTheme));
   document.querySelectorAll("[data-search]").forEach((button) => button.addEventListener("click", openSearch));
   document.querySelector("[data-search-close]")?.addEventListener("click", () => document.querySelector("#search-dialog").close());
   document.querySelector("#search-dialog input")?.addEventListener("input", (event) => runSearch(event.target.value));
@@ -149,7 +149,7 @@ function toggleTheme() {
   state.theme = state.theme === "dark" ? "light" : "dark";
   localStorage.setItem("easyhook-docs-theme", state.theme);
   document.documentElement.dataset.theme = state.theme;
-  document.querySelectorAll("[data-theme]").forEach((button) => {
+  document.querySelectorAll("button[data-theme-toggle]").forEach((button) => {
     button.innerHTML = iconSvg(state.theme === "dark" ? Sun : Moon);
   });
   document.querySelector('meta[name="theme-color"]')?.setAttribute(
