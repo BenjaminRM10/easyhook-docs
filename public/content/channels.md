@@ -87,9 +87,10 @@ curl -X POST https://api.easyhook.dev/v1/messages/email \
   }'
 ```
 
-Para responder un hilo existente usa `thread_id`, `in_reply_to` y `references`
-del mensaje entrante. Consulta todos los campos y ejemplos en
-[Referencia completa](/api-reference#gmail).
+Para responder un hilo existente envía `reply_to_message_id` con el
+`message.id` del mensaje entrante. Easyhook resuelve el hilo y los encabezados
+de Gmail automáticamente. Consulta todos los campos y ejemplos en
+[Referencia completa](/api-reference#email-gmail-outlook-and-imapsmtp).
 
 Al desconectar Gmail desde **Organización**, Easyhook detiene las
 notificaciones de Gmail, revoca la autorización OAuth y elimina la credencial

@@ -468,8 +468,8 @@ creates a multipart message with a plain-text fallback:
 }
 ```
 
-Reply inside an existing thread with the values received in the inbound
-webhook:
+Reply inside an existing thread using only the normalized `message.id` received
+in the inbound webhook:
 
 ```json
 {
@@ -477,18 +477,18 @@ webhook:
   "to": "cliente@example.net",
   "subject": "Re: Seguimiento",
   "body": "Gracias por confirmar.",
-  "reply_to_message_id": "provider-message-id",
-  "thread_id": "18f4...",
-  "in_reply_to": "<original-message-id@example.net>",
-  "references": "<original-message-id@example.net>"
+  "reply_to_message_id": "provider-message-id"
 }
 ```
 
 `reply_to_message_id` is recommended. For Outlook it performs a native
 Microsoft Graph reply. For Gmail, Easyhook resolves the original Gmail message
 and preserves its thread and RFC headers. For IMAP/SMTP, it is treated as the
-original RFC Message-ID. `thread_id`, `in_reply_to`, and `references` remain
-available for explicit reconciliation.
+original RFC Message-ID.
+
+Most integrations should not send `thread_id`, `in_reply_to`, or `references`.
+They remain available only for advanced direct-API reconciliation when the
+caller already owns those provider values.
 
 Request fields:
 
@@ -500,9 +500,9 @@ Request fields:
 | `body` | yes unless `html` is present | Plain-text body and HTML fallback. |
 | `html` | no | HTML body. It is sent as multipart when `body` is also present. |
 | `reply_to_message_id` | no | Provider message ID from the inbound event. Preferred reply selector. |
-| `thread_id` | no | Provider thread ID. |
-| `in_reply_to` | no | RFC Message-ID of the parent. |
-| `references` | no | RFC references chain. |
+| `thread_id` | no | Advanced: provider thread ID when `reply_to_message_id` cannot be used. |
+| `in_reply_to` | no | Advanced: RFC Message-ID of the parent. |
+| `references` | no | Advanced: RFC references chain. |
 
 The normalized email message fields are:
 

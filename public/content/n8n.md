@@ -6,7 +6,8 @@ Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
 Gmail, Outlook, and generic IMAP/SMTP email.
 
 - `Message Action` groups cross-channel text and media actions.
-- `Send Email` uses one operation for Gmail, Outlook, and IMAP/SMTP.
+- `Send Email` and `Reply to Email` work the same way with Gmail, Outlook, and
+  IMAP/SMTP.
 - `WhatsApp Only` groups templates, Flows, consent, onboarding links, read receipts, and typing indicators.
 - Use standard or humanized WhatsApp text delivery
 - Schedule messages with Easyhook's `at` parameter
@@ -65,8 +66,8 @@ Choose **Delivery: Humanized** when you want Easyhook to mark the latest inbound
 For scheduled text, media, or templates, add:
 
 - `Schedule At`: ISO 8601 execution time
-- `Options > Client Reference`: your application identifier
-- `Options > Idempotency Key`: a stable key reused only when retrying the same scheduled send; immediate sends do not use the scheduling idempotency contract
+- `Options > Client Reference`: optional identifier from your application
+- `Options > Idempotency Key`: optional stable key used only when retrying the same scheduled send
 
 Use resource **Cancel Scheduled Message** when you need to cancel a send before processing begins. Reconciliation remains available through the Easyhook API and webhooks.
 
@@ -78,16 +79,20 @@ and add or remove reactions.
 
 - Resource: `Message Action`
 - Operation: `Send Email`
-- From: select a connected Gmail, Outlook, or IMAP/SMTP address
-- To: recipient email
+- From Email: select a connected Gmail, Outlook, or IMAP/SMTP address
+- To Email: recipient email
 - Subject: message subject
-- Body: plain-text content
-- HTML: optional rich body
+- Message: plain-text content
+- HTML Message: optional rich body
 
-To reply, map `message.id` from the Easyhook Trigger into **Reply To Message
-ID**. You can also map `message.thread_id`, `message.in_reply_to`, and
-`message.references` when explicit thread headers are needed. All three email
-providers use `POST /v1/messages/email`; a workflow does not need
+To answer an existing email, select `Reply to Email` and map `message.id` from
+the Easyhook Trigger into **Original Email ID**. Easyhook resolves the Gmail
+thread, Outlook native reply, or IMAP headers automatically. The node does not
+ask for `Thread ID`, `In-Reply-To`, or `References`.
+
+The **From Email** list contains only email accounts connected to the API-key
+organization; WhatsApp numbers and other channels are excluded. All three
+providers use `POST /v1/messages/email`, so a workflow does not need
 provider-specific branches.
 
 ### Send Read, Typing, Or Reaction
