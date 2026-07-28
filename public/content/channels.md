@@ -69,9 +69,8 @@ Easyhook usa `gmail.modify` para:
 
 No se usa información de Gmail para publicidad.
 
-La primera versión admite texto, HTML, mensajes nuevos y respuestas en el hilo
-correcto. Los adjuntos de correo todavía no están disponibles en la API
-pública.
+Easyhook admite texto, HTML, adjuntos, mensajes nuevos, respuestas en el hilo,
+reenvío, leído/no leído, archivado y borradores.
 
 Envía un correo:
 
@@ -91,6 +90,11 @@ Para responder un hilo existente envía `reply_to_message_id` con el
 `message.id` del mensaje entrante. Easyhook resuelve el hilo y los encabezados
 de Gmail automáticamente. Consulta todos los campos y ejemplos en
 [Referencia completa](/api-reference#email-gmail-outlook-and-imapsmtp).
+
+En el Inbox, el icono de filtro aparece al seleccionar una cuenta de correo.
+Gmail permite filtrar por categorías, no leídos, destacados e importantes;
+Outlook por Prioritarios, Otros y no leídos; IMAP/SMTP por no leídos y
+destacados.
 
 Al desconectar Gmail desde **Organización**, Easyhook detiene las
 notificaciones de Gmail, revoca la autorización OAuth y elimina la credencial

@@ -74,6 +74,16 @@ Email providers use the same event with email-specific fields:
     "html": "<p>I need <strong>help</strong></p>",
     "thread_id": "provider-thread-id",
     "message_id_header": "<message@example.net>",
+    "is_read": false,
+    "inference_classification": "focused",
+    "attachments": [
+      {
+        "media_asset_id": "asset_uuid",
+        "filename": "invoice.pdf",
+        "content_type": "application/pdf",
+        "size": 48210
+      }
+    ],
     "timestamp": "2026-07-27T16:37:02.000Z"
   }
 }

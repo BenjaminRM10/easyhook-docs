@@ -6,8 +6,8 @@ Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
 Gmail, Outlook, and generic IMAP/SMTP email.
 
 - `Message Action` groups cross-channel text and media actions.
-- `Send Email` and `Reply to Email` work the same way with Gmail, Outlook, and
-  IMAP/SMTP.
+- Email actions work the same way with Gmail, Outlook, and IMAP/SMTP: send,
+  reply, forward, mark read/unread, archive, and create/edit/send drafts.
 - `WhatsApp Only` groups templates, Flows, consent, onboarding links, read receipts, and typing indicators.
 - Use standard or humanized WhatsApp text delivery
 - Schedule messages with Easyhook's `at` parameter
@@ -94,6 +94,21 @@ The **From Email** list contains only email accounts connected to the API-key
 organization; WhatsApp numbers and other channels are excluded. All three
 providers use `POST /v1/messages/email`, so a workflow does not need
 provider-specific branches.
+
+To attach files, add entries under **Attachments** and select each incoming
+binary field. Easyhook uses the binary file name and MIME type automatically;
+the optional overrides are only needed when the incoming binary metadata is
+incomplete.
+
+Other email operations:
+
+- `Forward Email`: map the trigger's `message.id`, choose the destination, and
+  optionally add a note.
+- `Update Email`: map `message.id` and choose read, unread, or archive.
+- `Create Email Draft`: enter recipient, subject, message, optional HTML, and
+  attachments.
+- `Edit Email Draft`: provide the returned Draft ID and replacement content.
+- `Send Email Draft`: provide the Draft ID and connected From Email.
 
 ### Send Read, Typing, Or Reaction
 

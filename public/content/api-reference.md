@@ -503,6 +503,70 @@ Request fields:
 | `thread_id` | no | Advanced: provider thread ID when `reply_to_message_id` cannot be used. |
 | `in_reply_to` | no | Advanced: RFC Message-ID of the parent. |
 | `references` | no | Advanced: RFC references chain. |
+| `attachments` | no | Up to 10 files and 20 MB decoded total. Supports JPEG, PNG, WebP, MP4, 3GPP, AAC, M4A, MP3, AMR, OGG, PDF, plain text, Word, Excel, and PowerPoint. Each item uses `filename`, `content_type`, and base64 `content_base64`. |
+
+Example with attachments:
+
+```json
+{
+  "from": "soporte@example.com",
+  "to": "cliente@example.net",
+  "subject": "Documentos",
+  "body": "Adjuntamos los archivos solicitados.",
+  "attachments": [
+    {
+      "filename": "reporte.pdf",
+      "content_type": "application/pdf",
+      "content_base64": "JVBERi0xLjc..."
+    }
+  ]
+}
+```
+
+### Forward, Message State, And Drafts
+
+Forward an existing email while preserving its original content and
+attachments:
+
+```http
+POST /v1/messages/email/forward
+```
+
+```json
+{
+  "from": "soporte@example.com",
+  "to": "equipo@example.com",
+  "message_id": "provider-message-id",
+  "note": "¿Puedes revisar este caso?"
+}
+```
+
+Mark an email as read, unread, or archived:
+
+```http
+POST /v1/email/actions
+```
+
+```json
+{
+  "from": "soporte@example.com",
+  "message_id": "provider-message-id",
+  "action": "mark_read"
+}
+```
+
+Valid actions are `mark_read`, `mark_unread`, and `archive`.
+
+Drafts use the same normalized content and attachment fields:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/v1/email/drafts` | Create a draft. |
+| `PUT` | `/v1/email/drafts/{draft_id}` | Replace a draft. |
+| `POST` | `/v1/email/drafts/{draft_id}/send` | Send a draft; body only requires `from`. |
+
+All routes resolve the provider from `from`. The API key must own that exact
+connected address; otherwise Easyhook returns `email_channel_not_found`.
 
 The normalized email message fields are:
 
@@ -515,6 +579,11 @@ The normalized email message fields are:
 | `message.message_id_header` | RFC Message-ID used by `in_reply_to`. |
 | `message.in_reply_to` | RFC reply header from the received message. |
 | `message.references` | RFC references chain. |
+| `message.attachments` | Stored attachment metadata: `media_asset_id`, `filename`, `content_type`, and `size`. Download through the authenticated Easyhook media route. |
+| `message.is_read` | Current read state when the provider exposes it. |
+| `message.label_ids` | Gmail labels used for category, unread, starred, and important filters. |
+| `message.inference_classification` | Outlook `focused` or `other` classification. |
+| `message.flags` | IMAP flags such as `\Seen` and `\Flagged`. |
 
 Customer API email sends are billed as one outbound operation. Incoming email
 and webhook delivery are free. Sends made directly from the Easyhook portal
@@ -554,8 +623,8 @@ Easyhook requests `openid`, `userinfo.email`, `userinfo.profile`, and
 `gmail.modify`. The restricted Gmail scope is used to receive mail, send
 replies, preserve threads, and maintain message state in the shared Easyhook
 Inbox. Easyhook does not use Gmail data for advertising. The first Gmail
-release supports plain text, HTML, new messages, and threaded replies. Email
-attachments are not yet exposed through the public API.
+release supports plain text, HTML, attachments, new messages, threaded
+replies, state changes, forwarding, and drafts.
 
 Disconnecting a Gmail channel from **Organization** stops its Gmail watch,
 revokes the stored OAuth grant, and removes the encrypted credential from
@@ -578,8 +647,9 @@ from the current IMAP UID and polls every 60 seconds, so only messages received
 after connection are imported. Disconnecting stops polling and deletes the
 encrypted credentials.
 
-Attachments are not yet exposed through the public email API. Received HTML is
-untrusted input; sanitize it or render it in a sandboxed document.
+Received HTML is untrusted input; sanitize it or render it in a sandboxed
+document. Incoming attachments are stored privately and exposed only through
+authenticated media downloads.
 
 ### Google verification recording
 
