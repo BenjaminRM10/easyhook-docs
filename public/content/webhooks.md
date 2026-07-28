@@ -3,13 +3,13 @@
 Last updated: 2026-07-27
 
 Easyhook sends one compact JSON object per event. The format is shared by
-WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, and IMAP/SMTP email.
+WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email, and Mercado Libre.
 
 ## Principles
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
 - `channel` is `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
-  `outlook`, or `imap_smtp`.
+  `outlook`, `imap_smtp`, or `mercadolibre`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
 - Provider-specific details used for debugging remain in the `X-Easyhook-Provider-Event` header.
@@ -92,6 +92,30 @@ Email providers use the same event with email-specific fields:
 `channel` can instead be `gmail` or `imap_smtp`. Treat `message.html` as
 untrusted input and render it only after sanitization or inside a sandbox.
 
+Mercado Libre questions and post-sale messages use the same envelope:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "mercadolibre",
+  "account": { "id": "123456789", "name": "EASYHOOK_STORE" },
+  "contact": { "id": "question:987654321", "name": "Comprador 456789" },
+  "message": {
+    "id": "question:987654321",
+    "direction": "in",
+    "type": "text",
+    "text": "¿Todavía está disponible?",
+    "from": "question:987654321",
+    "to": "123456789",
+    "timestamp": "2026-07-28T04:00:00.000Z"
+  }
+}
+```
+
+Use `contact.id` or `message.from` as `to` when replying. Product questions
+arrive as `question:<id>` and post-sale conversations as `pack:<id>`.
+
 ## Public Subscription API
 
 The API key determines the organization. Never send `tenant_id`.
@@ -137,7 +161,7 @@ Creation fields:
 | --- | --- | --- |
 | `name` | yes | Human-readable subscription name. |
 | `url` | yes | Public HTTPS destination. HTTP and invalid URLs are rejected. |
-| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, or `*`. Defaults to WhatsApp. |
+| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or `*`. Defaults to WhatsApp. |
 | `events` | no | Event filters. Empty behaves as `*`. Obtain compatible choices from `/v1/webhooks/options`. |
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
@@ -180,7 +204,7 @@ Available scopes:
 { "type": "channel", "from": "instagram_alias" }
 ```
 
-For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger, Instagram, Telegram, Gmail, Outlook, or IMAP/SMTP alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
+For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, or Mercado Libre alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
 
 WhatsApp scope numbers follow the same international normalization as the
 message API: E.164 or digits-only with a country calling code, common visual
@@ -195,7 +219,7 @@ curl "https://api.easyhook.dev/v1/webhooks/options?provider=whatsapp&scope_type=
 ```
 
 `provider` accepts `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
-`outlook`, `imap_smtp`, or `*`. `scope_type` accepts `organization`, `waba`,
+`outlook`, `imap_smtp`, `mercadolibre`, or `*`. `scope_type` accepts `organization`, `waba`,
 `phone`, or `channel`. The response filters incompatible combinations and
 returns `providers`, `events`, `scope_types`, and `scope_identifiers`.
 Connected-account values are public numbers or aliases that can be sent as
@@ -223,6 +247,7 @@ Providers:
 - `gmail`
 - `outlook`
 - `imap_smtp`
+- `mercadolibre`
 - `*`
 
 Common event filters:

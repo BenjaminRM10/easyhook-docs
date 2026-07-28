@@ -3,7 +3,7 @@
 Verified n8n community node for using Easyhook.
 
 Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
-Gmail, Outlook, and generic IMAP/SMTP email.
+Gmail, Outlook, generic IMAP/SMTP email, and Mercado Libre.
 
 - `Message Action` groups cross-channel text and media actions.
 - Email actions work the same way with Gmail, Outlook, and IMAP/SMTP: send,
@@ -52,6 +52,16 @@ n8n registers its Production URL in Easyhook automatically and stores the HMAC s
 WhatsApp uses the same three levels as the Easyhook portal: **Entire Organization → WABA → WhatsApp Number**. Selecting a WABA receives matching events from all numbers connected to it. Meta Business Portfolios stay internal and never appear as n8n scopes.
 
 The trigger outputs the normalized Easyhook webhook JSON directly.
+
+### Mercado Libre
+
+Choose `Mercado Libre` in the Easyhook Trigger to receive product questions
+and post-sale messages. To reply, use **Message Action > Send Text**, select the
+connected seller as **From**, and map `contact.id` from the trigger into
+**To**. The value will be `question:<id>` or `pack:<id>`.
+
+Do not replace that destination with a buyer ID. Mercado Libre requires the
+question or sale pack context and does not permit arbitrary conversations.
 
 ### Send Text
 

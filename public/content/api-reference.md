@@ -384,7 +384,7 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages?from=...` | `messages:read` | Read recent inbound and outbound WhatsApp messages with one contact. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp, Messenger, Instagram, or Telegram. WhatsApp supports scheduled `at`. |
+| `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. WhatsApp supports scheduled `at`. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Send WhatsApp text after read, human-like delay, typing indicator, and reply. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark an inbound WhatsApp message as read. |
@@ -701,6 +701,36 @@ storage and a public Easyhook download URL are not part of the first release.
 
 Disconnecting a Telegram channel removes its protected Telegram webhook before
 Easyhook deletes the encrypted bot token.
+
+## Mercado Libre
+
+Connect a seller account from **Connect > Mercado Libre**. OAuth credentials
+are encrypted and the rotating refresh token is updated automatically.
+
+Mercado Libre uses the standard text endpoint. The sender can be the nickname,
+seller ID, or `ml_<seller_id>`. The destination must come from a previous
+incoming event:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/text \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "ml_123456789",
+    "to": "pack:2000001234567890",
+    "body": "Tu compra está lista para continuar."
+  }'
+```
+
+| Destination | Action |
+| --- | --- |
+| `question:<id>` | Answer a product question. |
+| `pack:<id>` | Reply to a post-sale conversation. |
+
+Post-sale text is limited to 350 characters. Arbitrary buyer IDs are rejected
+because Mercado Libre requires question or pack context. Incoming messages are
+delivered as normalized `message.received` events with
+`channel: "mercadolibre"`.
 
 ## Conversations And Recent Messages
 

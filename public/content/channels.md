@@ -1,9 +1,65 @@
 # Canales
 
-Easyhook reúne WhatsApp, Messenger, Instagram, Telegram y correo bajo una misma
+Easyhook reúne WhatsApp, Messenger, Instagram, Telegram, correo y Mercado Libre bajo una misma
 organización, API key, wallet, Inbox y sistema de webhooks. El correo puede
 conectarse mediante Gmail, Outlook o IMAP/SMTP. Cada envío usa `from` para
 resolver el canal correcto dentro de la organización dueña de la API key.
+
+## Mercado Libre
+
+Mercado Libre se conecta con OAuth. Easyhook solicita únicamente acceso de
+lectura a la cuenta y acceso de lectura/escritura a comunicaciones pre y
+posventa.
+
+1. En Easyhook abre **Conectar > Mercado Libre**.
+2. Selecciona el país de la cuenta.
+3. Inicia sesión en Mercado Libre y autoriza Easyhook.
+4. Al regresar al portal, la cuenta aparece como un canal disponible en Inbox,
+   API y Webhooks.
+
+Easyhook recibe preguntas de publicaciones, mensajes posventa iniciados por un
+comprador y notificaciones de lectura. No se pueden iniciar conversaciones
+arbitrarias. Para responder, usa el destino normalizado incluido en el evento:
+
+- `question:<id>` responde una pregunta.
+- `pack:<id>` responde una conversación posventa.
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/text \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "ml_123456789",
+    "to": "question:987654321",
+    "body": "Sí, todavía está disponible."
+  }'
+```
+
+Los mensajes posventa admiten hasta 350 caracteres. Easyhook rota
+automáticamente el refresh token y cifra las credenciales. Mercado Libre no
+usa la ventana de servicio de 24 horas de WhatsApp. La primera versión del
+canal procesa texto; los adjuntos de Mercado Libre todavía no se exponen como
+media reutilizable de Easyhook.
+
+### Configuración de la aplicación
+
+Registra estos valores exactos:
+
+- Redirect URI:
+  `https://api.easyhook.dev/v1/channels/mercadolibre/oauth/callback`
+- Notificaciones callback URL:
+  `https://api.easyhook.dev/v1/channels/mercadolibre/webhook`
+- Flujos OAuth: **Authorization Code** y **Refresh Token**.
+- PKCE: activado.
+- Negocio: **Mercado Libre**.
+- Usuarios: lectura.
+- Comunicaciones pre y post ventas: lectura y escritura.
+- Tópicos: `questions`, `messages.created` y `messages.read`.
+
+No habilites Client Credentials, publicaciones, publicidad, facturación,
+métricas, promociones, ventas/envíos ni otros tópicos si Easyhook se usará
+solamente para mensajería. No marques la app como certificada hasta recibir la
+certificación formal de Mercado Libre.
 
 ## Telegram
 
@@ -151,7 +207,8 @@ Texto breve para justificar `gmail.modify`:
 ## Webhooks multicanal
 
 En **Webhooks** puedes suscribirte a toda la organización o a un canal
-específico. Selecciona `telegram`, `gmail`, `outlook` o `imap_smtp` y
+específico. Selecciona `telegram`, `gmail`, `outlook`, `imap_smtp` o
+`mercadolibre` y
 `message.*` para recibir mensajes nuevos. El JSON mantiene el mismo contrato
 normalizado:
 
