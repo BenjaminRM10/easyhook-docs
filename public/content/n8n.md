@@ -5,11 +5,13 @@ Verified n8n community node for using Easyhook.
 Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
 Gmail, Outlook, generic IMAP/SMTP email, and Mercado Libre.
 
-- `Message Action` groups cross-channel text and media actions.
-- Email actions work the same way with Gmail, Outlook, and IMAP/SMTP: send,
+- `Message Action` groups cross-channel text and media sends.
+- `Message Control` groups read, typing, reply, and reaction actions and only
+  lists senders that support the selected control.
+- `Email Only` works the same way with Gmail, Outlook, and IMAP/SMTP: send,
   reply, forward, mark read/unread, archive, and create/edit/send drafts.
-- `WhatsApp Only` groups templates, Flows, consent, onboarding links, read receipts, and typing indicators.
-- Use standard or humanized WhatsApp text delivery
+- `WhatsApp Only` groups templates, Flows, consent, and onboarding links.
+- Use standard or humanized delivery with WhatsApp, Messenger, Instagram, and Telegram.
 - Schedule messages with Easyhook's `at` parameter
 - Upload reusable media and send it later by `media_name`
 - List/sync templates and media
@@ -67,29 +69,40 @@ question or sale pack context and does not permit arbitrary conversations.
 
 - Resource: `Message Action`
 - Operation: `Send Text`
-- From: `5218661479075`
+- Channel: select a connected channel
 - To: `5215660069997`
 - Body: `Hello from n8n`
 
-Choose **Delivery: Humanized** when you want Easyhook to mark the latest inbound WhatsApp message as read, wait a human-like read/typing delay, show typing, and then send the text. If you already know the inbound WhatsApp `wamid`, put it in **Inbound Message ID**; otherwise Easyhook uses the latest inbound message from `To`.
+The channel selector stores the same provider-native identifier delivered as
+`account.id` by Easyhook webhooks. Map it directly without adding `page_` or
+`ig_`. WhatsApp also accepts its Meta Phone Number ID.
 
-For scheduled text, media, or templates, add:
+Choose **Delivery: Humanized** when you want Easyhook to apply the read/typing
+sequence supported by the selected provider before sending. WhatsApp can use
+the latest inbound `wamid`; Telegram uses typing without fabricating a read
+receipt.
+
+For scheduled text, media, or WhatsApp templates, add:
 
 - `Schedule At`: ISO 8601 execution time
 - `Options > Client Reference`: optional identifier from your application
 - `Options > Idempotency Key`: optional stable key used only when retrying the same scheduled send
 
+Text and media scheduling works with WhatsApp, Messenger, Instagram, and
+Telegram. Mercado Libre supports scheduled text. Email scheduling is not part
+of the current public contract.
+
 Use resource **Cancel Scheduled Message** when you need to cancel a send before processing begins. Reconciliation remains available through the Easyhook API and webhooks.
 
 Under **WhatsApp Only** you can also create an onboarding link, create and send
 that link, choose WhatsApp Coexistence or WhatsApp API, send the consent Flow,
-and add or remove reactions.
+or record opt-in/opt-out evidence collected by a website or CRM.
 
 ### Send Email
 
-- Resource: `Message Action`
+- Resource: `Email Only`
 - Operation: `Send Email`
-- From Email: select a connected Gmail, Outlook, or IMAP/SMTP address
+- Email: select a connected Gmail, Outlook, or IMAP/SMTP address
 - To Email: recipient email
 - Subject: message subject
 - Message: plain-text content
@@ -100,7 +113,7 @@ the Easyhook Trigger into **Original Email ID**. Easyhook resolves the Gmail
 thread, Outlook native reply, or IMAP headers automatically. The node does not
 ask for `Thread ID`, `In-Reply-To`, or `References`.
 
-The **From Email** list contains only email accounts connected to the API-key
+The email list contains only email accounts connected to the API-key
 organization; WhatsApp numbers and other channels are excluded. All three
 providers use `POST /v1/messages/email`, so a workflow does not need
 provider-specific branches.
@@ -120,14 +133,17 @@ Other email operations:
 - `Edit Email Draft`: provide the returned Draft ID and replacement content.
 - `Send Email Draft`: provide the Draft ID and connected From Email.
 
-### Send Read, Typing, Or Reaction
+### Read, Typing, Reply, Or Reaction
 
-- Resource: `WhatsApp Only`
-- Operation: `Send Read Receipt`, `Send Typing Indicator`, or `Send Reaction`
-- From: your WhatsApp sender number
-- Inbound Message ID: the inbound WhatsApp `wamid`
+- Resource: `Message Control`
+- Operation: `Mark as Read`, `Show Typing`, `Reply`, or `React`
+- Channel: select a compatible connected sender
+- Message ID: map the normalized webhook `message.id`
 
-For reactions, select the recipient and emoji. Leave the emoji empty to remove the current reaction.
+WhatsApp supports all four controls. Messenger and Instagram support read,
+typing, and reply. Telegram supports typing, reply, and reaction. Unsupported
+provider/operation pairs are omitted from the sender list and rejected by the
+API without billing.
 
 ### Send Reusable Media
 
@@ -135,21 +151,34 @@ First upload media:
 
 - Resource: `Media`
 - Operation: `Upload`
-- From: your WhatsApp sender number
 - Name: `promo_image`
 - Type: `Image`
 - Source: `Binary Property`
 - Binary Property: `data`
 
-Then send it:
+The asset belongs to the Easyhook organization and can be reused by every
+compatible connected channel. Then send it:
 
 - Resource: `Message Action`
 - Operation: `Send Media`
-- From: your WhatsApp sender number
+- Channel: select a compatible connected channel
 - To: customer WhatsApp ID
 - Type: `Image`
 - Media Reference Type: `Reusable Media Name`
 - Media Name: `promo_image`
+
+### Download Incoming Media
+
+Incoming webhook URLs are private. Add:
+
+- Resource: `Media`
+- Operation: `Download`
+- Media URL: `{{$json.message.media.url}}`
+- Output Binary Field: `data`
+
+The node authenticates with the Easyhook credential and returns n8n binary
+data. Opening the URL directly in a browser without authorization is expected
+to fail.
 
 ### Send Template
 

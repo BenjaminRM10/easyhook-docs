@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-07-27
+Last updated: 2026-07-29
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -139,12 +139,23 @@ the corresponding provider avatar the next time its integrations are loaded.
 Chatwoot still displays its standard API-channel icon in the sidebar; Chatwoot
 Cloud does not expose an API setting to replace that small channel-type icon.
 
+Chatwoot provisioning supports WhatsApp, Messenger, Instagram, Telegram,
+Gmail, Outlook, generic IMAP/SMTP accounts, and Mercado Libre. Each selected
+sender receives its own Chatwoot inbox so contacts and conversations cannot
+cross channel boundaries.
+
 ### Behavior
 
 - Live inbound text and media create or reuse a Chatwoot contact and
   conversation.
 - Public outgoing agent messages are sent through the connected Easyhook
   sender.
+- Gmail, Outlook, and IMAP/SMTP replies preserve the original subject and
+  provider thread whenever that context is available. Attachments are fetched
+  privately from Chatwoot, validated, and sent through the connected mailbox.
+- Telegram replies are sent through the selected bot. Mercado Libre replies
+  follow the question or post-purchase conversation represented by the
+  Easyhook contact identifier.
 - WhatsApp delivery states (`sent`, `delivered`, `read`, and `failed`) update
   the corresponding outgoing message in Chatwoot. Status correlation starts
   with messages sent after the integration version that stores the provider
@@ -160,6 +171,8 @@ Cloud does not expose an API setting to replace that small channel-type icon.
   normal Easyhook outbound operations.
 - WhatsApp free-form replies still require an open customer-service window.
   Outside that window, send an approved template through Easyhook.
+- Email and Telegram do not use WhatsApp's 24-hour customer-service window.
+  Provider-specific delivery and anti-spam policies still apply.
 - Contacts and coexistence history are imported only when an organization
   administrator requests them from **Integrations > Chatwoot**.
 - Delivery is idempotent by Easyhook event ID and Chatwoot message ID. Webhook
@@ -232,7 +245,6 @@ Credential setup:
 | Field | Value |
 | --- | --- |
 | API Key | Your Easyhook API key, for example `eh_live_xxx`. |
-| API Base URL | `https://api.easyhook.dev` |
 
 The credential test calls `GET /v1/me`, so it only verifies that the API key is valid and can identify the organization.
 
@@ -240,32 +252,37 @@ Available nodes:
 
 | Node | Purpose |
 | --- | --- |
-| `Easyhook` | Sends messages, sends templates, sends WhatsApp Flows, uploads/list/deletes reusable media, syncs/lists templates, and cancels scheduled messages. |
+| `Easyhook` | Sends messages, controls conversations, handles email-only actions, sends WhatsApp templates/Flows, manages organization media, downloads private incoming media, and cancels scheduled messages. |
 | `Easyhook Trigger` | Receives Easyhook webhook deliveries. Workflow activation registers the n8n Production URL automatically through `/v1/webhooks`. |
 
 Main `Easyhook` operations:
 
 | Resource | Operation | API endpoint used |
 | --- | --- | --- |
-| Message | Send Text | `POST /v1/messages/text` |
-| Message | Send Text + Humanized Delivery | `POST /v1/messages/humanized-text` |
-| Message | Send Read Receipt | `POST /v1/messages/read` |
-| Message | Reply to WhatsApp Message | `POST /v1/messages/reply` |
-| Message | Send Typing Indicator | `POST /v1/messages/typing` |
-| Message | Send Media | `POST /v1/messages/media` |
-| Message | Send Template | `POST /v1/messages/template` |
-| Message | Send Flow | `POST /v1/messages/flow` |
+| Message Action | Send Text | `POST /v1/messages/text` |
+| Message Action | Send Text + Humanized Delivery | `POST /v1/messages/humanized-text` |
+| Message Control | Mark as Read | `POST /v1/messages/read` |
+| Message Control | Reply | `POST /v1/messages/reply` |
+| Message Control | Show Typing | `POST /v1/messages/typing` |
+| Message Control | React | `POST /v1/messages/reaction` |
+| Message Action | Send Media | `POST /v1/messages/media` |
+| WhatsApp Only | Send Template | `POST /v1/messages/template` |
+| WhatsApp Only | Send Flow | `POST /v1/messages/flow` |
+| WhatsApp Only | Record Opt-In or Opt-Out | `POST /v1/consent` |
 | Media | Upload | `POST /v1/media` |
-| Media | List | `GET /v1/media?from=...` |
+| Media | List | `GET /v1/media` |
+| Media | Download | `GET /v1/media/{id}/download` |
 | Media | Delete | `DELETE /v1/media/{id}` |
 | Template | List | `GET /v1/templates?from=...` |
 | Template | Sync From Meta | `POST /v1/templates/sync` |
-| Scheduled Message | Get | `GET /v1/scheduled-messages/{id}` |
-| Scheduled Message | Cancel | `DELETE /v1/scheduled-messages/{id}` |
+| Cancel Scheduled Message | Cancel | `DELETE /v1/scheduled-messages/{id}` |
+| Email Only | Send / Reply | `POST /v1/messages/email` |
+| Email Only | Forward | `POST /v1/messages/email/forward` |
+| Email Only | Archive / Mark Read / Mark Unread | `POST /v1/email/actions` |
 
 Template sending in n8n defaults to manual entry because it is the most reliable path across self-hosted n8n environments:
 
-1. Choose `Resource: Message`.
+1. Choose `Resource: WhatsApp Only`.
 2. Choose `Operation: Send Template`.
 3. Keep `Template Source: Enter Manually`.
 4. Enter the approved template name and language code.
@@ -283,9 +300,16 @@ For webhooks in n8n:
 
 The node registers and removes the subscription automatically. It stores the one-time HMAC secret in n8n private workflow data and validates every delivery. No portal webhook or manual secret configuration is required.
 
+When a webhook contains `message.media.url`, the URL is intentionally private.
+Add an `Easyhook` node with `Resource: Media` and `Operation: Download`, map
+`{{$json.message.media.url}}` into `Media URL`, and choose the output binary
+field (default: `data`). The node authenticates the download with the same
+Easyhook credential and emits n8n binary data for subsequent file, storage, or
+AI nodes.
+
 For a WhatsApp Business App history import, choose `Provider: WhatsApp` and `Event: Coexistence history (history.*)`, then select the organization, WABA, or number scope and activate the workflow **before** connecting the coexistence phone or requesting synchronization. `message.*` does not include historical imports. Easyhook sends batches of at most 100 events; the n8n trigger expands each batch into one output item per normalized event.
 
-For WhatsApp, Easyhook exposes one consistent hierarchy in the portal, API webhooks, and n8n: **Organization → WABA → Number**. Meta Business Portfolios remain internal onboarding metadata. Templates, Flows, reusable media, and consent configuration belong to a WABA; conversations and customer-service windows belong to a number; contacts and consent evidence are isolated between WABAs.
+For WhatsApp, Easyhook exposes one consistent hierarchy in the portal, API webhooks, and n8n: **Organization → WABA → Number**. Meta Business Portfolios remain internal onboarding metadata. Templates, Flows, and consent configuration belong to a WABA; reusable media belongs to the Easyhook organization and can be sent through any compatible connected channel; conversations and customer-service windows belong to a number; contacts and consent evidence are isolated between WABAs.
 
 Do not send `tenant_id` to public endpoints. Easyhook resolves the tenant from the API key. If a request includes `tenant_id`, the API returns:
 
@@ -327,7 +351,7 @@ Included media quotas in V1:
 | Received chat media storage | `100 GB / tenant` |
 | Received chat media retention | `6 months` |
 
-Media transfer includes customer API downloads and Easyhook-hosted reusable media served to Meta when a customer sends by `media_name`. Received chat media is stored for up to `6 months`; storage is included until the tenant has more than `100 GB` of active received media. Reusable media does not expire; storage is included up to `1 GB` per WABA. Template media is managed separately.
+Media transfer includes customer API downloads and Easyhook-hosted reusable media served to providers when a customer sends by `media_name`. Received chat media is stored for up to `6 months`; storage is included until the tenant has more than `100 GB` of active received media. Reusable media does not expire; storage is included up to `1 GB` per organization. Template media is managed separately.
 
 Media overages are charged monthly from the organization wallet by a scheduled Supabase cron job. The cron runs on the first day of each month and bills the previous month using the idempotent admin billing function:
 
@@ -360,18 +384,20 @@ If no `Idempotency-Key` is sent, Easyhook treats each HTTP request as a separate
 
 USD wallets use a fractional accumulator because one API operation costs `0.001 USD`, one tenth of a cent. Easyhook deducts one USD cent every ten billable operations while preserving exact operation-level pricing. A zero USD balance blocks the first new billable operation; it does not grant fractional calls on credit.
 
-Manual MXN top-ups can be done per organization/tenant by an Easyhook admin in Supabase using the audited SQL function:
+Manual MXN or USD top-ups must be performed with the local Easyhook admin CLI.
+It resolves the public organization reference, verifies the fixed wallet
+currency, requires a payment reference and uses the audited, idempotent wallet
+credit function:
 
-```sql
-select public.easyhook_credit_wallet(
-  'TENANT_UUID',
-  50000,
-  'manual-topup-2026-07-07-transfer-001',
-  '500.00 MXN bank transfer'
-);
+```bash
+easyhook recharge 500 MXN to EH-130FF0EC \
+  --reference "SPEI-20260729-001"
 ```
 
-`p_amount_cents` is MXN cents, so `50000` means `500.00 MXN`.
+Run the same command with `--dry-run` to validate the organization, project,
+currency and resulting balance without writing. Setup and security details are
+documented in [`docs/admin/wallet-cli.md`](../admin/wallet-cli.md). Admins must
+not edit `wallets.balance_cents` directly.
 
 ## Endpoint Index
 
@@ -380,23 +406,25 @@ Recommended customer API endpoints:
 | Method | Endpoint | Scope | Use |
 | --- | --- | --- | --- |
 | `GET` | `/v1/me` | any valid key | Validate an API key and inspect its tenant/scopes. Useful for n8n credential tests. |
+| `GET` | `/v1/senders` | any valid key | List provider-native sender identifiers. Use `account_id` as `from`. |
 | `GET` | `/v1/conversations?from=...` | `messages:read` | List recent WhatsApp conversations for one tenant-owned sender. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages?from=...` | `messages:read` | Read recent inbound and outbound WhatsApp messages with one contact. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/text` | `messages:write` | Send text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. WhatsApp supports scheduled `at`. |
-| `POST` | `/v1/messages/email` | `messages:write` | Send or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
-| `POST` | `/v1/messages/humanized-text` | `messages:write` | Send WhatsApp text after read, human-like delay, typing indicator, and reply. |
-| `POST` | `/v1/messages/read` | `messages:write` | Mark an inbound WhatsApp message as read. |
-| `POST` | `/v1/messages/reply` | `messages:write` | Send a contextual WhatsApp text reply using the original `message_id`. |
-| `POST` | `/v1/messages/typing` | `messages:write` | Show WhatsApp typing indicator for an inbound message. |
-| `POST` | `/v1/messages/media` | `messages:write` | Send media. WhatsApp supports `media_name`, Meta media `id`, public `link`, and scheduled `at`; Messenger/Instagram support `id` or public `link`. |
+| `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. |
+| `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
+| `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram using only controls supported by that provider. |
+| `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, or Instagram. |
+| `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, or Telegram. |
+| `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, or Telegram. |
+| `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on WhatsApp or Telegram. |
+| `POST` | `/v1/messages/media` | `messages:write` | Send or schedule media through WhatsApp, Messenger, Instagram, or Telegram by organization media name or compatible provider reference. |
 | `POST` | `/v1/messages/template` | `messages:write` | Send or schedule approved WhatsApp templates. |
 | `POST` | `/v1/messages/flow` | `messages:write` | Send a published WhatsApp Flow inside the 24-hour window. |
 | `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Reconcile a scheduled message, its WAMID, execution failure, and latest Meta status. Existing `messages:write` keys remain compatible. |
 | `DELETE` | `/v1/scheduled-messages/{id}` | `messages:write` | Cancel a scheduled message that has not started processing. |
-| `POST` | `/v1/media` | `media:write` | Upload permanent reusable WhatsApp media for the WABA behind `from`. |
-| `GET` | `/v1/media?from=...` | `media:read` | List reusable WhatsApp media for a WABA. |
+| `POST` | `/v1/media` | `media:write` | Upload permanent reusable media for the API-key organization. |
+| `GET` | `/v1/media` | `media:read` | List the organization's reusable media library. |
 | `GET` | `/v1/media/{id}/download` | `media:read` | Download Easyhook-hosted media bytes for customer CRMs/inboxes. |
 | `DELETE` | `/v1/media/{id}` | `media:write` | Delete reusable media. |
 | `GET` | `/v1/templates?from=...` | `templates:read` | List WhatsApp templates for the WABA behind `from`. |
@@ -416,7 +444,6 @@ Recommended customer API endpoints:
 | `POST` | `/v1/consent` | `messages:write` | Record consent evidence, or send the default opt-in/opt-out Flow when `mode` is provided. |
 | `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted WhatsApp onboarding session owned by the API key tenant. |
 | `POST` | `/v1/onboarding/sessions/send` | `onboarding:write` | Create an onboarding session and send its URL from an authorized WhatsApp number. |
-| `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on a WhatsApp message. |
 | `GET` | `/v1/webhooks` | any valid key | List webhook subscriptions owned by the API-key organization. |
 | `GET` | `/v1/webhooks/options?provider=...&scope_type=...` | any valid key | Discover compatible providers, event filters, scopes, and public sender identifiers. |
 | `POST` | `/v1/webhooks` | any valid key | Create a webhook subscription; its HMAC/auth secret is returned once. |
@@ -433,13 +460,13 @@ Portal/admin endpoints exist for onboarding, API-key management, webhook managem
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
 
-## Email: Gmail, Outlook, And IMAP/SMTP
+## Gmail
 
-Email is represented as a normal Easyhook channel. The organization API key
-selects the organization and `from` must be the exact connected address.
+Gmail is represented as a normal Easyhook channel. The organization API key
+selects the organization and `from` must be the exact connected Gmail address.
 Incoming email is stored in the shared Inbox and delivered through customer
-webhooks as `message.received`. Gmail, Outlook, and generic IMAP/SMTP accounts
-share the same public send contract.
+webhooks as `message.received`. Messages sent from Gmail outside Easyhook are
+stored as outbound events without creating a second customer conversation.
 
 Send a new plain-text email:
 
@@ -468,8 +495,8 @@ creates a multipart message with a plain-text fallback:
 }
 ```
 
-Reply inside an existing thread using only the normalized `message.id` received
-in the inbound webhook:
+Reply inside an existing thread using the normalized `message.id` received in
+the inbound webhook:
 
 ```json
 {
@@ -481,41 +508,38 @@ in the inbound webhook:
 }
 ```
 
-`reply_to_message_id` is recommended. For Outlook it performs a native
-Microsoft Graph reply. For Gmail, Easyhook resolves the original Gmail message
-and preserves its thread and RFC headers. For IMAP/SMTP, it is treated as the
-original RFC Message-ID.
+`reply_to_message_id` is the normalized `message.id` from the inbound webhook.
+Easyhook uses it to resolve the provider-specific reply operation. Most
+integrations should not send `thread_id`, `in_reply_to`, or `references`; those
+fields remain optional advanced controls for callers that already own the
+provider values.
 
-Most integrations should not send `thread_id`, `in_reply_to`, or `references`.
-They remain available only for advanced direct-API reconciliation when the
-caller already owns those provider values.
+The normalized Gmail message fields are:
 
-Request fields:
+| Field | Description |
+| --- | --- |
+| `message.text` | Plain-text body or a safe text fallback derived from HTML. |
+| `message.subject` | Email subject. |
+| `message.html` | Original HTML body when present. Treat it as untrusted content. |
+| `message.thread_id` | Gmail thread ID used for replies. |
+| `message.message_id_header` | RFC Message-ID used by `in_reply_to`. |
+| `message.in_reply_to` | RFC reply header from the received message. |
+| `message.references` | RFC references chain. |
+| `message.attachments` | Private attachment metadata with `media_asset_id`, file name, MIME type, and size. |
+| `message.is_read` | Provider read state. |
+| `message.label_ids` | Gmail labels used for Inbox filters. |
+| `message.inference_classification` | Outlook `focused` or `other`. |
+| `message.flags` | IMAP flags such as `\Seen` and `\Flagged`. |
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `from` | yes | Exact connected email address owned by the API-key organization. |
-| `to` | yes | Recipient email address. |
-| `subject` | yes for a new message | Subject. Replies may reuse or provide `Re:` subject text. |
-| `body` | yes unless `html` is present | Plain-text body and HTML fallback. |
-| `html` | no | HTML body. It is sent as multipart when `body` is also present. |
-| `reply_to_message_id` | no | Provider message ID from the inbound event. Preferred reply selector. |
-| `thread_id` | no | Advanced: provider thread ID when `reply_to_message_id` cannot be used. |
-| `in_reply_to` | no | Advanced: RFC Message-ID of the parent. |
-| `references` | no | Advanced: RFC references chain. |
-| `attachments` | no | Up to 10 files and 20 MB decoded total. Supports JPEG, PNG, WebP, MP4, 3GPP, AAC, M4A, MP3, AMR, OGG, PDF, plain text, Word, Excel, and PowerPoint. Each item uses `filename`, `content_type`, and base64 `content_base64`. |
-
-Example with attachments:
+`POST /v1/messages/email` accepts up to 10 attachments and 20 MB decoded in
+total. Supported formats are JPEG, PNG, WebP, MP4, 3GPP, AAC, M4A, MP3, AMR,
+OGG, PDF, plain text, Word, Excel, and PowerPoint:
 
 ```json
 {
-  "from": "soporte@example.com",
-  "to": "cliente@example.net",
-  "subject": "Documentos",
-  "body": "Adjuntamos los archivos solicitados.",
   "attachments": [
     {
-      "filename": "reporte.pdf",
+      "filename": "report.pdf",
       "content_type": "application/pdf",
       "content_base64": "JVBERi0xLjc..."
     }
@@ -523,77 +547,15 @@ Example with attachments:
 }
 ```
 
-### Forward, Message State, And Drafts
-
-Forward an existing email while preserving its original content and
-attachments:
-
-```http
-POST /v1/messages/email/forward
-```
-
-```json
-{
-  "from": "soporte@example.com",
-  "to": "equipo@example.com",
-  "message_id": "provider-message-id",
-  "note": "¿Puedes revisar este caso?"
-}
-```
-
-Mark an email as read, unread, or archived:
-
-```http
-POST /v1/email/actions
-```
-
-```json
-{
-  "from": "soporte@example.com",
-  "message_id": "provider-message-id",
-  "action": "mark_read"
-}
-```
-
-Valid actions are `mark_read`, `mark_unread`, and `archive`.
-
-Drafts use the same normalized content and attachment fields:
+Additional normalized routes:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
+| `POST` | `/v1/messages/email/forward` | Forward `message_id` to another address with an optional `note`. |
+| `POST` | `/v1/email/actions` | `mark_read`, `mark_unread`, or `archive` a message. |
 | `POST` | `/v1/email/drafts` | Create a draft. |
 | `PUT` | `/v1/email/drafts/{draft_id}` | Replace a draft. |
-| `POST` | `/v1/email/drafts/{draft_id}/send` | Send a draft; body only requires `from`. |
-
-All routes resolve the provider from `from`. The API key must own that exact
-connected address; otherwise Easyhook returns `email_channel_not_found`.
-
-The normalized email message fields are:
-
-| Field | Description |
-| --- | --- |
-| `message.text` | Plain-text body or a safe text fallback derived from HTML. |
-| `message.subject` | Email subject. |
-| `message.html` | Original HTML body when present. Treat it as untrusted content. |
-| `message.thread_id` | Provider thread ID used for replies. |
-| `message.message_id_header` | RFC Message-ID used by `in_reply_to`. |
-| `message.in_reply_to` | RFC reply header from the received message. |
-| `message.references` | RFC references chain. |
-| `message.attachments` | Stored attachment metadata: `media_asset_id`, `filename`, `content_type`, and `size`. Download through the authenticated Easyhook media route. |
-| `message.is_read` | Current read state when the provider exposes it. |
-| `message.label_ids` | Gmail labels used for category, unread, starred, and important filters. |
-| `message.inference_classification` | Outlook `focused` or `other` classification. |
-| `message.flags` | IMAP flags such as `\Seen` and `\Flagged`. |
-
-Customer API email sends are billed as one outbound operation. Incoming email
-and webhook delivery are free. Sends made directly from the Easyhook portal
-are not customer API operations and are not charged.
-
-The WhatsApp 24-hour customer-service window does not apply to email or
-Telegram. Gmail, Outlook, IMAP/SMTP, and Telegram sends are allowed at any
-time permitted by their respective providers.
-
-### Gmail
+| `POST` | `/v1/email/drafts/{draft_id}/send` | Send a draft. |
 
 Google sends Gmail changes through Pub/Sub. Easyhook acknowledges the Pub/Sub
 request immediately, resolves changes with `users.history.list`, deduplicates
@@ -630,27 +592,6 @@ Disconnecting a Gmail channel from **Organization** stops its Gmail watch,
 revokes the stored OAuth grant, and removes the encrypted credential from
 Easyhook.
 
-### Outlook
-
-Outlook connects with Microsoft OAuth using `Mail.ReadWrite`, `Mail.Send`, and
-basic identity scopes. Easyhook creates a Microsoft Graph change subscription,
-validates its random `clientState`, queues each notification, and renews the
-subscription before expiration. Disconnecting deletes the Graph subscription,
-revokes the local grant, and removes the encrypted credential.
-
-### Generic IMAP/SMTP
-
-Generic email verifies IMAP receive access and SMTP send access before saving
-the channel. TLS or STARTTLS is mandatory, certificate verification is enabled,
-and private/reserved hosts are rejected after DNS resolution. Easyhook starts
-from the current IMAP UID and polls every 60 seconds, so only messages received
-after connection are imported. Disconnecting stops polling and deletes the
-encrypted credentials.
-
-Received HTML is untrusted input; sanitize it or render it in a sandboxed
-document. Incoming attachments are stored privately and exposed only through
-authenticated media downloads.
-
 ### Google verification recording
 
 Record one continuous, silent screen capture with short on-screen labels:
@@ -672,6 +613,70 @@ Suggested restricted-scope justification:
 > receive and read messages in Easyhook, send new messages and threaded
 > replies, and maintain message state. Gmail data is isolated by organization,
 > encrypted in transit and at rest, and is not used for advertising.
+
+## Outlook and IMAP/SMTP
+
+Outlook and generic email accounts use the same public contract as Gmail.
+Connect Outlook with Microsoft OAuth or connect another provider with its IMAP
+and SMTP settings. After connection, use the exact email address as `from`:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/email \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "support@company.com",
+    "to": "customer@example.net",
+    "subject": "Order update",
+    "body": "Your order is ready."
+  }'
+```
+
+The same endpoint accepts `html`, `reply_to_message_id`, `thread_id`,
+`in_reply_to`, and `references` for every email provider. Use
+`reply_to_message_id` with the inbound webhook's `message.id` for the simplest
+threaded reply. Responses have one normalized shape:
+
+```json
+{
+  "ok": true,
+  "provider": "outlook",
+  "channel_id": "channel-id",
+  "message_id": "provider-message-id",
+  "thread_id": "provider-thread-id"
+}
+```
+
+Incoming messages from all email providers produce `message.received` with
+`message.subject`, `message.text`, optional `message.html`, thread headers,
+provider filter metadata, and privately stored attachments. HTML is untrusted
+input and must be sanitized or rendered inside a sandbox.
+
+Outlook subscriptions are protected with a random Microsoft Graph
+`clientState`, processed asynchronously, and renewed before expiration.
+Configure these backend secrets:
+
+- `MICROSOFT_OAUTH_CLIENT_ID`
+- `MICROSOFT_OAUTH_CLIENT_SECRET`
+- `MICROSOFT_OAUTH_STATE_SECRET`
+- `MICROSOFT_OAUTH_REDIRECT_URI` set to
+  `https://api.easyhook.dev/v1/channels/outlook/oauth/callback`
+
+The Microsoft application needs delegated `User.Read`, `Mail.ReadWrite`, and
+`Mail.Send`, plus `openid`, `profile`, `email`, and `offline_access`.
+
+IMAP/SMTP credentials are validated at connection time and stored in the
+encrypted Easyhook secret vault. Easyhook records the mailbox's current UID
+cursor, then polls only new inbox messages. Use TLS, an app password, or a
+provider-specific SMTP credential; never use a personal password when the mail
+provider supports app passwords.
+
+Customer API sends through Gmail, Outlook, and IMAP/SMTP all consume the same
+wallet operation, `message.email.send`. Sends from the Easyhook portal remain
+portal operations and do not create customer API usage charges.
+
+The WhatsApp 24-hour customer-service window does not apply to email or
+Telegram. These channels can send at any time permitted by their provider.
 
 ## Telegram
 
@@ -701,36 +706,6 @@ storage and a public Easyhook download URL are not part of the first release.
 
 Disconnecting a Telegram channel removes its protected Telegram webhook before
 Easyhook deletes the encrypted bot token.
-
-## Mercado Libre
-
-Connect a seller account from **Connect > Mercado Libre**. OAuth credentials
-are encrypted and the rotating refresh token is updated automatically.
-
-Mercado Libre uses the standard text endpoint. The sender can be the nickname,
-seller ID, or `ml_<seller_id>`. The destination must come from a previous
-incoming event:
-
-```bash
-curl -X POST https://api.easyhook.dev/v1/messages/text \
-  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "from": "ml_123456789",
-    "to": "pack:2000001234567890",
-    "body": "Tu compra está lista para continuar."
-  }'
-```
-
-| Destination | Action |
-| --- | --- |
-| `question:<id>` | Answer a product question. |
-| `pack:<id>` | Reply to a post-sale conversation. |
-
-Post-sale text is limited to 350 characters. Arbitrary buyer IDs are rejected
-because Mercado Libre requires question or pack context. Incoming messages are
-delivered as normalized `message.received` events with
-`channel: "mercadolibre"`.
 
 ## Conversations And Recent Messages
 
@@ -1048,35 +1023,43 @@ response = requests.post(
 url = response.json()["url"]
 ```
 
-## Phone Numbers
+## Sender Identifiers
 
 Use `from` as the customer-visible sender identifier. Do not use internal Supabase ids in customer integrations unless you are doing a portal/admin operation.
 
-For WhatsApp, `from` is the business phone number:
+The canonical value is the `account.id` delivered in Easyhook webhooks. The same
+value can be passed directly as `from`, regardless of provider. `GET /v1/senders`
+returns every sender available to the API key with its canonical `account_id`.
+
+For WhatsApp, use the Meta Phone Number ID from `account.id`:
+
+```json
+{ "from": "980912725115744" }
+```
+
+The connected business phone number remains accepted for convenience:
 
 ```json
 { "from": "528661479075" }
 ```
 
-For Messenger or Instagram, `from` is the channel alias/id configured by Easyhook:
+For Messenger, Instagram, and Telegram, use the provider-native `account.id`:
 
 ```json
-{ "from": "support-messenger" }
-```
-
-Instagram examples:
-
-```json
-{ "from": "benjamin_rdz" }
+{ "from": "852736564589134" }
 ```
 
 ```json
-{ "from": "ig_17841401731804358" }
+{ "from": "17841401731804358" }
+```
+
+```json
+{ "from": "8447725885" }
 ```
 
 Rules:
 
-- Always include the international country calling code. Easyhook accepts
+- For WhatsApp phone numbers, always include the international country calling code. Easyhook accepts
   E.164 (`+573001234567`) and digits-only (`573001234567`) values, plus common
   formatting with spaces, hyphens, dots, parentheses, or the `00`
   international prefix.
@@ -1084,8 +1067,12 @@ Rules:
   the same leading digits can identify a different valid country calling code.
 - The `from` sender must belong to the tenant that owns the API key.
 - Instagram usernames are passed without a leading `@`. Use `benjamin_rdz`, not `@benjamin_rdz`.
-- A raw numeric Instagram Business Account id can be confused with a WhatsApp phone number. Use its generated `ig_<INSTAGRAM_ID>` alias instead.
-- If the API key tenant does not own the number, Easyhook returns `phone_not_found`.
+- Legacy aliases such as `page_<PAGE_ID>`, `ig_<INSTAGRAM_ID>`, and
+  `telegram_<BOT_ID>` remain accepted, but new integrations should map
+  `account.id` directly.
+- If the API key tenant does not own the sender, Easyhook returns
+  `channel_or_phone_not_found` or `phone_not_found` without exposing another
+  organization's data.
 - Legacy `phone_id`, `waba_id`, and `channel_id` style inputs are still accepted where documented for internal/backward compatibility, but external customer examples should use `from`.
 - Mexico: `+52 866 147 9075`, `528661479075`, `+52 1 866 147
   9075`, and `5218661479075` resolve to the same WhatsApp identity.
@@ -1447,6 +1434,13 @@ Allowed `scope` values: `service`, `marketing`.
 
 Allowed `status` values: `opt_in`, `opt_out`, `pending_opt_out`.
 
+An `opt_in` record must include non-empty `evidence`. Store enough information
+to demonstrate what the person accepted and when, such as a form version,
+timestamp, source URL, or external submission id. Easyhook stores the evidence
+and applies the resulting consent state; it does not certify that the collection
+method satisfies Meta policy or local law. The organization using the API
+remains responsible for obtaining valid consent and honoring opt-out requests.
+
 ## Errors
 
 Common errors:
@@ -1757,15 +1751,15 @@ Required fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `from` | string | Tenant-owned WhatsApp business phone number or connected Messenger/Instagram channel alias. |
-| `to` | string | WhatsApp recipient number, Messenger PSID, or Instagram IGSID. |
+| `from` | string | Tenant-owned `account.id`, WhatsApp business phone, or backward-compatible channel alias. |
+| `to` | string | WhatsApp recipient number, Messenger PSID, Instagram IGSID, Telegram chat id, or Mercado Libre recipient id. |
 | `body` | string | Message text. |
 
 Optional fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `at` | string | ISO 8601 date/time for scheduled WhatsApp delivery. Channel scheduling is not supported yet. |
+| `at` | string | ISO 8601 date/time for scheduled delivery. Supported for WhatsApp, Messenger, Instagram, Telegram, and Mercado Libre text. |
 | `phone_id` | string | Legacy Easyhook phone row id. Prefer `from`. |
 
 Example:
@@ -1783,17 +1777,31 @@ WhatsApp success response:
 { "ok": true, "wamid": "wamid..." }
 ```
 
-Messenger/Instagram success response:
+Non-WhatsApp success response:
 
 ```json
 { "ok": true, "provider": "messenger", "channel_id": "channel_uuid", "message_id": "mid..." }
 ```
 
-## Read, Typing, And Humanized Text
+## Read, Typing, Reply, Reaction, And Humanized Text
 
-These endpoints are WhatsApp-only in V1 and use the connected phone behind `from`.
+Easyhook exposes the same endpoints across providers and rejects unsupported
+operations explicitly with HTTP `422 operation_not_supported`. Unsupported
+operations are not billed.
 
-WhatsApp read receipts and typing indicators require an inbound WhatsApp message id (`wamid`).
+| Provider | Read | Typing | Reply | Reaction | Humanized text |
+| --- | --- | --- | --- | --- | --- |
+| WhatsApp | Yes | Yes | Yes | Yes | Yes |
+| Messenger | Yes | Yes | Yes | No | Yes |
+| Instagram | Yes | Yes | Yes | No | Yes |
+| Telegram | No | Yes | Yes | Yes | Yes |
+| Gmail, Outlook, IMAP/SMTP | Use Email Only actions | No | Yes | No | No |
+| Mercado Libre | No | No | No | No | No |
+
+WhatsApp read receipts and typing indicators require an inbound WhatsApp
+message id (`wamid`). Messenger and Instagram use the provider message id.
+Telegram typing requires the destination chat id and reactions require the
+Telegram message id.
 
 Mark a message as read:
 
@@ -1819,7 +1827,9 @@ curl -X POST https://api.easyhook.dev/v1/messages/typing \
   }'
 ```
 
-WhatsApp Cloud API does not expose a customer typing webhook in Easyhook V1. Customer webhooks receive actual messages, message statuses, template updates, Flow submissions, and coexistence events.
+Humanized text applies only controls supported by the selected provider. For
+example, Telegram sends a typing action but does not fabricate a read receipt.
+WhatsApp Cloud API does not expose a customer typing webhook in Easyhook V1.
 
 ### Coexistence History
 
@@ -1986,7 +1996,7 @@ Required fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `from` | string | Tenant-owned channel alias, for example `page_<PAGE_ID>`, a Page username, `ig_<IG_BUSINESS_ID>`, an Instagram username, or a custom alias. |
+| `from` | string | Tenant-owned provider `account.id`. Legacy aliases and usernames remain accepted. |
 | `to` | string | Provider recipient id. Messenger uses PSID. Instagram uses IGSID. |
 | `body` | string | Message text. |
 
@@ -1996,7 +2006,7 @@ Example Messenger send:
 curl -X POST https://api.easyhook.dev/v1/messages/channel/text \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"support-messenger","to":"PSID_VALUE","body":"Hello from Easyhook"}'
+  -d '{"from":"852736564589134","to":"PSID_VALUE","body":"Hello from Easyhook"}'
 ```
 
 Example Instagram send:
@@ -2005,7 +2015,7 @@ Example Instagram send:
 curl -X POST https://api.easyhook.dev/v1/messages/channel/text \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"brand-instagram","to":"IGSID_VALUE","body":"Hello from Easyhook"}'
+  -d '{"from":"17841401731804358","to":"IGSID_VALUE","body":"Hello from Easyhook"}'
 ```
 
 Success response:
@@ -2106,9 +2116,16 @@ Endpoint:
 POST /v1/media
 ```
 
-Uploads private Easyhook-managed media for a WhatsApp WABA. This media is reusable, does not expire, and is addressed by a unique `name` within that WABA. Use this for media that customer applications will send repeatedly from automations, CRMs, or internal tools.
+Uploads private Easyhook-managed media for the organization that owns the API
+key. This media is reusable, does not expire, and is addressed by a unique
+`name` within the organization. Compatible connected channels can reuse the
+same asset without uploading it again.
 
-Each WABA includes `1 GB` of active reusable media storage. Reusable media over that included quota is billed monthly at `3 MXN / GB / month`. Uploading reusable media does not expire and does not block at `1 GB`; the upload response includes the current WABA usage estimate when available:
+Each organization includes `1 GB` of active reusable media storage. Reusable
+media over that included quota is billed monthly at `3 MXN / GB / month`.
+Uploading reusable media does not expire and does not block at `1 GB`; the
+upload response includes the current organization usage estimate when
+available:
 
 ```json
 {
@@ -2132,18 +2149,11 @@ Required fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `from` | string | Tenant-owned WhatsApp business phone number. Digits are preferred, but formatted numbers are accepted. |
-| `name` | string | Unique media name for this WABA. Use lowercase letters, numbers, `_`, `.`, or `-`. |
+| `name` | string | Unique media name for this organization. Use lowercase letters, numbers, `_`, `.`, or `-`. |
 | `type` | string | `image`, `video`, `audio`, `document`, or `sticker`. |
 | `file_name` | string | Original filename. |
 | `file_type` | string | MIME type. |
 | `file_base64` | string | Base64 encoded file bytes. |
-
-Optional fields:
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `phone_id` | string | Legacy Easyhook phone row id. Prefer `from`. |
 
 Supported upload limits:
 
@@ -2164,7 +2174,6 @@ curl -X POST https://api.easyhook.dev/v1/media \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d "{
-    \"from\": \"528661479075\",
     \"name\": \"logo_easyhook\",
     \"type\": \"image\",
     \"file_name\": \"logo.png\",
@@ -2199,15 +2208,17 @@ Success response:
 Endpoint:
 
 ```http
-GET /v1/media?from=528661479075
+GET /v1/media
 ```
 
-Requires `media:read`. Returns the reusable media library for the WABA behind `from`. Each item includes `download_url`, which can be fetched with the same API key.
+Requires `media:read`. Returns the reusable media library for the API-key
+organization. Each item includes `download_url`, which can be fetched with the
+same API key.
 
 Example:
 
 ```bash
-curl -X GET "https://api.easyhook.dev/v1/media?from=528661479075" \
+curl -X GET "https://api.easyhook.dev/v1/media" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -2228,6 +2239,19 @@ curl -L "https://api.easyhook.dev/v1/media/media_asset_uuid/download" \
   -H "Authorization: Bearer eh_live_xxx" \
   --output logo.png
 ```
+
+The same authenticated download pattern applies to private URLs delivered in
+incoming webhooks:
+
+```bash
+curl -L "$EASYHOOK_MEDIA_URL" \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  --output inbound-media
+```
+
+Do not expose the API key in browser HTML. Download through a trusted backend,
+n8n credential, or server-side worker. A bare browser request to the URL is
+expected to fail because incoming customer media is private.
 
 ## Delete Reusable Media
 
@@ -2258,19 +2282,19 @@ Required fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `from` | string | Tenant-owned WhatsApp business phone number. Digits are preferred, but formatted numbers are accepted. |
+| `from` | string | Tenant-owned WhatsApp `account.id` (Meta Phone Number ID) or business phone number. |
 | `to` | string | Recipient WhatsApp number. |
 | `type` | string | Media type: `image`, `video`, `audio`, `document`, or `sticker`. |
 | `media_name`, `id`, or `link` | string | Easyhook reusable media name, Meta media id, or public media URL. Exactly one is required. |
 
-Required fields for Messenger/Instagram:
+Required fields for Messenger, Instagram, and Telegram:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `from` | string | Tenant-owned Messenger or Instagram channel alias/id. |
-| `to` | string | Messenger PSID or Instagram IGSID. |
-| `type` | string | `image`, `video`, `audio`, or `file`. `document` is normalized to `file`. |
-| `id` or `link` | string | Existing provider attachment id or public HTTPS media URL. |
+| `from` | string | Tenant-owned provider `account.id`. |
+| `to` | string | Messenger PSID, Instagram IGSID, or Telegram chat ID. |
+| `type` | string | `image`, `video`, `audio`, or `file`. `document` is normalized to `file` where required. |
+| `media_name`, `id`, or `link` | string | Organization reusable media name, existing provider attachment id, or public HTTPS media URL. |
 
 Optional fields:
 
@@ -2287,7 +2311,9 @@ Notes:
 - Stickers and audio do not support captions.
 - Prefer Easyhook-managed reusable media for repeated sends. Session media can still use `id` or `link`.
 - When `media_name` is used, Easyhook creates a short-lived signed URL internally and sends that URL to Meta. Customer applications only need to know the stable `media_name`.
-- `media_name` is WhatsApp-only. Messenger and Instagram accept `id` or `link` through `/v1/messages/media`.
+- `media_name` resolves an organization-wide reusable asset. The same name can
+  be used from WhatsApp, Messenger, Instagram, or Telegram when that provider
+  supports the selected media type.
 
 Example using a link:
 

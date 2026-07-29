@@ -176,14 +176,15 @@ invalidate successfully imported events.
 | --- | --- |
 | Validate key | `GET /v1/me` |
 | Send text | `POST /v1/messages/text` |
-| Reply to a WhatsApp message | `POST /v1/messages/reply` |
+| Reply to a supported channel message | `POST /v1/messages/reply` |
 | Send multichannel text | `POST /v1/messages/send` |
-| Send humanized WhatsApp text | `POST /v1/messages/humanized-text` |
+| Send humanized multichannel text | `POST /v1/messages/humanized-text` |
 | Send media | `POST /v1/messages/media` |
 | Send template | `POST /v1/messages/template` |
 | Upload template header media | `POST /v1/templates/media` |
 | Send Flow | `POST /v1/messages/flow` |
 | Mark read / show typing | `POST /v1/messages/read`, `/v1/messages/typing` |
+| Add/remove reaction | `POST /v1/messages/reaction` |
 | List/read conversations | `GET /v1/conversations...` |
 
 For multimedia template headers, upload the approval example with `POST /v1/templates/media`. Supplying
@@ -193,7 +194,8 @@ For multimedia template headers, upload the approval example with `POST /v1/temp
 video, or document header type; document media may also set `filename`.
 | Wait for inbound reply | `GET /v1/conversations/{contact}/messages/wait...` |
 | Reconcile/cancel scheduled message | `GET`, `DELETE /v1/scheduled-messages/{id}` |
-| Upload/list reusable media | `POST /v1/media`, `GET /v1/media?from=...` |
+| Upload/list organization media | `POST /v1/media`, `GET /v1/media` |
+| Download protected incoming media | `GET /v1/media/{id}/download` |
 | List/sync templates | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
 | Manage Flows | `/v1/flows` |
 | Manage consent | `/v1/consent` and `/v1/consent/*` |
@@ -221,8 +223,9 @@ different WABA automatically.
 ## Acceptance Checklist
 
 - API key remains server-side.
-- No `tenant_id`, Supabase UUID, Meta access token, WABA ID, or Phone Number ID
-  is hardcoded unless the normative endpoint explicitly requires it.
+- No `tenant_id`, Supabase UUID, Meta access token, or WABA ID is hardcoded.
+  Map the tenant-owned provider `account.id` as `from`; for WhatsApp this is
+  normally the Meta Phone Number ID.
 - All sender and recipient numbers use international digits.
 - Every retryable write has a stable `Idempotency-Key`.
 - HMAC is checked against raw bytes using constant-time comparison.
