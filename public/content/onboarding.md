@@ -2,6 +2,15 @@
 
 Easyhook usa el registro insertado oficial de Meta. Elige el modo según lo que debe ocurrir con el número después de conectarlo.
 
+| | WhatsApp Coexistence | WhatsApp Cloud API |
+|---|---|---|
+| App en el teléfono | Sigue funcionando | No se utiliza |
+| Número | Número activo y elegible en WhatsApp Business | Número nuevo de Meta o número existente |
+| Último paso | Escanear un código QR | Registrar el número y su PIN cuando corresponda |
+| Úsalo cuando | El equipo necesita conservar la aplicación | El número operará exclusivamente mediante API |
+
+> Antes de comenzar, confirma qué modalidad necesita el negocio. Cambiar un número existente a Cloud API puede impedir que vuelva a utilizarse en WhatsApp o WhatsApp Business App.
+
 ## WhatsApp Coexistence
 
 Usa Coexistence cuando el negocio necesita conservar el número en WhatsApp Business App.
@@ -12,6 +21,14 @@ Usa Coexistence cuando el negocio necesita conservar el número en WhatsApp Busi
 - Durante el registro se escanea un código QR.
 - Puedes autorizar la sincronización inicial de contactos e historial.
 
+### Recorrido de Coexistence
+
+1. En Easyhook abre **Conectar > WhatsApp Coexistence** y revisa los requisitos.
+2. En la ventana oficial de Meta selecciona el portafolio, la cuenta y el número correctos.
+3. Autoriza contactos e historial únicamente si deseas importarlos.
+4. Abre WhatsApp Business en el teléfono y escanea el QR desde **Dispositivos vinculados**.
+5. Regresa a Easyhook y confirma que el canal aparece activo en **Organización**.
+
 La disponibilidad de historial y media depende de lo que Meta entregue durante el onboarding. Los eventos de importación son históricos y no deben activar respuestas automáticas.
 
 ## WhatsApp Cloud API
@@ -21,6 +38,18 @@ Usa Cloud API cuando el número funcionará exclusivamente mediante la plataform
 - Puedes solicitar un número nuevo proporcionado por Meta.
 - Puedes migrar un número existente.
 - Un número existente migrado deja de funcionar en WhatsApp y WhatsApp Business App.
+
+### Recorrido de Cloud API
+
+1. En Easyhook abre **Conectar > WhatsApp API**.
+2. Elige un número nuevo proporcionado por Meta o un número existente.
+3. Selecciona el portafolio y la WABA correctos dentro de Meta.
+4. Completa el registro del número y define el PIN cuando se solicite.
+5. Confirma el canal activo en Easyhook antes de generar una API key.
+
+## Material visual
+
+Las pantallas de Meta cambian con frecuencia. Easyhook mantiene diagramas de orientación dentro del portal y esta página conserva el contrato vigente. Los tutoriales con capturas reales se publicarán aquí después de grabarlos con una cuenta de demostración; nunca uses un código QR, token o número de producción tomado de una captura antigua.
 
 ## Onboarding alojado para tus clientes
 

@@ -21,6 +21,8 @@ Abre **Conectar** y elige el modo correcto:
 - **WhatsApp Coexistence:** conserva el número en WhatsApp Business App y úsalo también con Easyhook.
 - **WhatsApp Cloud API:** usa un número nuevo de Meta o migra un número existente exclusivamente a la API.
 
+Easyhook muestra una comparación visual antes de abrir Meta. Lee la advertencia completa: Coexistence termina con un QR y conserva la aplicación; Cloud API opera el número directamente y una migración deja de usar las aplicaciones de WhatsApp. Consulta el [recorrido completo](/onboarding).
+
 ## 3. Crea una API key
 
 Abre **API**, crea una key con un nombre reconocible y guárdala. La key completa solo se muestra una vez.
