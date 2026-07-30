@@ -309,11 +309,24 @@ For webhooks in n8n:
 The node registers and removes the subscription automatically. It stores the one-time HMAC secret in n8n private workflow data and validates every delivery. No portal webhook or manual secret configuration is required.
 
 When a webhook contains `message.media.url`, the URL is intentionally private.
-Add an `Easyhook` node with `Resource: Media` and `Operation: Download`, map
-`{{$json.message.media.url}}` into `Media URL`, and choose the output binary
-field (default: `data`). The node authenticates the download with the same
-Easyhook credential and emits n8n binary data for subsequent file, storage, or
-AI nodes.
+Use that exact URL from your server and authenticate it with the API key for the
+same Easyhook organization:
+
+```bash
+curl -L "$MESSAGE_MEDIA_URL" \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  --output received-media
+```
+
+Do not expose the API key in frontend JavaScript. A customer portal should call
+its own authenticated backend; that backend downloads the bytes from
+`message.media.url` and streams them to the authorized portal user.
+
+In n8n, add an `Easyhook` node with `Resource: Media` and
+`Operation: Download`, map `{{$json.message.media.url}}` into `Media URL`, and
+choose the output binary field (default: `data`). The node authenticates the
+download with the same Easyhook credential and emits n8n binary data for
+subsequent file, storage, or AI nodes.
 
 For a WhatsApp Business App history import, choose `Provider: WhatsApp` and `Event: Coexistence history (history.*)`, then select the organization, WABA, or number scope and activate the workflow **before** connecting the coexistence phone or requesting synchronization. `message.*` does not include historical imports. Easyhook sends batches of at most 100 events; the n8n trigger expands each batch into one output item per normalized event.
 

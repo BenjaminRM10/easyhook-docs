@@ -757,6 +757,20 @@ Media fields are normalized across channels. `url` is included when Easyhook sto
 
 The URL may contain an internal asset UUID because it is an opaque download resource. No separate asset UUID is exposed in the JSON.
 
+Download the file using the exact `message.media.url` received in the webhook
+and an API key that belongs to the same organization:
+
+```bash
+curl -L "https://api.easyhook.dev/v1/media/asset_uuid/download" \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  --output received-image.jpg
+```
+
+The URL cannot be opened anonymously. In a CRM or customer portal, keep the API
+key on the backend and proxy or stream the downloaded bytes only after
+authorizing the signed-in user. Never embed an Easyhook API key in browser
+JavaScript.
+
 WhatsApp circular video notes currently arrive from Meta as unsupported messages without a media ID or URL:
 
 ```json
