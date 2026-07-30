@@ -1,6 +1,6 @@
 # Easyhook Webhooks
 
-Last updated: 2026-07-27
+Last updated: 2026-07-30
 
 Easyhook sends one compact JSON object per event. The format is shared by
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email, and Mercado Libre.
@@ -161,8 +161,8 @@ Creation fields:
 | --- | --- | --- |
 | `name` | yes | Human-readable subscription name. |
 | `url` | yes | Public HTTPS destination. HTTP and invalid URLs are rejected. |
-| `providers` | no | Array containing `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or `*`. Defaults to WhatsApp. |
-| `events` | no | Event filters. Empty behaves as `*`. Obtain compatible choices from `/v1/webhooks/options`. |
+| `providers` | yes | One or more providers: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or `*`. Select `*` alone. |
+| `events` | yes | One or more compatible event filters obtained from `/v1/webhooks/options`. An empty list is rejected. Select `*` alone when every event is intended. |
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
 | `auth_header_name` | only for `custom_header` | Safe custom header name. `Authorization`, transport headers, and `X-Easyhook-*` are reserved. |
@@ -255,7 +255,7 @@ Common event filters:
 | Filter | Receives |
 | --- | --- |
 | `*` | Every event in the selected provider and scope. |
-| `message.*` | Live incoming messages/reactions. For WhatsApp coexistence it also matches live `smb_message_echo.*` events and delivers them as `message.echo`. It does not include History imports. |
+| `message.*` | Live inbound messages and reactions. It does not include coexistence echoes or History imports. |
 | `message.text`, `message.image`, `message.audio`, `message.video` | One concrete live message type. |
 | `message.document`, `message.reaction` | WhatsApp document or reaction events. |
 | `message.file` | Messenger/Instagram file events. |
@@ -271,10 +271,10 @@ Common event filters:
 | `onboarding.*` | Hosted onboarding lifecycle. |
 
 Filtering uses the provider event name. The delivered public `type` remains
-standardized. Use `smb_message_echo.*` when a coexistence integration wants
-only messages sent from the WhatsApp Business App. Use `message.*` when it
-wants all live conversation traffic, including those echoes. Use `history.*`
-separately for imported conversations.
+standardized. Use `message.*` for inbound traffic, `smb_message_echo.*` for
+messages sent from the WhatsApp Business App, and `history.*` for imported
+conversations. These filters are intentionally disjoint so a workflow cannot
+receive an echo through both the inbound and coexistence subscriptions.
 
 ## Event Types
 

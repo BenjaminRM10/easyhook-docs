@@ -10,13 +10,15 @@ Gmail, Outlook, generic IMAP/SMTP email, and Mercado Libre.
   lists senders that support the selected control.
 - `Email Only` works the same way with Gmail, Outlook, and IMAP/SMTP: send,
   reply, forward, mark read/unread, archive, and create/edit/send drafts.
-- `WhatsApp Only` groups templates, Flows, consent, and onboarding links.
+- `Onboarding` creates hosted connection links for any supported channel.
+- `WhatsApp Only` groups WhatsApp sends, templates, Flows, and consent.
+- `Template` lists, synchronizes, checks categories, creates, and deletes templates.
 - Use standard or humanized delivery with WhatsApp, Messenger, Instagram, and Telegram.
 - Schedule messages with Easyhook's `at` parameter
 - Upload reusable media and send it later by `media_name`
 - List/sync templates and media
 - Cancel scheduled messages before processing begins
-- Create hosted WhatsApp onboarding links
+- Create hosted onboarding links for supported channels
 - Send Easyhook opt-in and opt-out Flows
 - Receive Easyhook webhook events in n8n with the Easyhook Trigger node
 
@@ -94,8 +96,9 @@ of the current public contract.
 
 Use resource **Cancel Scheduled Message** when you need to cancel a send before processing begins. Reconciliation remains available through the Easyhook API and webhooks.
 
-Under **WhatsApp Only** you can also create an onboarding link, create and send
-that link, choose WhatsApp Coexistence or WhatsApp API, send the consent Flow,
+Under **Onboarding** you can create an onboarding link or create and send that
+link, then choose the target provider. WhatsApp additionally asks for
+Coexistence or Cloud API. Under **WhatsApp Only** you can send the consent Flow
 or record opt-in/opt-out evidence collected by a website or CRM.
 
 ### Send Email
@@ -279,11 +282,29 @@ Media links must use HTTPS and be downloadable by Meta without authentication. A
 Under **WhatsApp Only**:
 
 - **Send Opt-In or Opt-Out** sends the WABA consent Flow to a WhatsApp contact.
-- **Create Onboarding Link** creates a hosted Easyhook link for Cloud API or Coexistence signup. The connection is registered under the organization that owns the API credential.
+
+Under **Onboarding**:
+
+- **Create Onboarding Link** creates a hosted Easyhook link for WhatsApp,
+  Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, or Mercado Libre.
+  The connection is registered under the organization that owns the API
+  credential.
+- **Create And Send Onboarding Link** creates the same session and sends its
+  URL in a localized WhatsApp message.
+
+Under **Template**:
+
+- **Check Category** returns non-blocking category advice before submission.
+- **Create** submits the requested template and returns the same warning when
+  its selected classification may be inconsistent.
 
 ### Webhook Automation
 
 Easyhook webhooks are handled with **Easyhook Trigger**. It is not a polling node: activation creates a `/v1/webhooks` subscription for the n8n Production URL and deactivation removes it. Deliveries are authenticated automatically with `X-Easyhook-Signature: sha256=<hex>`.
+
+The trigger starts with no provider or events selected. Choose one provider and
+at least one compatible event. Names and values match the portal and
+`GET /v1/webhooks/options`; `All events` must be selected by itself.
 
 Useful event scopes:
 

@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -93,6 +93,10 @@ Available MCP tools:
 | `send_template` | Send an approved WhatsApp template. |
 | `send_flow` | Send a published WhatsApp Flow. |
 | `send_consent_flow` | Send the WABA opt-in or opt-out Flow. |
+| `check_template_category` | Review whether content appears consistent with its selected Meta category. |
+| `create_template` | Submit a WhatsApp template to Meta for approval. |
+| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel. |
+| `send_onboarding_link` | Send a hosted onboarding URL to an allowlisted WhatsApp contact. |
 | `list_templates` | List templates resolved from the configured sender. |
 | `list_media` | List reusable media resolved from the configured sender. |
 | `list_flows` | List Flows resolved from the configured sender. |
@@ -275,6 +279,10 @@ Main `Easyhook` operations:
 | Media | Delete | `DELETE /v1/media/{id}` |
 | Template | List | `GET /v1/templates?from=...` |
 | Template | Sync From Meta | `POST /v1/templates/sync` |
+| Template | Check Category | `POST /v1/templates/classify` |
+| Template | Create | `POST /v1/templates` |
+| Onboarding | Get URL | `POST /v1/onboarding/sessions` |
+| Onboarding | Send URL | `POST /v1/onboarding/sessions/send` |
 | Cancel Scheduled Message | Cancel | `DELETE /v1/scheduled-messages/{id}` |
 | Email Only | Send / Reply | `POST /v1/messages/email` |
 | Email Only | Forward | `POST /v1/messages/email/forward` |
@@ -429,6 +437,7 @@ Recommended customer API endpoints:
 | `DELETE` | `/v1/media/{id}` | `media:write` | Delete reusable media. |
 | `GET` | `/v1/templates?from=...` | `templates:read` | List WhatsApp templates for the WABA behind `from`. |
 | `POST` | `/v1/templates/sync` | `templates:write` | Sync templates from Meta into Easyhook. |
+| `POST` | `/v1/templates/classify` | `templates:write` | Return non-blocking category advice without submitting to Meta. |
 | `POST` | `/v1/templates` | `templates:write` | Create a WhatsApp template in Meta and store it locally. |
 | `POST` | `/v1/templates/media` | `templates:write` | Upload image, video, or document header media and obtain the Meta creation handle. |
 | `POST` | `/v1/templates/delete` | `templates:write` | Delete a WhatsApp template in Meta and locally. |
@@ -442,7 +451,7 @@ Recommended customer API endpoints:
 | `PATCH` | `/v1/consent/config` | `flows:write` | Update WABA consent copy and custom keywords. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent/enable` | `flows:write` | Create/publish default opt-in and opt-out Flows and enable WABA consent. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent` | `messages:write` | Record consent evidence, or send the default opt-in/opt-out Flow when `mode` is provided. |
-| `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted WhatsApp onboarding session owned by the API key tenant. |
+| `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted onboarding session for any supported channel, owned by the API key tenant. |
 | `POST` | `/v1/onboarding/sessions/send` | `onboarding:write` | Create an onboarding session and send its URL from an authorized WhatsApp number. |
 | `GET` | `/v1/webhooks` | any valid key | List webhook subscriptions owned by the API-key organization. |
 | `GET` | `/v1/webhooks/options?provider=...&scope_type=...` | any valid key | Discover compatible providers, event filters, scopes, and public sender identifiers. |
@@ -885,9 +894,11 @@ Additional wait errors:
 | `400` | `invalid_timeout_seconds` | Timeout is outside 1-300 seconds. |
 | `429` | `too_many_active_waits` | This API key already has two active waits on the current API instance. |
 
-## Hosted WhatsApp Onboarding
+## Hosted Channel Onboarding
 
-Use hosted onboarding when a developer wants their own customer to connect a WhatsApp Business account without giving that customer access to the Easyhook portal. The API key determines the owning organization; clients must not send `tenant_id`.
+Use hosted onboarding when a developer wants their own customer to connect a
+channel without giving that customer access to the Easyhook portal. The API key
+determines the owning organization; clients must not send `tenant_id`.
 
 New keys include `onboarding:write`. Existing keys created before this scope was introduced can use this endpoint if they have `messages:write`.
 
@@ -909,7 +920,7 @@ Request:
   "metadata": {
     "external_customer_id": "cus_123"
   },
-  "expires_in_seconds": 259200
+  "expires_in_seconds": 3600
 }
 ```
 
@@ -920,6 +931,7 @@ Parameters:
 | `signup_mode` | no | `cloud_api` for a regular WhatsApp Business API connection, or `coexistence` for WhatsApp Business App coexistence. Defaults to `cloud_api`. |
 | `return_url` | no | HTTPS URL where the hosted page can send the customer after completion. |
 | `language` | no | `es` or `en`. Defaults to `es`. |
+| `provider` | no | `whatsapp` (default), `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, or `mercadolibre`. |
 | `metadata` | no | JSON object echoed back in onboarding webhooks. |
 | `expires_in_seconds` | no | Lifetime from `300` to `3600` seconds. Defaults to one hour. |
 
@@ -927,11 +939,11 @@ Response:
 
 ```json
 {
-  "url": "https://www.easyhook.dev/connect/whatsapp/onboarding/onb_xxx",
+  "url": "https://www.easyhook.dev/connect/onboarding/onb_xxx",
   "session": {
     "id": "session_uuid",
     "status": "pending",
-    "url": "https://www.easyhook.dev/connect/whatsapp/onboarding/onb_xxx",
+    "url": "https://www.easyhook.dev/connect/onboarding/onb_xxx",
     "organization": {
       "name": "appcreatorbr",
       "slug": "appcreatorbr"
@@ -949,7 +961,12 @@ Response:
 }
 ```
 
-When the customer completes Meta embedded signup on the hosted page, Easyhook stores the connected WABA and phone under the organization that owns the API key. Subscribe to `onboarding.*` webhooks to receive completion events in your app. Sessions expire after at most one hour and are consumed after the first successful completion.
+When the customer completes the provider authorization on the hosted page,
+Easyhook stores the channel under the organization that owns the API key.
+WhatsApp stores its WABA and phone; other providers store their channel ID.
+Subscribe to `onboarding.*` webhooks to receive completion events in your app.
+Sessions expire after at most one hour and are consumed after the first
+successful completion.
 
 The hosted Easyhook page uses these token-scoped support endpoints internally:
 
@@ -957,6 +974,8 @@ The hosted Easyhook page uses these token-scoped support endpoints internally:
 | --- | --- | --- | --- |
 | `GET` | `/v1/onboarding/sessions/{token}` | Public opaque session token | Read/open a non-expired hosted onboarding session. |
 | `POST` | `/v1/onboarding/sessions/{token}/complete` | Public opaque session token | Exchange the Meta authorization code and complete the connection for the owning organization. |
+| `POST` | `/v1/onboarding/sessions/{token}/connect` | Public opaque session token | Complete Telegram, IMAP/SMTP, Messenger, or Instagram authorization. |
+| `POST` | `/v1/onboarding/sessions/{token}/oauth/start` | Public opaque session token | Start Gmail, Outlook, or Mercado Libre OAuth. |
 
 Customer applications normally create a session and redirect the user to the returned Easyhook `url`; they should not recreate the hosted page's token completion flow.
 

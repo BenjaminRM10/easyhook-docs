@@ -1,4 +1,8 @@
-# Conectar WhatsApp
+# Conectar canales
+
+Easyhook ofrece onboarding alojado para WhatsApp, Messenger, Instagram,
+Telegram, Gmail, Outlook, correo IMAP/SMTP y Mercado Libre. Las siguientes
+secciones explican las dos modalidades específicas de WhatsApp.
 
 Easyhook usa el registro insertado oficial de Meta. Elige el modo según lo que debe ocurrir con el número después de conectarlo.
 
@@ -53,13 +57,17 @@ Las pantallas de Meta cambian con frecuencia. Easyhook mantiene diagramas de ori
 
 ## Onboarding alojado para tus clientes
 
-Una API key puede crear una sesión alojada en `easyhook.dev`. El número completado se registra automáticamente en la organización dueña de esa key.
+Una API key puede crear una sesión alojada en `easyhook.dev`. El canal
+completado se registra automáticamente en la organización dueña de esa key.
+El mismo contrato conecta WhatsApp, Messenger, Instagram, Telegram, Gmail,
+Outlook, correo IMAP/SMTP y Mercado Libre.
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/onboarding/sessions \
   -H "Authorization: Bearer $EASYHOOK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "provider": "whatsapp",
     "signup_mode": "coexistence",
     "language": "es",
     "return_url": "https://app.example.com/channels"
@@ -77,10 +85,13 @@ curl -X POST https://api.easyhook.dev/v1/onboarding/sessions/send \
   -d '{
     "from": "5218661479075",
     "to": "5215660069997",
-    "signup_mode": "coexistence",
+    "provider": "gmail",
     "language": "es"
   }'
 ```
 
-`signup_mode` acepta `coexistence` o `cloud_api`. El envío del enlace como texto
-requiere una ventana de atención abierta.
+`provider` acepta `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
+`outlook`, `imap_smtp` o `mercadolibre`. `signup_mode` se usa solamente con
+WhatsApp y acepta `coexistence` o `cloud_api`. El enlace expira en un máximo de
+una hora y se consume al completar una conexión. Enviarlo desde un número de
+WhatsApp requiere una ventana de atención abierta.
