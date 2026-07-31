@@ -540,6 +540,33 @@ Meta documents History as an import of up to approximately 180 days and excludes
 
 Historical imports never trigger live consent keyword handling or replay Flow submission side effects. They only rebuild message history and emit the subscribed `history.*` customer webhook events.
 
+## Consent Updates
+
+Subscribe to `consent.updated` to receive a normalized event whenever a
+contact's service or marketing state actually changes:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "consent.updated",
+  "channel": "whatsapp",
+  "account": { "id": "980912725115744" },
+  "contact": { "id": "5218661479075" },
+  "consent": {
+    "contact": "5218661479075",
+    "scope": "marketing",
+    "status": "opt_out",
+    "previous_status": "opt_in",
+    "source": "whatsapp_flow",
+    "updated_at": "2026-07-31T18:00:00.000Z"
+  }
+}
+```
+
+Deduplicate with the top-level `id`. Evidence is retained for the organization
+audit trail and is not delivered. Reconcile both scopes with
+`GET /v1/consent/status`.
+
 Subscribe to `history.*` before connecting or requesting coexistence synchronization when the destination must receive the complete historical import. Live events continue to use their corresponding `message.*` or `smb_message_echo.*` filters.
 
 The subscription selector uses the provider event (`history.*`). Easyhook sends `{ "type": "sync.batch", "sync": {...}, "events": [...] }`, with at most 100 normalized events in `events`. Each event keeps the standard public `type` (`message.received` or `message.echo`). A `message.*` subscription alone does not receive the historical import.

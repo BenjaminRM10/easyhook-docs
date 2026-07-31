@@ -282,6 +282,8 @@ Media links must use HTTPS and be downloadable by Meta without authentication. A
 Under **WhatsApp Only**:
 
 - **Send Opt-In or Opt-Out** sends the WABA consent Flow to a WhatsApp contact.
+- **Get Consent Status** returns both service and marketing consent for a
+  contact under the selected WhatsApp sender.
 
 Under **Onboarding**:
 
