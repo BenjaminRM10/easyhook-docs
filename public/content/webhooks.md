@@ -407,8 +407,8 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `source` | string | `history`, `whatsapp_business_app`, or another provider source when relevant. |
 | `from` | string | Provider identifier of the sender. |
 | `to` | string | Provider identifier of the recipient. |
-| `type` | string | `text`, `interactive`, `image`, `audio`, `video`, `document`, `file`, `sticker`, `reaction`, `unsupported`, or a future provider type. |
-| `text` | string | Text body for `text` and normalized interactive replies. |
+| `type` | string | `text`, `edit`, `revoke`, `system`, `media_placeholder`, `interactive`, `image`, `audio`, `video`, `document`, `file`, `sticker`, `reaction`, `unsupported`, or a future provider type. |
+| `text` | string | Text body for `text`, `edit`, and normalized interactive replies. |
 | `subject` | string | Email subject for Gmail, Outlook, and IMAP/SMTP. |
 | `html` | string | Original email HTML when present. Treat as untrusted content. |
 | `thread_id` | string | Provider thread identifier. |
@@ -417,6 +417,9 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `references` | string | RFC references chain. |
 | `media` | object | Normalized media metadata described below. |
 | `reaction` | object | Target message and emoji. |
+| `edit` | object | Original message ID, replacement type, and replacement text. |
+| `revoke` | object | Original message ID that was deleted in WhatsApp. |
+| `system` | object | Informational WhatsApp event such as a changed phone number. |
 | `referral` | object | Click-to-WhatsApp/provider referral context. |
 | `unsupported` | object | Unsupported provider type and errors. |
 | `timestamp` | ISO 8601 string | Original provider timestamp after normalization. |
@@ -434,9 +437,16 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `sha256` | string | Provider/file digest when available. |
 | `size` | number | Size in bytes. |
 | `expires_at` | ISO 8601 string | URL/asset expiration when applicable. |
+| `storage_status` | string | `stored`, `pending`, `failed`, or `unavailable`. |
+| `placeholder` | boolean | `true` when History did not include a downloadable media ID. |
 
 `message.reaction` contains `message_id` and `emoji`. An empty `emoji` removes
-the previous reaction. `message.unsupported` contains `type` and optional
+the previous reaction. `message.edit` contains `original_message_id`, `type`,
+and `text`; update the original message instead of inserting a second message.
+`message.revoke.original_message_id` identifies the message to mark as deleted.
+Display `message.system.body` as an informational notice; it is not a new
+customer message and must not open a service window.
+`message.unsupported` contains `type` and optional
 `errors[]`. `message.history` can contain `thread_id`, `status`, `phase`,
 `chunk_order`, and `progress`.
 
@@ -694,6 +704,11 @@ Choose the policy when requesting a synchronization:
 | `all_recent_media` | Also downloads available recent video. |
 
 Meta generally exposes downloadable media IDs only for recent historical media (approximately the last 14 days). Older messages can remain as metadata or `media_placeholder`; missing media never fails the message import. Storage and transfer use the normal Easyhook media quotas.
+
+If Meta sends `media_placeholder` without a media ID, Easyhook returns
+`message.media.storage_status: "unavailable"` and `placeholder: true`. There is
+no file to download unless a later `message.media_available` event arrives with
+the same `message.id`.
 
 ## Coexistence App State Sync
 
