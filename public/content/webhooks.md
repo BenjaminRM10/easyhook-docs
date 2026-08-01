@@ -57,6 +57,31 @@ The same event from Messenger or Instagram only changes `channel` and the provid
 }
 ```
 
+When a contact selects a Messenger or Instagram quick reply, subscribe to
+`message.quick_reply` or the broader `message.*` filter. The visible title is
+also exposed as `message.text` for simple workflows, while `payload` remains
+the stable routing value:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "instagram",
+  "account": { "id": "17841401731804358" },
+  "contact": { "id": "IGSID_VALUE" },
+  "message": {
+    "id": "mid...",
+    "type": "quick_reply",
+    "text": "Soporte",
+    "quick_reply": {
+      "title": "Soporte",
+      "payload": "support"
+    },
+    "timestamp": "2026-08-01T20:00:00.000Z"
+  }
+}
+```
+
 Email providers use the same event with email-specific fields:
 
 ```json
@@ -257,6 +282,7 @@ Common event filters:
 | `*` | Every event in the selected provider and scope. |
 | `message.*` | Live inbound messages and reactions. It does not include coexistence echoes or History imports. |
 | `message.text`, `message.image`, `message.audio`, `message.video` | One concrete live message type. |
+| `message.quick_reply` | Messenger or Instagram quick-reply selections with visible title and payload. |
 | `message.document`, `message.reaction` | WhatsApp document or reaction events. |
 | `message.file` | Messenger/Instagram file events. |
 | `status.*` | WhatsApp delivery, read, and failure statuses. |

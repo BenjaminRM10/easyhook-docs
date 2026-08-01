@@ -311,6 +311,7 @@ at least one compatible event. Names and values match the portal and
 Useful event scopes:
 
 - `message.*`: incoming WhatsApp/Messenger/Instagram messages
+- `message.quick_reply`: Messenger/Instagram quick-reply selections with `message.text` and `message.quick_reply.payload`
 - `status.*`: message delivery/read/failure status
 - `template.*`: template status changes
 - `flow.submission.*`: WhatsApp Flow responses
@@ -328,6 +329,11 @@ headers. One webhook request creates one n8n execution; normal non-sync events
 produce one item.
 
 Messenger and Instagram hooks are configured in the Easyhook portal with the provider filter. In n8n you can also label a trigger as `messenger.message.*` or `instagram.message.*` for workflow clarity.
+
+To send buttons, use **Message Action > Send Quick Replies**, select a
+Messenger or Instagram sender, and add 1–13 title/payload pairs. Route the
+response using `{{$json.message.quick_reply.payload}}`; the visible button text
+is available at `{{$json.message.text}}`.
 
 ### Receive Coexistence History
 

@@ -264,6 +264,7 @@ Main `Easyhook` operations:
 | Resource | Operation | API endpoint used |
 | --- | --- | --- |
 | Message Action | Send Text | `POST /v1/messages/text` |
+| Message Action | Send Quick Replies | `POST /v1/messages/quick-replies` |
 | Message Action | Send Text + Humanized Delivery | `POST /v1/messages/humanized-text` |
 | Message Control | Mark as Read | `POST /v1/messages/read` |
 | Message Control | Reply | `POST /v1/messages/reply` |
@@ -433,6 +434,7 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
 | `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. |
+| `POST` | `/v1/messages/quick-replies` | `messages:write` | Send 1–13 text quick replies through Messenger or Instagram. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram using only controls supported by that provider. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, or Instagram. |
@@ -1880,6 +1882,38 @@ Non-WhatsApp success response:
 ```json
 { "ok": true, "provider": "messenger", "channel_id": "channel_uuid", "message_id": "mid..." }
 ```
+
+## Send Quick Replies
+
+Send text quick-reply buttons through Messenger or Instagram:
+
+```http
+POST /v1/messages/quick-replies
+```
+
+`from` accepts the connected Page or Instagram `account.id`, and `to` is the
+PSID or IGSID received from Easyhook. Send between 1 and 13 options. Each
+visible `title` is limited to 20 characters; `payload` is the stable value your
+automation should use.
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/quick-replies \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "17841401731804358",
+    "to": "IGSID_VALUE",
+    "body": "¿Qué necesitas?",
+    "quick_replies": [
+      { "title": "Ventas", "payload": "sales" },
+      { "title": "Soporte", "payload": "support" }
+    ]
+  }'
+```
+
+Easyhook implements the common text-button contract shared by Messenger and
+Instagram. Phone/email quick replies and Messenger-only button images are not
+part of this standardized endpoint.
 
 ## Read, Typing, Reply, Reaction, And Humanized Text
 
