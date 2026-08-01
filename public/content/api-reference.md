@@ -1356,14 +1356,14 @@ POST /v1/consent/enable
 
 Requires `flows:write`.
 
-This creates or reuses two default Flows for the WABA, publishes them, and marks WABA consent as active:
+This creates or reuses two versioned Flows for the WABA, publishes them, and marks WABA consent as active:
 
 | Flow name | Purpose |
 | --- | --- |
-| `easyhook_consent_preferences_opt_in` | Collect service/utility and marketing opt-in. |
-| `easyhook_consent_preferences_opt_out` | Confirm service/utility and marketing opt-out. |
+| `easyhook_consent_preferences_<revision>_opt_in` | Collect service/utility and marketing opt-in. |
+| `easyhook_consent_preferences_<revision>_opt_out` | Confirm service/utility and marketing opt-out. |
 
-The two Flows are separate Meta assets so the opt-in experience only shows opt-in choices, and the opt-out experience only shows opt-out choices.
+The two Flows are separate Meta assets so the opt-in experience only shows opt-in choices, and the opt-out experience only shows opt-out choices. Meta Flows are immutable after publication. Changed copy creates a new deterministic revision; unchanged copy reuses the current revision.
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/consent/enable \
@@ -1372,7 +1372,13 @@ curl -X POST https://api.easyhook.dev/v1/consent/enable \
   -d '{
     "from": "528661479075",
     "copy": {
-      "business_name": "Acme Clinic"
+      "language": "es",
+      "business_name": "Clínica Acme",
+      "opt_in_heading": "Confirma tus preferencias",
+      "opt_in_body": "Elige qué mensajes quieres recibir de {business_name}.",
+      "opt_out_heading": "Dejar de recibir mensajes",
+      "opt_out_body": "Elige qué mensajes quieres cancelar.",
+      "footer": "Puedes cambiar estas preferencias después."
     },
     "custom_keywords": ["cancel my reminders"]
   }'
@@ -1392,7 +1398,9 @@ Requires `flows:read`. Also accepts `waba_id` or `phone_id` for legacy/admin usa
 PATCH /v1/consent/config
 ```
 
-Requires `flows:write`. Use this to customize copy and add customer-specific opt-out keywords. Fixed Easyhook opt-out keywords are still enforced.
+Requires `flows:write`. Use this to save copy and add customer-specific opt-out keywords. Fixed Easyhook opt-out keywords are still enforced. `language` accepts `es` or `en` and controls Easyhook-managed labels. Heading, body, and footer are used in the Flow; `{business_name}` inside a body is replaced with the configured business name.
+
+Saving does not mutate a published Meta Flow. Call `POST /v1/consent/enable` after changing copy to create and activate the corresponding version.
 
 ```bash
 curl -X PATCH https://api.easyhook.dev/v1/consent/config \
@@ -1401,7 +1409,13 @@ curl -X PATCH https://api.easyhook.dev/v1/consent/config \
   -d '{
     "from": "528661479075",
     "copy": {
-      "business_name": "Acme Clinic"
+      "language": "en",
+      "business_name": "Acme Clinic",
+      "opt_in_heading": "Confirm your preferences",
+      "opt_in_body": "Choose which messages you want to receive from {business_name}.",
+      "opt_out_heading": "Stop messages",
+      "opt_out_body": "Choose which messages you no longer want to receive.",
+      "footer": "You can change these preferences later."
     },
     "custom_keywords": ["cancel reminders", "stop promos"]
   }'
@@ -1430,7 +1444,7 @@ curl -X POST https://api.easyhook.dev/v1/consent \
 
 Allowed `mode` values: `opt_in`, `opt_out`.
 
-`opt_in` sends `easyhook_consent_preferences_opt_in`. `opt_out` sends `easyhook_consent_preferences_opt_out`.
+`opt_in` and `opt_out` send the currently active versioned Flow recorded for that WABA.
 
 The WABA must have consent enabled and the customer-service window must be open. A successful response includes `accepted: true`, `delivery_status: "pending"`, and a `wamid`: this means Meta accepted the Flow request, not that the device displayed it. Subscribe to `status.*` and correlate by `wamid` to observe `sent`, `delivered`, `read`, or `failed`.
 
