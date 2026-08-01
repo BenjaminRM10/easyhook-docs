@@ -1374,8 +1374,14 @@ curl -X POST https://api.easyhook.dev/v1/consent/enable \
     "copy": {
       "language": "es",
       "business_name": "Clínica Acme",
+      "opt_in_message_body": "Revisa qué mensajes quieres recibir de {business_name}.",
+      "opt_in_message_cta": "Confirmar preferencias",
+      "opt_in_screen_title": "Preferencias de comunicación",
       "opt_in_heading": "Confirma tus preferencias",
-      "opt_in_body": "Elige qué mensajes quieres recibir de {business_name}.",
+      "opt_in_body": "Elige qué mensajes quieres recibir.",
+      "opt_out_message_body": "Administra los mensajes que recibes de {business_name}.",
+      "opt_out_message_cta": "Administrar preferencias",
+      "opt_out_screen_title": "Preferencias de comunicación",
       "opt_out_heading": "Dejar de recibir mensajes",
       "opt_out_body": "Elige qué mensajes quieres cancelar.",
       "footer": "Puedes cambiar estas preferencias después."
@@ -1398,7 +1404,20 @@ Requires `flows:read`. Also accepts `waba_id` or `phone_id` for legacy/admin usa
 PATCH /v1/consent/config
 ```
 
-Requires `flows:write`. Use this to save copy and add customer-specific opt-out keywords. Fixed Easyhook opt-out keywords are still enforced. `language` accepts `es` or `en` and controls Easyhook-managed labels. Heading, body, and footer are used in the Flow; `{business_name}` inside a body is replaced with the configured business name.
+Requires `flows:write`. Use this to save copy and add customer-specific opt-out keywords. Fixed Easyhook opt-out keywords are still enforced. `language` accepts `es` or `en` and controls Easyhook-managed labels.
+
+Message and form copy are intentionally separate:
+
+| Fields | Where they appear |
+| --- | --- |
+| `opt_in_message_body`, `opt_out_message_body` | Message bubble that opens the Flow. Supports `{business_name}`. |
+| `opt_in_message_cta`, `opt_out_message_cta` | Button in that message bubble. |
+| `opt_in_screen_title`, `opt_out_screen_title` | Top bar of the opened Flow. |
+| `opt_in_heading`, `opt_out_heading` | Heading inside the form. |
+| `opt_in_body`, `opt_out_body` | Explanation inside the form. |
+| `footer` | Caption at the bottom of the form. |
+
+Older configurations that only have `opt_in_body` or `opt_out_body` keep their previous send behavior until saved with the new message fields.
 
 Saving does not mutate a published Meta Flow. Call `POST /v1/consent/enable` after changing copy to create and activate the corresponding version.
 
@@ -1411,8 +1430,14 @@ curl -X PATCH https://api.easyhook.dev/v1/consent/config \
     "copy": {
       "language": "en",
       "business_name": "Acme Clinic",
+      "opt_in_message_body": "Review the messages you want to receive from {business_name}.",
+      "opt_in_message_cta": "Confirm preferences",
+      "opt_in_screen_title": "Communication preferences",
       "opt_in_heading": "Confirm your preferences",
-      "opt_in_body": "Choose which messages you want to receive from {business_name}.",
+      "opt_in_body": "Choose which messages you want to receive.",
+      "opt_out_message_body": "Manage the messages you receive from {business_name}.",
+      "opt_out_message_cta": "Manage preferences",
+      "opt_out_screen_title": "Communication preferences",
       "opt_out_heading": "Stop messages",
       "opt_out_body": "Choose which messages you no longer want to receive.",
       "footer": "You can change these preferences later."
@@ -1438,11 +1463,15 @@ curl -X POST https://api.easyhook.dev/v1/consent \
   -d '{
     "from": "528661479075",
     "to": "5218661479075",
-    "mode": "opt_in"
+    "mode": "opt_in",
+    "body": "Optional message override for this send",
+    "cta": "Review"
   }'
 ```
 
 Allowed `mode` values: `opt_in`, `opt_out`.
+
+`body` and `cta` are optional per-send overrides. If omitted, Easyhook uses the corresponding `copy.opt_*_message_body` and `copy.opt_*_message_cta` values from the WABA consent configuration. They do not modify the published Flow form.
 
 `opt_in` and `opt_out` send the currently active versioned Flow recorded for that WABA.
 
