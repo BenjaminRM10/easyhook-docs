@@ -464,7 +464,7 @@ Recommended customer API endpoints:
 | `PATCH` | `/v1/consent/config` | `flows:write` | Update WABA consent copy and custom keywords. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent/enable` | `flows:write` | Create/publish default opt-in and opt-out Flows and enable WABA consent. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent` | `messages:write` | Record consent evidence, or send the default opt-in/opt-out Flow when `mode` is provided. |
-| `GET` | `/v1/consent/status?from=...&contact=...` | `messages:read` | Read service and marketing consent for one contact in the WABA behind `from`. |
+| `GET` | `/v1/consent/status?from=...&contact=...` | `messages:read` or legacy `messages:write` | Read service and marketing consent for one contact in the WABA behind `from`. |
 | `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted onboarding session for any supported channel, owned by the API key tenant. |
 | `POST` | `/v1/onboarding/sessions/send` | `onboarding:write` | Create an onboarding session and send its URL from an authorized WhatsApp number. |
 | `GET` | `/v1/webhooks` | any valid key | List webhook subscriptions owned by the API-key organization. |
@@ -1494,7 +1494,8 @@ remains responsible for obtaining valid consent and honoring opt-out requests.
 GET /v1/consent/status?from=980912725115744&contact=5218661479075
 ```
 
-Requires `messages:read`. The contact is resolved inside the WABA behind the
+Requires `messages:read`. For backward compatibility, API keys created before
+this read scope existed may use `messages:write`. The contact is resolved inside the WABA behind the
 sender, so consent is never shared between WABAs. `from` accepts the connected
 WhatsApp `account.id`, Phone Number ID, or business phone number. `to` and
 `recipient` are accepted as aliases for `contact`.
