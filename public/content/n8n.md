@@ -287,11 +287,11 @@ Under **WhatsApp Only**:
 
 Under **Onboarding**:
 
-- **Create Onboarding Link** creates a hosted Easyhook link for WhatsApp,
+- **Get Onboarding URL** creates a hosted Easyhook link for WhatsApp,
   Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, or Mercado Libre.
   The connection is registered under the organization that owns the API
   credential.
-- **Create And Send Onboarding Link** creates the same session and sends its
+- **Send Onboarding Link** creates the same session and sends its
   URL in a localized WhatsApp message.
 
 Under **Template**:

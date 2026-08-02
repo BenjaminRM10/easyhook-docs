@@ -1,17 +1,17 @@
 # Easyhook Agent Integration Guide
 
-Last updated: 2026-07-24
+Last updated: 2026-08-02
 
 This file is the entry point for a coding agent integrating Easyhook into
 another application. It is intentionally concise. The normative contracts are:
 
-1. [Public API](./public-api.md): every customer endpoint, request parameter,
+1. [Public API](/api-reference): every customer endpoint, request parameter,
    response, error, billing rule, and example.
-2. [Customer Webhooks](./customer-webhooks.md): subscription API, filters,
+2. [Customer Webhooks](/webhooks): subscription API, filters,
    security headers, normalized JSON field names, History batches, and retries.
 
-Do not invent fields from Meta documentation or use old Easyhook examples found
-elsewhere. Easyhook accepts Meta events internally but exposes its own compact,
+Do not invent fields from provider documentation or use old Easyhook examples found
+elsewhere. Easyhook accepts provider events internally but exposes its own compact,
 normalized public contract.
 
 ## Integration Inputs
@@ -20,13 +20,15 @@ Obtain these from the Easyhook organization owner:
 
 ```text
 EASYHOOK_API_KEY=eh_live_xxx
-EASYHOOK_FROM=international sender digits or a channel alias
+EASYHOOK_FROM=provider-native account ID or connected WhatsApp number
 EASYHOOK_WEBHOOK_URL=https://your-app.example/webhooks/easyhook
 ```
 
 The API key fixes the organization. Never send `tenant_id` to a public
-endpoint. `from` must resolve to a WhatsApp number, Messenger Page alias, or
-Instagram alias owned by that organization.
+endpoint. `from` must resolve to a connected channel owned by that
+organization. Prefer the provider-native `account.id` received in Easyhook
+webhooks. WhatsApp also accepts its connected international number; do not add
+`page_` or `ig_` prefixes.
 
 For WhatsApp, always include the international country calling code. Easyhook
 accepts E.164, digits-only international values, spaces, hyphens, parentheses,
@@ -64,7 +66,7 @@ For a scheduled message, also send an application-owned `client_reference`:
 ```
 
 Persist the returned `scheduled_message.id`. Subscribe to both `scheduled.*`
-and `status.*`. `scheduled.sent` provides the Meta WAMID; later message status
+and `status.*`. `scheduled.sent` provides the provider message ID; later message status
 events include `scheduled_message_id` and `client_reference`. Reconcile after a
 timeout or webhook outage with:
 
@@ -129,7 +131,8 @@ asynchronously.
 ## Routing Rules
 
 - Use `type` to choose the payload block.
-- Use `channel` to distinguish `whatsapp`, `messenger`, and `instagram`.
+- Use `channel` to distinguish `whatsapp`, `messenger`, `instagram`, `telegram`,
+  `gmail`, `outlook`, `imap_smtp`, and `mercadolibre`.
 - Use `account.id + ":" + contact.id` as a conversation identity.
 - Use `message.id` as the message idempotency key.
 - Use webhook `id` as the idempotency key for non-message events.
@@ -186,12 +189,6 @@ invalidate successfully imported events.
 | Mark read / show typing | `POST /v1/messages/read`, `/v1/messages/typing` |
 | Add/remove reaction | `POST /v1/messages/reaction` |
 | List/read conversations | `GET /v1/conversations...` |
-
-For multimedia template headers, upload the approval example with `POST /v1/templates/media`. Supplying
-`template_name`, `template_language`, and `media_type` stores it as the default asset. At send time,
-`POST /v1/messages/template` may omit `media` to use that default or provide exactly one dynamic
-`media.link`, `media.id`, or reusable `media.name`. A dynamic override must match the approved image,
-video, or document header type; document media may also set `filename`.
 | Wait for inbound reply | `GET /v1/conversations/{contact}/messages/wait...` |
 | Reconcile/cancel scheduled message | `GET`, `DELETE /v1/scheduled-messages/{id}` |
 | Upload/list organization media | `POST /v1/media`, `GET /v1/media` |
@@ -203,8 +200,16 @@ video, or document header type; document media may also set `filename`.
 | Create and send onboarding URL | `POST /v1/onboarding/sessions/send` |
 | Manage webhook subscriptions | `/v1/webhooks` |
 
-Read the corresponding section in `public-api.md` before implementing an
-endpoint. That document defines all accepted parameters and mutually exclusive
+For multimedia template headers, upload the approval example with
+`POST /v1/templates/media`. Supplying `template_name`, `template_language`, and
+`media_type` stores it as the default asset. At send time,
+`POST /v1/messages/template` may omit `media` to use that default or provide
+exactly one dynamic `media.link`, `media.id`, or reusable `media.name`. A
+dynamic override must match the approved image, video, or document header type;
+document media may also set `filename`.
+
+Read the corresponding section in [Public API](/api-reference) before implementing an
+endpoint. That reference defines all accepted parameters and mutually exclusive
 fields.
 
 Template list, sync, and create responses include `meta_waba_id`. Treat that as
