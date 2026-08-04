@@ -1066,6 +1066,44 @@ If Meta cannot start the import, the trigger can instead receive:
 
 The trigger obtains these choices from `GET /v1/webhooks/options`. The endpoint is restricted to the tenant of the API key and returns display labels and public aliases, never provider tokens or internal tenant IDs.
 
+## Google Business Profile reviews
+
+Choose provider `google_business_profile` and subscribe to `review.created`,
+`review.updated`, or `review.*`. Scope `channel` limits delivery to one connected
+location; organization scope receives every selected location.
+
+```json
+{
+  "id": "event-id",
+  "type": "review.created",
+  "channel": "google_business_profile",
+  "account": {
+    "id": "accounts/123/locations/456",
+    "name": "Sucursal Centro"
+  },
+  "review": {
+    "id": "review_abc",
+    "name": "accounts/123/locations/456/reviews/review_abc",
+    "rating": 5,
+    "comment": "Excelente atención",
+    "reviewer": {
+      "name": "Ana",
+      "photo_url": "https://...",
+      "is_anonymous": false
+    },
+    "created_at": "2026-08-04T18:10:00Z",
+    "updated_at": "2026-08-04T18:10:00Z",
+    "reply": null
+  }
+}
+```
+
+Google Pub/Sub sends only a change notification. Easyhook fetches the current
+review, normalizes it, deduplicates by review and update time, and then delivers
+the customer webhook. Delivery remains at-least-once: deduplicate non-message
+events by top-level `id`. A changed review or business reply may produce
+`review.updated` with the same `review.id` and a newer `updated_at`.
+
 ## Billing And Delivery
 
 - Meta ingestion and portal updates are not billed.

@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-08-02
+Last updated: 2026-08-04
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -47,7 +47,59 @@ Expected isolation errors:
 | `409` | `sender_waba_mismatch` | The selected sender does not belong to the supplied WABA. |
 
 These rules apply to messages, media, templates, Flows, consent, read/typing
-actions, scheduling, conversations, webhooks, and reusable assets.
+actions, scheduling, conversations, reviews, webhooks, and reusable assets.
+
+## Google Business Profile Reviews
+
+Google Business Profile locations use the provider-native resource name from
+`account.id`, for example `accounts/123/locations/456`. Obtain connected values
+with `GET /v1/senders`; never send an internal Easyhook channel UUID.
+
+API keys require `reviews:read` for list/summary and `reviews:write` for replies.
+Every operation is tenant-scoped and returns
+`google_business_location_not_found` when the selected location does not belong
+to the API-key organization.
+
+### List reviews
+
+```bash
+curl "https://api.easyhook.dev/v1/reviews?from=accounts%2F123%2Flocations%2F456&page_size=20" \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY"
+```
+
+Optional query fields are `page_size` (1–50), `page_token`, and `order_by`.
+The response contains `account`, aggregate `rating`, normalized `reviews`, and
+`next_page_token`.
+
+### Get aggregate rating
+
+```bash
+curl "https://api.easyhook.dev/v1/reviews/summary?from=accounts%2F123%2Flocations%2F456" \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY"
+```
+
+```json
+{
+  "account": { "id": "accounts/123/locations/456", "name": "Sucursal Centro" },
+  "rating": { "average": 4.8, "total": 126 }
+}
+```
+
+### Reply to a review
+
+```bash
+curl -X PUT https://api.easyhook.dev/v1/reviews/review_abc/reply \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "accounts/123/locations/456",
+    "comment": "Gracias por compartir tu experiencia."
+  }'
+```
+
+Google publishes the reply on the Business Profile. Repeating the operation for
+the same review updates the existing reply. Use `review.id` from a list result
+or webhook; do not construct it from reviewer data.
 
 ## MCP For AI Agents
 

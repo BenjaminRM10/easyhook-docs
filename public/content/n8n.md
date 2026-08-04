@@ -3,7 +3,7 @@
 Verified n8n community node for using Easyhook.
 
 Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
-Gmail, Outlook, generic IMAP/SMTP email, and Mercado Libre.
+Gmail, Outlook, generic IMAP/SMTP email, Mercado Libre, and Google Business Profile reviews.
 
 - `Message Action` groups cross-channel text and media sends.
 - `Message Control` groups read, typing, reply, and reaction actions and only
@@ -21,6 +21,19 @@ Gmail, Outlook, generic IMAP/SMTP email, and Mercado Libre.
 - Create hosted onboarding links for supported channels
 - Send Easyhook opt-in and opt-out Flows
 - Receive Easyhook webhook events in n8n with the Easyhook Trigger node
+- List Google reviews, get an aggregate rating, and publish public replies
+
+## Google reviews
+
+Use **Review** with `List Reviews`, `Get Rating`, or `Reply to Review`. The
+location selector loads only Google Business Profile locations connected to the
+API-key organization. For replies, map `review.id` and enter the public reply.
+
+To automate new reviews, use **Easyhook Trigger**, provider **Google Business
+Profile**, and event `review.created` or `review.updated`. The trigger registers
+the webhook and HMAC secret automatically. Treat updates as idempotent by
+top-level event `id`; the same `review.id` may legitimately appear again after
+the review or business reply changes.
 
 ## Install
 

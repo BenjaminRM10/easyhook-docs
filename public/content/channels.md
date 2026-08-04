@@ -1,9 +1,16 @@
 # Canales
 
-Easyhook reúne WhatsApp, Messenger, Instagram, Telegram, correo y Mercado Libre bajo una misma
+Easyhook reúne WhatsApp, Messenger, Instagram, Telegram, correo, Mercado Libre y Google Business Profile bajo una misma
 organización, API key, wallet, Inbox y sistema de webhooks. El correo puede
 conectarse mediante Gmail, Outlook o IMAP/SMTP. Cada envío usa `from` para
 resolver el canal correcto dentro de la organización dueña de la API key.
+
+## Google Business Profile
+
+Google Business Profile se conecta con OAuth y cada ubicación elegida aparece
+como un canal independiente de reseñas. Desde **Reseñas** puedes consultar la
+calificación agregada, leer reseñas y publicar o editar la respuesta pública
+del negocio. Consulta la [guía completa](/google-business-profile).
 
 ## Mercado Libre
 
