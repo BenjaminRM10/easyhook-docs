@@ -1,15 +1,17 @@
 # Easyhook Webhooks
 
-Last updated: 2026-07-30
+Last updated: 2026-08-10
 
 Easyhook sends one compact JSON object per event. The format is shared by
-WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email, and Mercado Libre.
+WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email,
+Mercado Libre, and Google Business Profile.
 
 ## Principles
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
-- `channel` is `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
-  `outlook`, `imap_smtp`, or `mercadolibre`.
+- `channel` identifies the provider: `whatsapp`, `messenger`, `instagram`,
+  `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or
+  `google_business_profile`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
 - Provider-specific details used for debugging remain in the `X-Easyhook-Provider-Event` header.
@@ -57,31 +59,6 @@ The same event from Messenger or Instagram only changes `channel` and the provid
 }
 ```
 
-When a contact selects a Messenger or Instagram quick reply, subscribe to
-`message.quick_reply` or the broader `message.*` filter. The visible title is
-also exposed as `message.text` for simple workflows, while `payload` remains
-the stable routing value:
-
-```json
-{
-  "id": "event_uuid",
-  "type": "message.received",
-  "channel": "instagram",
-  "account": { "id": "17841401731804358" },
-  "contact": { "id": "IGSID_VALUE" },
-  "message": {
-    "id": "mid...",
-    "type": "quick_reply",
-    "text": "Soporte",
-    "quick_reply": {
-      "title": "Soporte",
-      "payload": "support"
-    },
-    "timestamp": "2026-08-01T20:00:00.000Z"
-  }
-}
-```
-
 Email providers use the same event with email-specific fields:
 
 ```json
@@ -101,14 +78,12 @@ Email providers use the same event with email-specific fields:
     "message_id_header": "<message@example.net>",
     "is_read": false,
     "inference_classification": "focused",
-    "attachments": [
-      {
-        "media_asset_id": "asset_uuid",
-        "filename": "invoice.pdf",
-        "content_type": "application/pdf",
-        "size": 48210
-      }
-    ],
+    "attachments": [{
+      "media_asset_id": "asset_uuid",
+      "filename": "invoice.pdf",
+      "content_type": "application/pdf",
+      "size": 48210
+    }],
     "timestamp": "2026-07-27T16:37:02.000Z"
   }
 }
@@ -186,8 +161,8 @@ Creation fields:
 | --- | --- | --- |
 | `name` | yes | Human-readable subscription name. |
 | `url` | yes | Public HTTPS destination. HTTP and invalid URLs are rejected. |
-| `providers` | yes | One or more providers: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or `*`. Select `*` alone. |
-| `events` | yes | One or more compatible event filters obtained from `/v1/webhooks/options`. An empty list is rejected. Select `*` alone when every event is intended. |
+| `providers` | yes | One or more providers: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `google_business_profile`, or `*`. Select `*` alone. |
+| `events` | yes | One or more compatible filters from `/v1/webhooks/options`. Empty is rejected. Select `*` alone for every event. |
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
 | `auth_header_name` | only for `custom_header` | Safe custom header name. `Authorization`, transport headers, and `X-Easyhook-*` are reserved. |
@@ -229,7 +204,12 @@ Available scopes:
 { "type": "channel", "from": "instagram_alias" }
 ```
 
-For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp number. A WABA subscription receives matching events from all numbers currently connected to that WABA. For `channel`, use a Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, or Mercado Libre alias. Internal scope IDs and Meta Business Portfolio IDs are never needed.
+For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp
+number. A WABA subscription receives matching events from all numbers currently
+connected to that WABA. For `channel`, use the public alias returned for a
+Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, Mercado Libre, or
+Google Business Profile channel. Internal
+scope IDs and Meta Business Portfolio IDs are never needed.
 
 WhatsApp scope numbers follow the same international normalization as the
 message API: E.164 or digits-only with a country calling code, common visual
@@ -244,7 +224,8 @@ curl "https://api.easyhook.dev/v1/webhooks/options?provider=whatsapp&scope_type=
 ```
 
 `provider` accepts `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
-`outlook`, `imap_smtp`, `mercadolibre`, or `*`. `scope_type` accepts `organization`, `waba`,
+`outlook`, `imap_smtp`, `mercadolibre`, `google_business_profile`, or `*`.
+`scope_type` accepts `organization`, `waba`,
 `phone`, or `channel`. The response filters incompatible combinations and
 returns `providers`, `events`, `scope_types`, and `scope_identifiers`.
 Connected-account values are public numbers or aliases that can be sent as
@@ -273,6 +254,7 @@ Providers:
 - `outlook`
 - `imap_smtp`
 - `mercadolibre`
+- `google_business_profile`
 - `*`
 
 Common event filters:
@@ -280,10 +262,10 @@ Common event filters:
 | Filter | Receives |
 | --- | --- |
 | `*` | Every event in the selected provider and scope. |
-| `message.*` | Live inbound messages and reactions. It does not include coexistence echoes or History imports. |
+| `message.*` | Live incoming messages/reactions. It does not include WhatsApp Business App echoes or History imports. |
 | `message.text`, `message.image`, `message.audio`, `message.video` | One concrete live message type. |
-| `message.quick_reply` | Messenger or Instagram quick-reply selections with visible title and payload. |
 | `message.document`, `message.reaction` | WhatsApp document or reaction events. |
+| `message.button`, `message.interactive` | WhatsApp template-button, quick-reply, list, and Flow interactions. |
 | `message.file` | Messenger/Instagram file events. |
 | `status.*` | WhatsApp delivery, read, and failure statuses. |
 | `status.failed` | Only failed WhatsApp message statuses. |
@@ -295,12 +277,20 @@ Common event filters:
 | `history.*` | Coexistence history synchronization. |
 | `account_update.*` | WhatsApp account connection updates. |
 | `onboarding.*` | Hosted onboarding lifecycle. |
+| `consent.updated` | A contact's service or marketing consent state changed. |
+| `review.created` | A new Google Business Profile review. |
+| `review.updated` | A Google Business Profile review or business reply changed. |
+
+Email providers use the same `message.*` subscription as the other channels.
+Their normalized `message` block adds `subject`, optional `html`, `thread_id`,
+`message_id_header`, `in_reply_to`, and `references`. Use `message.id` as
+`reply_to_message_id` when replying through `POST /v1/messages/email`. Render
+`html` as untrusted content and use the thread/header values when needed.
 
 Filtering uses the provider event name. The delivered public `type` remains
-standardized. Use `message.*` for inbound traffic, `smb_message_echo.*` for
-messages sent from the WhatsApp Business App, and `history.*` for imported
-conversations. These filters are intentionally disjoint so a workflow cannot
-receive an echo through both the inbound and coexistence subscriptions.
+standardized. Use `smb_message_echo.*` for messages sent from the WhatsApp
+Business App. Use `message.*` for inbound messages only. Use `history.*`
+separately for imported conversations. These families never overlap.
 
 ## Event Types
 
@@ -309,6 +299,9 @@ receive an echo through both the inbound and coexistence subscriptions.
 | `message.received` | `message` |
 | `message.echo` | `message` |
 | `message.media_available` | `message`; update the existing message with the same `message.id` |
+| `message.edit` / normalized `message.received` | `message.edit.original_message_id`; update the original message instead of inserting another one |
+| `message.revoke` / normalized `message.received` | `message.revoke.original_message_id`; mark the original message as deleted |
+| `message.system` / normalized `message.received` | `message.system`; informational WhatsApp event such as a changed phone number |
 | `message.sent` | `status` |
 | `message.delivered` | `status` |
 | `message.read` | `status` |
@@ -325,6 +318,9 @@ receive an echo through both the inbound and coexistence subscriptions.
 | `template.components_changed` | `template` |
 | `account.updated` | `account_update` |
 | `contact.updated` | `contact_update` |
+| `consent.updated` | `consent` |
+| `review.created` | `review` |
+| `review.updated` | `review` |
 | `onboarding.created` | `onboarding` |
 | `onboarding.completed` | `onboarding` |
 | `sync.failed` | `sync` for lifecycle failures, or `error` for a terminal item/provider error |
@@ -406,6 +402,42 @@ Later Meta status events remain standard `message.sent`, `message.delivered`, `m
 }
 ```
 
+Failed status events preserve Meta's `errors` array and add a normalized
+`status.error` when Easyhook can identify the cause:
+
+```json
+{
+  "type": "message.failed",
+  "status": {
+    "message_id": "wamid.HBg...",
+    "recipient_id": "5215551112222",
+    "errors": [{
+      "code": 131053,
+      "title": "Media upload error",
+      "error_data": {
+        "details": "Sticker with dimensions 406x379 has incorrect dimensions, expected dimension: 512x512"
+      }
+    }],
+    "error": {
+      "code": "invalid_sticker_dimensions",
+      "message": "Sticker must be exactly 512x512 pixels. Received 406x379.",
+      "provider_code": 131053,
+      "retryable": false,
+      "details": {
+        "width": 406,
+        "height": 379,
+        "expected_width": 512,
+        "expected_height": 512
+      }
+    }
+  }
+}
+```
+
+Use `status.error.code` for application logic and retain the raw `errors`
+array for diagnostics. A `message.failed` event is terminal unless the
+normalized error explicitly reports `retryable: true`.
+
 Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-level `id`, message statuses by `status.message_id` plus public `type`, and reconcile with `GET /v1/scheduled-messages/{id}` after webhook downtime.
 
 ### `account`
@@ -420,8 +452,11 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `id` | string | Remote WhatsApp ID/phone, PSID, or IGSID. Use with `account.id` as the conversation identity. |
-| `user_id` | string | Optional coexistence alias such as `MX.1030980939667977`. |
+| `id` | string | Routable remote provider ID. For WhatsApp this can be a phone or a Business-scoped User ID (BSUID); it is not guaranteed to contain only digits. |
+| `phone` | string or null | WhatsApp phone in international digits while Meta supplies it. It can be absent for username-first conversations. |
+| `user_id` | string or null | WhatsApp BSUID, such as `MX.1030980939667977`. Prefer it as the stable contact key when present. |
+| `username` | string or null | Optional WhatsApp username without `@`. |
+| `country_code` | string or null | Optional country code supplied by WhatsApp. |
 | `name` | string | Provider-supplied contact/profile name, when available. |
 
 ### `message`
@@ -433,19 +468,20 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `source` | string | `history`, `whatsapp_business_app`, or another provider source when relevant. |
 | `from` | string | Provider identifier of the sender. |
 | `to` | string | Provider identifier of the recipient. |
-| `type` | string | `text`, `edit`, `revoke`, `system`, `media_placeholder`, `interactive`, `image`, `audio`, `video`, `document`, `file`, `sticker`, `reaction`, `unsupported`, or a future provider type. |
-| `text` | string | Text body for `text`, `edit`, and normalized interactive replies. |
+| `type` | string | `text`, `button`, `edit`, `interactive`, `image`, `audio`, `video`, `document`, `file`, `sticker`, `reaction`, `unsupported`, or a future provider type. |
+| `text` | string | Text body for text/edit messages and the visible title selected in button, quick-reply, and list interactions. |
 | `subject` | string | Email subject for Gmail, Outlook, and IMAP/SMTP. |
-| `html` | string | Original email HTML when present. Treat as untrusted content. |
-| `thread_id` | string | Provider thread identifier. |
+| `html` | string | Original email HTML when present. Treat it as untrusted content. |
+| `thread_id` | string | Provider email thread identifier. |
 | `message_id_header` | string | RFC Message-ID header. |
 | `in_reply_to` | string | RFC parent Message-ID. |
 | `references` | string | RFC references chain. |
+| `attachments` | array | Normalized email attachments, including protected Easyhook media IDs. |
 | `media` | object | Normalized media metadata described below. |
 | `reaction` | object | Target message and emoji. |
+| `button` | object | WhatsApp template button response with `text` and provider `payload`. |
+| `interactive` | object | WhatsApp interactive response with `type` and a `button_reply` or `list_reply` block. |
 | `edit` | object | Original message ID, replacement type, and replacement text. |
-| `revoke` | object | Original message ID that was deleted in WhatsApp. |
-| `system` | object | Informational WhatsApp event such as a changed phone number. |
 | `referral` | object | Click-to-WhatsApp/provider referral context. |
 | `unsupported` | object | Unsupported provider type and errors. |
 | `timestamp` | ISO 8601 string | Original provider timestamp after normalization. |
@@ -463,18 +499,161 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `sha256` | string | Provider/file digest when available. |
 | `size` | number | Size in bytes. |
 | `expires_at` | ISO 8601 string | URL/asset expiration when applicable. |
-| `storage_status` | string | `stored`, `pending`, `failed`, or `unavailable`. |
-| `placeholder` | boolean | `true` when History did not include a downloadable media ID. |
 
 `message.reaction` contains `message_id` and `emoji`. An empty `emoji` removes
 the previous reaction. `message.edit` contains `original_message_id`, `type`,
 and `text`; update the original message instead of inserting a second message.
-`message.revoke.original_message_id` identifies the message to mark as deleted.
-Display `message.system.body` as an informational notice; it is not a new
-customer message and must not open a service window.
 `message.unsupported` contains `type` and optional
 `errors[]`. `message.history` can contain `thread_id`, `status`, `phase`,
 `chunk_order`, and `progress`.
+
+For WhatsApp button responses, never infer the selected action from the
+template definition. Easyhook preserves the values supplied by Meta:
+
+```json
+{
+  "message": {
+    "type": "button",
+    "text": "Confirmar asistencia",
+    "button": {
+      "text": "Confirmar asistencia",
+      "payload": "confirm_attendance"
+    }
+  }
+}
+```
+
+Interactive quick replies and list selections use the same visible
+`message.text` convenience field and retain their structured identifier:
+
+```json
+{
+  "message": {
+    "type": "interactive",
+    "text": "Necesito cambiarla",
+    "interactive": {
+      "type": "button_reply",
+      "button_reply": {
+        "id": "change_attendance",
+        "title": "Necesito cambiarla"
+      }
+    }
+  }
+}
+```
+
+For automation, prefer `message.button.payload`,
+`message.interactive.button_reply.id`, or
+`message.interactive.list_reply.id`. Use `message.text` only as the human
+label. If Meta omits an identifier, Easyhook leaves it absent rather than
+guessing it.
+
+### Messenger and Instagram quick replies
+
+Quick replies selected in Messenger or Instagram use the dedicated provider
+event filter `message.quick_reply`. The public event remains a normalized
+inbound message:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "instagram",
+  "account": { "id": "17841401731804358" },
+  "contact": { "id": "27481212444850810" },
+  "message": {
+    "id": "mid...",
+    "direction": "in",
+    "type": "quick_reply",
+    "text": "Ventas",
+    "quick_reply": {
+      "title": "Ventas",
+      "payload": "sales"
+    }
+  }
+}
+```
+
+Use `message.quick_reply.payload` as the stable routing value. A subscription
+to `message.*` also receives this event; do not subscribe to both filters on
+separate automations unless duplicate processing is intentional.
+
+### WhatsApp edits, deletions, and system notices
+
+Subscribe to the provider event names `message.edit`, `message.revoke`, and
+`message.system`. These are normalized message events, so the delivered
+top-level `type` is `message.received`; route the operation with
+`message.type`:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "whatsapp",
+  "account": { "id": "109489555192993", "phone": "5218441010369" },
+  "contact": { "id": "5218445625711" },
+  "message": {
+    "id": "wamid.edit-event",
+    "type": "edit",
+    "text": "Texto corregido",
+    "edit": {
+      "original_message_id": "wamid.original",
+      "type": "text",
+      "text": "Texto corregido"
+    },
+    "timestamp": "2026-07-31T13:33:03.000Z"
+  }
+}
+```
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "whatsapp",
+  "message": {
+    "id": "wamid.revoke-event",
+    "type": "revoke",
+    "revoke": { "original_message_id": "wamid.original" },
+    "timestamp": "2026-07-31T11:28:57.000Z"
+  }
+}
+```
+
+```json
+{
+  "id": "event_uuid",
+  "type": "message.received",
+  "channel": "whatsapp",
+  "message": {
+    "id": "wamid.system-event",
+    "type": "system",
+    "system": {
+      "type": "user_changed_number",
+      "body": "User A changed from 5218447301597 to 5218446730750",
+      "wa_id": "5218446730750"
+    },
+    "timestamp": "2026-07-30T02:34:03.000Z"
+  }
+}
+```
+
+Consumer rules:
+
+- For `edit`, find the existing row by `message.edit.original_message_id`,
+  replace its text with `message.edit.text` (or `message.text`), and mark it as
+  edited. Do not insert a second chat message.
+- For `revoke`, find the existing row by
+  `message.revoke.original_message_id`, mark it as revoked, and hide or clear
+  its content. Do not insert a standalone chat message.
+- For `system`, display `message.system.body` as an informational notice. For
+  `user_changed_number`, use `message.system.wa_id` as the new WhatsApp
+  identity according to the application's contact-merging policy.
+- Deduplicate each webhook with top-level `id`. Use the original WAMID for the
+  message update; the event's `message.id` identifies the edit, revoke, or
+  system event itself.
+- Never render these events as a generic empty message when their specialized
+  block is present.
 
 ### `status`
 
@@ -566,36 +745,9 @@ Meta documents History as an import of up to approximately 180 days and excludes
 
 Historical imports never trigger live consent keyword handling or replay Flow submission side effects. They only rebuild message history and emit the subscribed `history.*` customer webhook events.
 
-## Consent Updates
+Subscribe to `history.*` before connecting or requesting coexistence synchronization when the destination must receive the complete historical import. Live inbound events use `message.*`; live WhatsApp Business App echoes use `smb_message_echo.*`.
 
-Subscribe to `consent.updated` to receive a normalized event whenever a
-contact's service or marketing state actually changes:
-
-```json
-{
-  "id": "event_uuid",
-  "type": "consent.updated",
-  "channel": "whatsapp",
-  "account": { "id": "980912725115744" },
-  "contact": { "id": "5218661479075" },
-  "consent": {
-    "contact": "5218661479075",
-    "scope": "marketing",
-    "status": "opt_out",
-    "previous_status": "opt_in",
-    "source": "whatsapp_flow",
-    "updated_at": "2026-07-31T18:00:00.000Z"
-  }
-}
-```
-
-Deduplicate with the top-level `id`. Evidence is retained for the organization
-audit trail and is not delivered. Reconcile both scopes with
-`GET /v1/consent/status`.
-
-Subscribe to `history.*` before connecting or requesting coexistence synchronization when the destination must receive the complete historical import. Live events continue to use their corresponding `message.*` or `smb_message_echo.*` filters.
-
-The subscription selector uses the provider event (`history.*`). Easyhook sends `{ "type": "sync.batch", "sync": {...}, "events": [...] }`, with at most 100 normalized events in `events`. Each event keeps the standard public `type` (`message.received` or `message.echo`). A `message.*` subscription alone does not receive the historical import.
+The subscription selector uses the provider event (`history.*`). Easyhook sends `{ "type": "sync.batch", "sync": {...}, "events": [...] }`, with at most 100 normalized events in `events`. Each event keeps the standard public `type` (`message.received` or `message.echo`). Neither `message.*` nor `smb_message_echo.*` receives the historical import.
 
 Complete batch envelope:
 
@@ -695,12 +847,13 @@ The business must allow history sharing in the WhatsApp Business App during coex
 
 Treat each element of `events` as one normalized message. The outer object is an Easyhook delivery batch, not Meta's raw `messages[]`, `contacts[]`, or `history[]` payload.
 
-- Use `account.id + ":" + contact.id` as the conversation key. The account ID is required because the same contact can talk to more than one connected number.
+- Use `account.id + ":" + (contact.user_id ?? contact.id)` as the conversation key. The account ID is required because a BSUID is scoped to the business and the same person can talk to more than one connected number.
 - Use `message.id` (the Meta `wamid`) as the message deduplication key. Webhook and workflow processing must be idempotent.
 - Sort imported messages by `message.timestamp`, not by webhook arrival time. Separate conversations can be processed concurrently, so global delivery order is not meaningful.
 - For `message.direction: in`, `contact` is the sender and `account` is the receiving Easyhook number.
 - For `message.direction: out`, `account` is the sender and `contact` is the recipient.
-- Meta can identify a coexistence contact with a country-scoped user ID such as `MX.1030980939667977` instead of a phone number. Easyhook maps it to the phone from `smb_app_state_sync` when available; otherwise `contact.id`, `contact.user_id`, `message.from`/`to`, and `message.history.thread_id` preserve that stable Meta user ID. Never invent or guess a phone number.
+- WhatsApp usernames can hide the person's phone number. Meta then identifies the contact with a Business-scoped User ID (BSUID), such as `MX.1030980939667977`. Easyhook stores phone/BSUID aliases when Meta supplies both and preserves the BSUID in `contact.user_id`. `contact.phone`, `message.from`, `message.to`, and status `recipient_id` can be absent or contain an opaque BSUID. Never require digits, invent a phone, or strip letters and punctuation from these identifiers.
+- During Meta's transition window a webhook can contain both `contact.phone` and `contact.user_id`; store both. A later webhook can contain only the BSUID and still belongs to the same contact.
 - In rare historical records, Meta can omit every remote-contact field. Easyhook emits `type: sync.failed` with `error.code: missing_remote_contact` and `error.provider_message_id` instead of publishing an unusable `message.received` or `message.echo`. Keep the rest of the import and record this item as terminal unless Meta later supplies the missing identity.
 - Do not trigger live auto-replies, consent keyword detection, or other real-time inbound automations when `message.source === "history"` unless replay behavior is explicitly intended.
 - A history subscription can receive `sync.failed`; handle it separately from message events and keep the workflow retry-safe.
@@ -758,10 +911,14 @@ Choose the policy when requesting a synchronization:
 
 Meta generally exposes downloadable media IDs only for recent historical media (approximately the last 14 days). Older messages can remain as metadata or `media_placeholder`; missing media never fails the message import. Storage and transfer use the normal Easyhook media quotas.
 
-If Meta sends `media_placeholder` without a media ID, Easyhook returns
-`message.media.storage_status: "unavailable"` and `placeholder: true`. There is
-no file to download unless a later `message.media_available` event arrives with
-the same `message.id`.
+When Meta sends `media_placeholder` without a media ID, Easyhook emits `message.media.storage_status: "unavailable"` and `placeholder: true`. No file exists to download in that case. Consumers must show a placeholder and wait for `message.media_available`; they must not treat it as an empty text message.
+
+For `edit`, update the existing row identified by
+`message.edit.original_message_id`. For `revoke`, use
+`message.revoke.original_message_id` to mark the existing message as deleted.
+For `system`, display `message.system.body` as an informational notice and do
+not treat it as a new customer message or open a service window. The same
+mapping rules apply when these records arrive inside a History batch.
 
 ## Coexistence App State Sync
 
@@ -792,9 +949,43 @@ The `smb_app_state_sync.*` filter receives contact and app-state records importe
 }
 ```
 
-`contact_update.type` and `contact_update.action` preserve Meta's record classification. Consumers must not hardcode a closed list of values. Use `contact_update.provider_id` as the phone identity within the WhatsApp account, retain `contact_update.user_id` as its coexistence alias, and process repeated updates idempotently.
+`contact_update.type` and `contact_update.action` preserve Meta's record classification. Consumers must not hardcode a closed list of values. Retain both `contact_update.provider_id` and `contact_update.user_id`, and process repeated updates idempotently. The BSUID is opaque and must not be reformatted as a phone number.
+
+See Meta's [Business-scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) documentation and [WhatsApp username announcement](https://about.fb.com/news/2026/06/its-time-to-reserve-your-whatsapp-username/) for the provider transition.
 
 Subscribe to both `smb_app_state_sync.*` and `history.*` before starting coexistence synchronization when the destination needs both the imported contact state and historical conversations. State-sync events do not contain historical messages; history events do not replace contact-state updates.
+
+## Consent Updated
+
+Subscribe to `consent.updated` to react to opt-in, opt-out, and pending opt-out
+changes without polling the status endpoint. Easyhook emits the event only when
+the stored state changes. Evidence remains in the organization's audit record
+and is never included in the customer webhook.
+
+```json
+{
+  "id": "event_uuid",
+  "type": "consent.updated",
+  "channel": "whatsapp",
+  "account": { "id": "980912725115744" },
+  "contact": { "id": "5218661479075" },
+  "consent": {
+    "contact": "5218661479075",
+    "scope": "marketing",
+    "status": "opt_out",
+    "previous_status": "opt_in",
+    "source": "whatsapp_flow",
+    "updated_at": "2026-07-31T18:00:00.000Z"
+  }
+}
+```
+
+Use the top-level `id` as the idempotency key. `scope` is `service` or
+`marketing`; `status` is `opt_in`, `opt_out`, or `pending_opt_out`. Query the
+complete current state with `GET /v1/consent/status` when reconciling a CRM.
+`pending_opt_out` only reports that Easyhook sent a confirmation Flow. It does
+not revoke an existing opt-in. The pending request expires after one hour if
+the contact does not submit the Flow.
 
 ## Media Message
 
@@ -824,20 +1015,6 @@ Media fields are normalized across channels. `url` is included when Easyhook sto
 ```
 
 The URL may contain an internal asset UUID because it is an opaque download resource. No separate asset UUID is exposed in the JSON.
-
-Download the file using the exact `message.media.url` received in the webhook
-and an API key that belongs to the same organization:
-
-```bash
-curl -L "https://api.easyhook.dev/v1/media/asset_uuid/download" \
-  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
-  --output received-image.jpg
-```
-
-The URL cannot be opened anonymously. In a CRM or customer portal, keep the API
-key on the backend and proxy or stream the downloaded bytes only after
-authorizing the signed-in user. Never embed an Easyhook API key in browser
-JavaScript.
 
 WhatsApp circular video notes currently arrive from Meta as unsupported messages without a media ID or URL:
 
@@ -999,6 +1176,44 @@ Subscribe to `onboarding.*` to receive hosted signup lifecycle events:
 }
 ```
 
+## Google Business Profile Reviews
+
+Choose provider `google_business_profile` and subscribe to `review.created`,
+`review.updated`, or `review.*`. Scope `channel` limits delivery to one connected
+location; organization scope receives every selected location.
+
+```json
+{
+  "id": "event-id",
+  "type": "review.created",
+  "channel": "google_business_profile",
+  "account": {
+    "id": "accounts/123/locations/456",
+    "name": "Sucursal Centro"
+  },
+  "review": {
+    "id": "review_abc",
+    "name": "accounts/123/locations/456/reviews/review_abc",
+    "rating": 5,
+    "comment": "Excelente atención",
+    "reviewer": {
+      "name": "Ana",
+      "photo_url": "https://example.com/photo.jpg",
+      "is_anonymous": false
+    },
+    "created_at": "2026-08-04T18:10:00Z",
+    "updated_at": "2026-08-04T18:10:00Z",
+    "reply": null
+  }
+}
+```
+
+Google Pub/Sub sends only a change notification. Easyhook fetches the current
+review, normalizes it, deduplicates by review and update time, and then delivers
+the customer webhook. Delivery remains at-least-once: deduplicate non-message
+events by top-level `id`. A changed review or business reply can produce
+`review.updated` with the same `review.id` and a newer `updated_at`.
+
 ## Headers And Security
 
 Every delivery includes:
@@ -1065,44 +1280,6 @@ If Meta cannot start the import, the trigger can instead receive:
 ```
 
 The trigger obtains these choices from `GET /v1/webhooks/options`. The endpoint is restricted to the tenant of the API key and returns display labels and public aliases, never provider tokens or internal tenant IDs.
-
-## Google Business Profile reviews
-
-Choose provider `google_business_profile` and subscribe to `review.created`,
-`review.updated`, or `review.*`. Scope `channel` limits delivery to one connected
-location; organization scope receives every selected location.
-
-```json
-{
-  "id": "event-id",
-  "type": "review.created",
-  "channel": "google_business_profile",
-  "account": {
-    "id": "accounts/123/locations/456",
-    "name": "Sucursal Centro"
-  },
-  "review": {
-    "id": "review_abc",
-    "name": "accounts/123/locations/456/reviews/review_abc",
-    "rating": 5,
-    "comment": "Excelente atención",
-    "reviewer": {
-      "name": "Ana",
-      "photo_url": "https://...",
-      "is_anonymous": false
-    },
-    "created_at": "2026-08-04T18:10:00Z",
-    "updated_at": "2026-08-04T18:10:00Z",
-    "reply": null
-  }
-}
-```
-
-Google Pub/Sub sends only a change notification. Easyhook fetches the current
-review, normalizes it, deduplicates by review and update time, and then delivers
-the customer webhook. Delivery remains at-least-once: deduplicate non-message
-events by top-level `id`. A changed review or business reply may produce
-`review.updated` with the same `review.id` and a newer `updated_at`.
 
 ## Billing And Delivery
 

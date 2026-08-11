@@ -1,8 +1,16 @@
 # Skill de Easyhook para agentes
 
-La skill oficial enseña a un agente a integrar la API, webhooks normalizados,
-onboarding, consentimiento, History, n8n, Chatwoot y MCP sin inventar campos ni
+La skill oficial incluye la referencia completa de la API y los webhooks de
+Easyhook. Enseña a un agente a integrar mensajería multicanal, media, templates,
+Flows, consentimiento, programación, onboarding, History, correo, Mercado Libre,
+reseñas de Google Business Profile, n8n, Chatwoot y MCP sin inventar campos ni
 usar identificadores internos.
+
+El paquete contiene tres referencias versionadas junto con la skill:
+
+- API pública, endpoints, parámetros y ejemplos.
+- Contratos de webhooks, filtros, firmas e idempotencia.
+- Guía de integración para agentes y decisiones de enrutamiento.
 
 Descarga oficial:
 

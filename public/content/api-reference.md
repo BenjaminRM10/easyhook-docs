@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-08-04
+Last updated: 2026-08-10
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -60,18 +60,18 @@ Every operation is tenant-scoped and returns
 `google_business_location_not_found` when the selected location does not belong
 to the API-key organization.
 
-### List reviews
+### List Reviews
 
 ```bash
 curl "https://api.easyhook.dev/v1/reviews?from=accounts%2F123%2Flocations%2F456&page_size=20" \
   -H "Authorization: Bearer $EASYHOOK_API_KEY"
 ```
 
-Optional query fields are `page_size` (1–50), `page_token`, and `order_by`.
+Optional query fields are `page_size` (1-50), `page_token`, and `order_by`.
 The response contains `account`, aggregate `rating`, normalized `reviews`, and
 `next_page_token`.
 
-### Get aggregate rating
+### Get Aggregate Rating
 
 ```bash
 curl "https://api.easyhook.dev/v1/reviews/summary?from=accounts%2F123%2Flocations%2F456" \
@@ -85,7 +85,7 @@ curl "https://api.easyhook.dev/v1/reviews/summary?from=accounts%2F123%2Flocation
 }
 ```
 
-### Reply to a review
+### Reply To A Review
 
 ```bash
 curl -X PUT https://api.easyhook.dev/v1/reviews/review_abc/reply \
@@ -145,10 +145,6 @@ Available MCP tools:
 | `send_template` | Send an approved WhatsApp template. |
 | `send_flow` | Send a published WhatsApp Flow. |
 | `send_consent_flow` | Send the WABA opt-in or opt-out Flow. |
-| `check_template_category` | Review whether content appears consistent with its selected Meta category. |
-| `create_template` | Submit a WhatsApp template to Meta for approval. |
-| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel. |
-| `send_onboarding_link` | Send a hosted onboarding URL to an allowlisted WhatsApp contact. |
 | `list_templates` | List templates resolved from the configured sender. |
 | `list_media` | List reusable media resolved from the configured sender. |
 | `list_flows` | List Flows resolved from the configured sender. |
@@ -316,7 +312,6 @@ Main `Easyhook` operations:
 | Resource | Operation | API endpoint used |
 | --- | --- | --- |
 | Message Action | Send Text | `POST /v1/messages/text` |
-| Message Action | Send Quick Replies | `POST /v1/messages/quick-replies` |
 | Message Action | Send Text + Humanized Delivery | `POST /v1/messages/humanized-text` |
 | Message Control | Mark as Read | `POST /v1/messages/read` |
 | Message Control | Reply | `POST /v1/messages/reply` |
@@ -332,10 +327,6 @@ Main `Easyhook` operations:
 | Media | Delete | `DELETE /v1/media/{id}` |
 | Template | List | `GET /v1/templates?from=...` |
 | Template | Sync From Meta | `POST /v1/templates/sync` |
-| Template | Check Category | `POST /v1/templates/classify` |
-| Template | Create | `POST /v1/templates` |
-| Onboarding | Get URL | `POST /v1/onboarding/sessions` |
-| Onboarding | Send URL | `POST /v1/onboarding/sessions/send` |
 | Cancel Scheduled Message | Cancel | `DELETE /v1/scheduled-messages/{id}` |
 | Email Only | Send / Reply | `POST /v1/messages/email` |
 | Email Only | Forward | `POST /v1/messages/email/forward` |
@@ -362,24 +353,11 @@ For webhooks in n8n:
 The node registers and removes the subscription automatically. It stores the one-time HMAC secret in n8n private workflow data and validates every delivery. No portal webhook or manual secret configuration is required.
 
 When a webhook contains `message.media.url`, the URL is intentionally private.
-Use that exact URL from your server and authenticate it with the API key for the
-same Easyhook organization:
-
-```bash
-curl -L "$MESSAGE_MEDIA_URL" \
-  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
-  --output received-media
-```
-
-Do not expose the API key in frontend JavaScript. A customer portal should call
-its own authenticated backend; that backend downloads the bytes from
-`message.media.url` and streams them to the authorized portal user.
-
-In n8n, add an `Easyhook` node with `Resource: Media` and
-`Operation: Download`, map `{{$json.message.media.url}}` into `Media URL`, and
-choose the output binary field (default: `data`). The node authenticates the
-download with the same Easyhook credential and emits n8n binary data for
-subsequent file, storage, or AI nodes.
+Add an `Easyhook` node with `Resource: Media` and `Operation: Download`, map
+`{{$json.message.media.url}}` into `Media URL`, and choose the output binary
+field (default: `data`). The node authenticates the download with the same
+Easyhook credential and emits n8n binary data for subsequent file, storage, or
+AI nodes.
 
 For a WhatsApp Business App history import, choose `Provider: WhatsApp` and `Event: Coexistence history (history.*)`, then select the organization, WABA, or number scope and activate the workflow **before** connecting the coexistence phone or requesting synchronization. `message.*` does not include historical imports. Easyhook sends batches of at most 100 events; the n8n trigger expands each batch into one output item per normalized event.
 
@@ -486,9 +464,9 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
 | `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. |
-| `POST` | `/v1/messages/quick-replies` | `messages:write` | Send 1–13 text quick replies through Messenger or Instagram. |
+| `POST` | `/v1/messages/quick-replies` | `messages:write` | Send one text prompt with 1–13 quick-reply buttons through Messenger or Instagram. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
-| `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram using only controls supported by that provider. |
+| `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram. Presence controls are best-effort and never replace the actual send. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, or Instagram. |
 | `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, or Telegram. |
 | `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, or Telegram. |
@@ -519,8 +497,15 @@ Recommended customer API endpoints:
 | `POST` | `/v1/consent/enable` | `flows:write` | Create/publish default opt-in and opt-out Flows and enable WABA consent. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent` | `messages:write` | Record consent evidence, or send the default opt-in/opt-out Flow when `mode` is provided. |
 | `GET` | `/v1/consent/status?from=...&contact=...` | `messages:read` or legacy `messages:write` | Read service and marketing consent for one contact in the WABA behind `from`. |
-| `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted onboarding session for any supported channel, owned by the API key tenant. |
+| `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted channel onboarding session owned by the API key tenant. |
 | `POST` | `/v1/onboarding/sessions/send` | `onboarding:write` | Create an onboarding session and send its URL from an authorized WhatsApp number. |
+| `GET` | `/v1/onboarding/sessions/{token}` | opaque session token | Read or open a hosted onboarding session. |
+| `POST` | `/v1/onboarding/sessions/{token}/complete` | opaque session token | Complete WhatsApp embedded signup. |
+| `POST` | `/v1/onboarding/sessions/{token}/connect` | opaque session token | Complete a direct hosted channel connection. |
+| `POST` | `/v1/onboarding/sessions/{token}/oauth/start` | opaque session token | Start a hosted provider OAuth flow. |
+| `GET` | `/v1/reviews?from=...` | `reviews:read` | List normalized Google Business Profile reviews and aggregate rating for one connected location. |
+| `GET` | `/v1/reviews/summary?from=...` | `reviews:read` | Read the aggregate rating and total review count for one connected location. |
+| `PUT` | `/v1/reviews/{review_id}/reply` | `reviews:write` | Publish or update the business reply to a Google review. |
 | `GET` | `/v1/webhooks` | any valid key | List webhook subscriptions owned by the API-key organization. |
 | `GET` | `/v1/webhooks/options?provider=...&scope_type=...` | any valid key | Discover compatible providers, event filters, scopes, and public sender identifiers. |
 | `POST` | `/v1/webhooks` | any valid key | Create a webhook subscription; its HMAC/auth secret is returned once. |
@@ -536,6 +521,57 @@ Recommended customer API endpoints:
 Portal/admin endpoints exist for onboarding, API-key management, webhook management, and Meta webhook ingestion. They are listed near the end of this document so customers can recognize them, but new product integrations should use the recommended endpoints above.
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
+
+## Messenger And Instagram Quick Replies
+
+Easyhook exposes the common text quick-reply contract supported by Messenger
+and Instagram. `from` is the connected Page or Instagram account ID, and `to`
+is the provider-scoped contact ID received in Easyhook webhooks.
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/quick-replies \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "17841401731804358",
+    "to": "27481212444850810",
+    "body": "¿Cómo podemos ayudarte?",
+    "quick_replies": [
+      { "title": "Ventas", "payload": "sales" },
+      { "title": "Soporte", "payload": "support" }
+    ]
+  }'
+```
+
+Rules:
+
+- Send between 1 and 13 replies.
+- `title` is visible to the contact and accepts at most 20 characters.
+- `payload` is an application-defined stable value and accepts at most 1,000
+  characters.
+- Only text quick replies are normalized across both providers. Provider-only
+  phone, email, and image variants are intentionally not part of this endpoint.
+- Instagram quick replies are not available in the desktop experience.
+
+When the contact chooses an option, subscribe to `message.quick_reply`:
+
+```json
+{
+  "type": "message.received",
+  "channel": "instagram",
+  "message": {
+    "type": "quick_reply",
+    "text": "Ventas",
+    "quick_reply": {
+      "title": "Ventas",
+      "payload": "sales"
+    }
+  }
+}
+```
+
+Route automation by `message.quick_reply.payload`; use `message.text` or
+`message.quick_reply.title` only as the label shown to the person.
 
 ## Gmail
 
@@ -982,6 +1018,7 @@ Request:
 
 ```json
 {
+  "provider": "whatsapp",
   "signup_mode": "cloud_api",
   "return_url": "https://app.example.com/settings/whatsapp",
   "language": "es",
@@ -996,10 +1033,10 @@ Parameters:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
+| `provider` | no | `whatsapp` (default), `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, or `mercadolibre`. |
 | `signup_mode` | no | `cloud_api` for a regular WhatsApp Business API connection, or `coexistence` for WhatsApp Business App coexistence. Defaults to `cloud_api`. |
 | `return_url` | no | HTTPS URL where the hosted page can send the customer after completion. |
 | `language` | no | `es` or `en`. Defaults to `es`. |
-| `provider` | no | `whatsapp` (default), `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, or `mercadolibre`. |
 | `metadata` | no | JSON object echoed back in onboarding webhooks. |
 | `expires_in_seconds` | no | Lifetime from `300` to `3600` seconds. Defaults to one hour. |
 
@@ -1029,12 +1066,11 @@ Response:
 }
 ```
 
-When the customer completes the provider authorization on the hosted page,
-Easyhook stores the channel under the organization that owns the API key.
-WhatsApp stores its WABA and phone; other providers store their channel ID.
-Subscribe to `onboarding.*` webhooks to receive completion events in your app.
-Sessions expire after at most one hour and are consumed after the first
-successful completion.
+When the customer completes authorization on the hosted page, Easyhook stores
+the channel under the organization that owns the API key. Subscribe to
+`onboarding.*` webhooks to receive completion events in your app. Sessions
+expire after at most one hour and are consumed after the first successful
+completion.
 
 The hosted Easyhook page uses these token-scoped support endpoints internally:
 
@@ -1150,6 +1186,9 @@ Rules:
   E.164 (`+573001234567`) and digits-only (`573001234567`) values, plus common
   formatting with spaces, hyphens, dots, parentheses, or the `00`
   international prefix.
+- A WhatsApp recipient can also be the opaque BSUID received in `contact.user_id`,
+  `message.from_user_id`, or `status.recipient_user_id`. Pass it unchanged in
+  `to`; do not add `+`, remove punctuation, or validate it as E.164.
 - Do not send national-only numbers. Easyhook does not guess a country because
   the same leading digits can identify a different valid country calling code.
 - The `from` sender must belong to the tenant that owns the API key.
@@ -1387,6 +1426,8 @@ If the WABA is enabled but the contact has not opted in, Easyhook returns:
 
 Consent is configured per WABA. If WABA consent is not enabled, Easyhook still allows normal 24-hour session replies, but blocks business-initiated templates with `consent_not_enabled`.
 
+The Easyhook record is an operational safeguard, not a substitute for valid permission. The customer remains responsible for collecting truthful, explicit and auditable consent under Meta policy and applicable law. Configure Meta billing separately in [WhatsApp Manager](https://business.facebook.com/latest/settings/whatsapp_account); the Easyhook wallet does not pay Meta's template charges. See Meta's [opt-in guidance](https://developers.facebook.com/docs/whatsapp/overview/getting-opt-in/) and [pricing documentation](https://developers.facebook.com/docs/whatsapp/pricing/).
+
 If a contact is opted out, Easyhook blocks business-initiated template sends with `recipient_opted_out`. Free-form text, media, and Flow messages are still allowed when the contact has an open 24-hour customer service window, because the contact initiated that session.
 
 Easyhook records consent automatically when a WhatsApp Flow submission includes these boolean fields:
@@ -1398,7 +1439,18 @@ Easyhook records consent automatically when a WhatsApp Flow submission includes 
 | `service_opt_out` | Contact opted out of service/utility messages. |
 | `marketing_opt_out` | Contact opted out of marketing messages. |
 
-Clear opt-out phrases such as `Ya no quiero recibir mensajes`, `Stop sending me messages`, `unsubscribe`, or the common typo `unsuscribe` do not immediately unsubscribe the contact. If WABA consent is active, Easyhook records `pending_opt_out` and sends the published opt-out WhatsApp Flow so the contact can confirm whether they want to stop service messages, marketing messages, or both.
+Clear opt-out phrases such as `Ya no quiero recibir mensajes`, `dame de baja`, `no me contactes`, `stop`, `unsubscribe`, or the common typo `unsuscribe` do not immediately unsubscribe the contact. If WABA consent is active, Easyhook records a pending opt-out request and sends the published opt-out WhatsApp Flow so the contact can confirm whether they want to stop service messages, marketing messages, or both. The existing effective consent remains unchanged until the Flow is submitted. An unconfirmed request expires after one hour and may then be requested again. Easyhook's fixed phrases cannot be removed; `custom_keywords` only adds business-specific phrases.
+
+### Optional automatic opt-in
+
+Set `auto_opt_in_enabled` to `true` when enabling or updating the WABA configuration to schedule the opt-in Flow 23 hours after a contact's first live inbound interaction with that WhatsApp number.
+
+- The option is disabled by default and applies per WABA.
+- One automatic request is created per contact and sender number.
+- History imports never schedule it.
+- At dispatch time Easyhook revalidates that consent remains enabled, the contact has neither opted in nor opted out, and the 24-hour service window is still open.
+- If any check fails, Easyhook cancels the task without sending.
+- This internal automation does not count as a customer API call. Meta's own messaging charges and policies still apply.
 
 ### Enable WABA Consent
 
@@ -1417,7 +1469,7 @@ This creates or reuses two versioned Flows for the WABA, publishes them, and mar
 | `easyhook_consent_preferences_<revision>_opt_in` | Collect service/utility and marketing opt-in. |
 | `easyhook_consent_preferences_<revision>_opt_out` | Confirm service/utility and marketing opt-out. |
 
-The two Flows are separate Meta assets so the opt-in experience only shows opt-in choices, and the opt-out experience only shows opt-out choices. Meta Flows are immutable after publication. Changed copy creates a new deterministic revision; unchanged copy reuses the current revision.
+The two Flows are separate Meta assets so the opt-in experience only shows opt-in choices, and the opt-out experience only shows opt-out choices. Meta Flows are immutable after publication. Calling this endpoint with changed copy creates a new deterministic revision; unchanged copy reuses the current revision.
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/consent/enable \
@@ -1440,6 +1492,7 @@ curl -X POST https://api.easyhook.dev/v1/consent/enable \
       "opt_out_body": "Elige qué mensajes quieres cancelar.",
       "footer": "Puedes cambiar estas preferencias después."
     },
+    "auto_opt_in_enabled": true,
     "custom_keywords": ["cancel my reminders"]
   }'
 ```
@@ -1473,7 +1526,7 @@ Message and form copy are intentionally separate:
 
 Older configurations that only have `opt_in_body` or `opt_out_body` keep their previous send behavior until saved with the new message fields.
 
-Saving does not mutate a published Meta Flow. Call `POST /v1/consent/enable` after changing copy to create and activate the corresponding version.
+Saving configuration does not mutate a published Meta Flow. Call `POST /v1/consent/enable` after changing copy to create and activate the corresponding version.
 
 ```bash
 curl -X PATCH https://api.easyhook.dev/v1/consent/config \
@@ -1496,6 +1549,7 @@ curl -X PATCH https://api.easyhook.dev/v1/consent/config \
       "opt_out_body": "Choose which messages you no longer want to receive.",
       "footer": "You can change these preferences later."
     },
+    "auto_opt_in_enabled": true,
     "custom_keywords": ["cancel reminders", "stop promos"]
   }'
 ```
@@ -1527,7 +1581,7 @@ Allowed `mode` values: `opt_in`, `opt_out`.
 
 `body` and `cta` are optional per-send overrides. If omitted, Easyhook uses the corresponding `copy.opt_*_message_body` and `copy.opt_*_message_cta` values from the WABA consent configuration. They do not modify the published Flow form.
 
-`opt_in` and `opt_out` send the currently active versioned Flow recorded for that WABA.
+`opt_in` sends `easyhook_consent_preferences_opt_in`. `opt_out` sends `easyhook_consent_preferences_opt_out`.
 
 The WABA must have consent enabled and the customer-service window must be open. A successful response includes `accepted: true`, `delivery_status: "pending"`, and a `wamid`: this means Meta accepted the Flow request, not that the device displayed it. Subscribe to `status.*` and correlate by `wamid` to observe `sent`, `delivered`, `read`, or `failed`.
 
@@ -1578,20 +1632,45 @@ GET /v1/consent/status?from=980912725115744&contact=5218661479075
 ```
 
 Requires `messages:read`. For backward compatibility, API keys created before
-this read scope existed may use `messages:write`. The contact is resolved inside the WABA behind the
-sender, so consent is never shared between WABAs. `from` accepts the connected
-WhatsApp `account.id`, Phone Number ID, or business phone number. `to` and
-`recipient` are accepted as aliases for `contact`.
+this read scope existed may use `messages:write`. `from` accepts the connected WhatsApp `account.id`,
+Phone Number ID, or business phone number. The contact is resolved inside the
+WABA behind that sender; contacts and consent are never shared between WABAs.
+`to` and `recipient` are accepted as aliases for `contact`.
 
 ```bash
 curl -X GET 'https://api.easyhook.dev/v1/consent/status?from=980912725115744&contact=5218661479075' \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
-The `service` and `marketing` blocks each return `opt_in`, `opt_out`,
-`pending_opt_out`, or `unknown`, plus `updated_at` and `source` when known.
-`unknown` is not consent. Evidence is intentionally omitted. Subscribe to
-`consent.updated` to receive changes without polling.
+```json
+{
+  "consent": {
+    "contact": "5218661479075",
+    "account": { "id": "980912725115744" },
+    "service": {
+      "status": "opt_in",
+      "updated_at": "2026-07-30T18:00:00.000Z",
+      "source": "whatsapp_flow",
+      "pending_opt_out": true,
+      "pending_opt_out_at": "2026-08-01T05:30:00.000Z",
+      "pending_opt_out_expires_at": "2026-08-01T06:30:00.000Z"
+    },
+    "marketing": {
+      "status": "opt_out",
+      "updated_at": "2026-07-31T18:00:00.000Z",
+      "source": "customer_api"
+    }
+  }
+}
+```
+
+Each scope returns the effective status: `opt_in`, `opt_out`, or `unknown`.
+`unknown` means Easyhook has no recorded choice for that scope; it does not
+mean that the person opted in. `pending_opt_out` is separate metadata and does
+not replace a confirmed `opt_in`; it remains `true` for at most one hour while
+Easyhook waits for Flow confirmation. Evidence is intentionally excluded from this
+read endpoint. Subscribe to `consent.updated` to receive changes without
+polling.
 
 ## Errors
 
@@ -1606,7 +1685,7 @@ Common errors:
 | `channel_or_phone_not_found` | The unified send endpoint could not resolve `from` as a WhatsApp number or channel alias connected to the API key organization. |
 | `channel_not_enabled` | `from` resolved to a non-WhatsApp channel that is not enabled for public sending yet. |
 | `unsupported_message_type` | The endpoint does not support the requested message type. |
-| `invalid_whatsapp_recipient` | The unified endpoint resolved WhatsApp, but `to` is not a valid WhatsApp phone number. |
+| `invalid_whatsapp_recipient` | The unified endpoint resolved WhatsApp, but `to` is neither a valid international phone nor a valid opaque WhatsApp BSUID. |
 | `phone_or_template_not_found` | The selected template could not be resolved for the WABA behind `from`. |
 | `phone_or_flow_not_found` | The selected Flow could not be resolved for the WABA behind `from`. |
 | `template_not_approved` | The template exists but is not approved by Meta. |
@@ -1904,7 +1983,7 @@ Required fields:
 | Field | Type | Description |
 | --- | --- | --- |
 | `from` | string | Tenant-owned `account.id`, WhatsApp business phone, or backward-compatible channel alias. |
-| `to` | string | WhatsApp recipient number, Messenger PSID, Instagram IGSID, Telegram chat id, or Mercado Libre recipient id. |
+| `to` | string | WhatsApp recipient phone or BSUID, Messenger PSID, Instagram IGSID, Telegram chat id, or Mercado Libre recipient id. |
 | `body` | string | Message text. |
 
 Optional fields:
@@ -1934,38 +2013,6 @@ Non-WhatsApp success response:
 ```json
 { "ok": true, "provider": "messenger", "channel_id": "channel_uuid", "message_id": "mid..." }
 ```
-
-## Send Quick Replies
-
-Send text quick-reply buttons through Messenger or Instagram:
-
-```http
-POST /v1/messages/quick-replies
-```
-
-`from` accepts the connected Page or Instagram `account.id`, and `to` is the
-PSID or IGSID received from Easyhook. Send between 1 and 13 options. Each
-visible `title` is limited to 20 characters; `payload` is the stable value your
-automation should use.
-
-```bash
-curl -X POST https://api.easyhook.dev/v1/messages/quick-replies \
-  -H "Authorization: Bearer eh_live_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "from": "17841401731804358",
-    "to": "IGSID_VALUE",
-    "body": "¿Qué necesitas?",
-    "quick_replies": [
-      { "title": "Ventas", "payload": "sales" },
-      { "title": "Soporte", "payload": "support" }
-    ]
-  }'
-```
-
-Easyhook implements the common text-button contract shared by Messenger and
-Instagram. Phone/email quick replies and Messenger-only button images are not
-part of this standardized endpoint.
 
 ## Read, Typing, Reply, Reaction, And Humanized Text
 
@@ -2029,7 +2076,11 @@ Create the customer webhook subscription with the `history.*` filter before conn
 
 During coexistence onboarding, the business must allow history sharing in the WhatsApp Business App and should keep the app open while the initial synchronization starts. Meta error `2593109` means history sharing is disabled; Easyhook normalizes it as `type: sync.failed` for `history.*` subscribers.
 
-Consumers receive an Easyhook batch rather than Meta's raw callback. Process each normalized element in `events`. Build the conversation key from `account.id + ":" + contact.id`, deduplicate with `message.id`, order a conversation by `message.timestamp`, and prevent live auto-reply logic when `message.source` is `history`. Deliveries are at-least-once and retry up to five times. Meta sometimes supplies a stable country-scoped user ID instead of a phone; Easyhook maps it through state sync when possible and otherwise preserves it in `contact.id`/`contact.user_id` rather than guessing a number. The complete mapping contract is documented in [Customer Webhooks: Coexistence History](/webhooks#coexistence-history).
+Consumers receive an Easyhook batch rather than Meta's raw callback. Process each normalized element in `events`. Build the conversation key from `account.id + ":" + (contact.user_id ?? contact.id)`, deduplicate with `message.id`, order a conversation by `message.timestamp`, and prevent live auto-reply logic when `message.source` is `history`. Deliveries are at-least-once and retry up to five times. WhatsApp can supply a stable Business-scoped User ID (BSUID) instead of a phone; Easyhook preserves it in `contact.id`/`contact.user_id` and stores a phone alias when Meta supplies one. The complete mapping contract is documented in [Customer Webhooks: Coexistence History](./customer-webhooks.md#coexistence-history).
+
+The same BSUID can be used as `to` for normal WhatsApp sends. Authentication
+templates that use one-tap, zero-tap, or copy-code delivery still require a
+phone number; Meta can reject a BSUID destination with error `131062`.
 
 Historical media is asynchronous. The initial message can contain `message.media.storage_status: pending`. If Meta still exposes the file, Easyhook later emits `message.media_available` with the same `message.id` and a protected Easyhook download URL. Missing or expired Meta media never blocks the text/history import.
 
@@ -2058,7 +2109,7 @@ Only one active replay of each type is allowed per webhook and number. Poll `GET
 
 The same coexistence synchronization request also asks Meta for WhatsApp Business App contact/state data. Subscribe to `smb_app_state_sync.*` before synchronization to receive each imported record as a normalized `contact.updated` event under `contact_update`.
 
-State sync and history are complementary: `smb_app_state_sync.*` carries contact/app updates, while `history.*` carries historical messages. An integration rebuilding both contacts and conversations must subscribe to both filters before starting the sync. See [Customer Webhooks: Coexistence App State Sync](/webhooks#coexistence-app-state-sync) for the payload and identity rules.
+State sync and history are complementary: `smb_app_state_sync.*` carries contact/app updates, while `history.*` carries historical messages. An integration rebuilding both contacts and conversations must subscribe to both filters before starting the sync. See [Customer Webhooks: Coexistence App State Sync](./customer-webhooks.md#coexistence-app-state-sync) for the payload and identity rules.
 
 ### Reactions And Unsupported WhatsApp Messages
 
@@ -2127,11 +2178,13 @@ WhatsApp circular video notes currently reach Cloud API as `message.unsupported`
 Humanized text is still saved and delivered as a normal Easyhook text message. It only changes the pre-send behavior:
 
 1. Easyhook finds the latest inbound message from `to`, unless `message_id` is provided.
-2. Easyhook marks that inbound message as read.
+2. Easyhook attempts to mark the conversation as read when the provider supports it.
 3. Easyhook waits a short estimated reading delay.
-4. Easyhook sends WhatsApp typing.
+4. Easyhook attempts to show the provider's typing indicator.
 5. Easyhook waits a short estimated typing delay.
 6. Easyhook sends the text message.
+
+Messenger and Instagram use their sender actions, Telegram uses its typing action, and WhatsApp uses read and typing indicators. These presence controls are best-effort: if the provider rejects one, Easyhook still sends the text and reports the result in `controls.read` and `controls.typing` as `sent`, `failed`, or `skipped`.
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/messages/humanized-text \
@@ -2493,6 +2546,7 @@ Notes:
 
 - WhatsApp media messages are session messages and require an open 24-hour customer service window.
 - Stickers and audio do not support captions.
+- WhatsApp stickers must be valid WebP files measuring exactly 512 x 512 px. Easyhook rejects reusable stickers with `invalid_sticker_dimensions` before sending or charging the send operation. The error includes both `dimensions` and `expected_dimensions`.
 - Prefer Easyhook-managed reusable media for repeated sends. Session media can still use `id` or `link`.
 - When `media_name` is used, Easyhook creates a short-lived signed URL internally and sends that URL to Meta. Customer applications only need to know the stable `media_name`.
 - `media_name` resolves an organization-wide reusable asset. The same name can
@@ -2854,7 +2908,7 @@ The tokenized `/v1/integrations/chatwoot/events/...` and
 server-to-server by Easyhook and Chatwoot. Customers must not construct or call
 them manually.
 
-Customer webhook admin parameters are documented in [Customer Webhooks](/webhooks). In short, `POST /v1/hooks` accepts `tenant_id`, `name`, `url`, `events`, `providers`, `scope_type`, `scope_ref`, `auth_type`, and `auth_header_name`.
+Customer webhook admin parameters are documented in [Customer Webhooks](./customer-webhooks.md). In short, `POST /v1/hooks` accepts `tenant_id`, `name`, `url`, `events`, `providers`, `scope_type`, `scope_ref`, `auth_type`, and `auth_header_name`.
 
 Webhook routing uses three separate filters:
 
@@ -2993,6 +3047,30 @@ The response includes the templates returned by Meta after their local status ha
 }
 ```
 
+## Check Template Category
+
+Endpoint:
+
+```http
+POST /v1/templates/classify
+```
+
+Requires `templates:write`. Send `category` and the intended `components`.
+Easyhook returns fast, deterministic advice before submission:
+
+```json
+{
+  "category": "UTILITY",
+  "components": [
+    { "type": "BODY", "text": "Aprovecha 20% de descuento hoy." }
+  ]
+}
+```
+
+When the content appears promotional, the response can recommend `MARKETING`
+and include a warning. This check is advisory and never replaces Meta's final
+classification.
+
 ## Create Template
 
 Endpoint:
@@ -3001,7 +3079,9 @@ Endpoint:
 POST /v1/templates
 ```
 
-Requires `templates:write`. Creates a WhatsApp template in Meta and stores the local copy.
+Requires `templates:write`. Creates a WhatsApp template in Meta and stores the
+local copy. The response includes `category_advice`; warnings do not block
+submission.
 
 Required fields:
 
