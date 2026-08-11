@@ -280,7 +280,9 @@ Common event filters:
 | `*` | Every event in the selected provider and scope. |
 | `message.*` | Live incoming messages/reactions. It does not include WhatsApp Business App echoes or History imports. |
 | `message.text`, `message.image`, `message.audio`, `message.video` | One concrete live message type. |
-| `message.document`, `message.reaction` | WhatsApp document or reaction events. |
+| `message.document` | WhatsApp document events. |
+| `message.reaction` | WhatsApp, Messenger, or Instagram reactions when the provider emits them. |
+| `message.edit` | WhatsApp, Messenger, or Instagram edits when the provider emits them. |
 | `message.button`, `message.interactive` | WhatsApp template-button, quick-reply, list, and Flow interactions. |
 | `message.file` | Messenger/Instagram file events. |
 | `status.*` | WhatsApp delivery, read, and failure statuses. |
@@ -516,9 +518,11 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `size` | number | Size in bytes. |
 | `expires_at` | ISO 8601 string | URL/asset expiration when applicable. |
 
-`message.reaction` contains `message_id` and `emoji`. An empty `emoji` removes
-the previous reaction. `message.edit` contains `original_message_id`, `type`,
-and `text`; update the original message instead of inserting a second message.
+`message.reply_to.message_id` identifies the original message for an inline
+reply. `message.reaction` contains `message_id`, `action`, and optional `emoji`
+or provider reaction name. `action: "unreact"` removes the previous reaction.
+`message.edit` contains `original_message_id`, `type`, `text`, and optional
+`num_edit`; update the original message instead of inserting a second message.
 `message.unsupported` contains `type` and optional
 `errors[]`. `message.history` can contain `thread_id`, `status`, `phase`,
 `chunk_order`, and `progress`.
@@ -594,10 +598,25 @@ Use `message.quick_reply.payload` as the stable routing value. A subscription
 to `message.*` also receives this event; do not subscribe to both filters on
 separate automations unless duplicate processing is intentional.
 
-### WhatsApp edits, deletions, and system notices
+### Cross-channel replies, reactions, and edits
 
-Subscribe to the provider event names `message.edit`, `message.revoke`, and
-`message.system`. These are normalized message events, so the delivered
+Easyhook uses the same normalized fields when WhatsApp, Messenger, or Instagram
+provides the underlying event:
+
+- Inline reply: `message.reply_to.message_id`.
+- Reaction: `message.reaction.message_id`, `action`, and optional `emoji`.
+- Edit: `message.edit.original_message_id`, `text`, and optional `num_edit`.
+
+Provider capabilities are not identical. Meta currently exposes Messenger and
+Instagram reactions and edits, and Instagram inline reply references. Meta does
+not expose Messenger or Instagram message deletion/unsend as an equivalent
+webhook, so Easyhook does not infer or fabricate those events. Always ignore
+unknown optional fields and only process events that were actually delivered.
+
+### WhatsApp deletions and system notices
+
+Subscribe to the provider event names `message.revoke` and `message.system`.
+These are normalized message events, so the delivered
 top-level `type` is `message.received`; route the operation with
 `message.type`:
 

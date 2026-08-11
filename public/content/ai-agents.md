@@ -5,9 +5,9 @@ Last updated: 2026-08-10
 This file is the entry point for a coding agent integrating Easyhook into
 another application. It is intentionally concise. The normative contracts are:
 
-1. [Public API](/api-reference): every customer endpoint, request parameter,
+1. [Public API](./public-api.md): every customer endpoint, request parameter,
    response, error, billing rule, and example.
-2. [Customer Webhooks](/webhooks): subscription API, filters,
+2. [Customer Webhooks](./customer-webhooks.md): subscription API, filters,
    security headers, normalized JSON field names, History batches, and retries.
 
 Do not invent fields from provider documentation or use old Easyhook examples found
@@ -153,6 +153,11 @@ asynchronously.
 - When `message.type` is `edit`, update the row identified by
   `message.edit.original_message_id` with `message.edit.text`; do not insert a
   second message.
+- For WhatsApp, Messenger, and Instagram, use the same optional structures when
+  present: `message.reply_to.message_id`, `message.reaction.message_id` plus
+  `action`/`emoji`, and `message.edit.original_message_id` plus `text`.
+  Capabilities differ by provider; never infer a missing reaction, edit, reply,
+  or deletion from text or timing.
 - When `message.type` is `revoke`, mark the row identified by
   `message.revoke.original_message_id` as revoked and hide its content; do not
   insert a standalone message.
@@ -250,7 +255,7 @@ Messenger and Instagram share one quick-reply request shape:
 Subscribe to `message.quick_reply` and route by
 `message.quick_reply.payload`. Keep `message.text` for display only.
 
-Read the corresponding section in [Public API](/api-reference) before implementing an
+Read the corresponding section in `public-api.md` before implementing an
 endpoint. That document defines all accepted parameters and mutually exclusive
 fields.
 
