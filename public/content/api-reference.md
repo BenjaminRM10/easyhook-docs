@@ -510,6 +510,7 @@ Recommended customer API endpoints:
 | `GET` | `/v1/webhooks/options?provider=...&scope_type=...` | any valid key | Discover compatible providers, event filters, scopes, and public sender identifiers. |
 | `POST` | `/v1/webhooks` | any valid key | Create a webhook subscription; its HMAC/auth secret is returned once. |
 | `GET` | `/v1/webhooks/{id}` | any valid key | Read one owned webhook subscription without exposing its secret. |
+| `PATCH` | `/v1/webhooks/{id}` | any valid key | Replace only the subscribed `events`; URL, secret, authentication, providers, and scope remain unchanged. |
 | `DELETE` | `/v1/webhooks/{id}` | any valid key | Remove an owned webhook subscription. |
 | `POST` | `/v1/webhooks/{id}/replay` | any valid key | Retry failed delivery batches, optionally filtered by `sync_id`. |
 | `POST` | `/v1/webhooks/{id}/history-replays` | any valid key | Re-send stored messages or contacts for `phone_id` using `replay_type`. |

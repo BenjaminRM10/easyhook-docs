@@ -134,6 +134,7 @@ Meta Business Portfolios are retained internally as onboarding metadata. They ar
 | `GET` | `/v1/webhooks/options` | List compatible events, scopes, and connected accounts for the API-key tenant. |
 | `POST` | `/v1/webhooks` | Create a subscription and return its secret once. |
 | `GET` | `/v1/webhooks/{id}` | Read one subscription. |
+| `PATCH` | `/v1/webhooks/{id}` | Replace the subscribed events without changing the URL, secret, authentication, provider, or scope. |
 | `DELETE` | `/v1/webhooks/{id}` | Delete one subscription. |
 | `POST` | `/v1/webhooks/{id}/replay` | Requeue failed/dead deliveries for this subscription. |
 | `POST` | `/v1/webhooks/{id}/history-replays` | Re-send stored History messages or App State contacts. |
@@ -166,6 +167,21 @@ Creation fields:
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
 | `auth_header_name` | only for `custom_header` | Safe custom header name. `Authorization`, transport headers, and `X-Easyhook-*` are reserved. |
+
+Update only the subscribed events after creation:
+
+```bash
+curl -X PATCH https://api.easyhook.dev/v1/webhooks/WEBHOOK_ID \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": ["message.*", "status.*", "consent.updated"]
+  }'
+```
+
+`events` replaces the previous event selection and must contain at least one
+event compatible with the webhook's existing providers. This operation does
+not rotate or return the secret and does not recreate the subscription.
 
 Successful creation returns HTTP `201`. Save `secret` immediately; list/get
 calls never return it:
