@@ -465,6 +465,7 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
 | `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. |
 | `POST` | `/v1/messages/quick-replies` | `messages:write` | Send one text prompt with 1–13 quick-reply buttons through Messenger or Instagram. |
+| `POST` | `/v1/messages/interactive` | `messages:write` | Send one prompt with up to three reply or URL buttons through WhatsApp, Messenger, Instagram, or Telegram. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram. Presence controls are best-effort and never replace the actual send. |
 | `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, or Instagram. |
@@ -497,6 +498,7 @@ Recommended customer API endpoints:
 | `POST` | `/v1/consent/enable` | `flows:write` | Create/publish default opt-in and opt-out Flows and enable WABA consent. Accepts `from`, `phone_id`, or `waba_id`. |
 | `POST` | `/v1/consent` | `messages:write` | Record consent evidence, or send the default opt-in/opt-out Flow when `mode` is provided. |
 | `GET` | `/v1/consent/status?from=...&contact=...` | `messages:read` or legacy `messages:write` | Read service and marketing consent for one contact in the WABA behind `from`. |
+| `PUT` | `/v1/contacts` | `messages:write` | Idempotently update Easyhook-local contact names for the WABA behind `from`. |
 | `POST` | `/v1/onboarding/sessions` | `onboarding:write` | Create a hosted channel onboarding session owned by the API key tenant. |
 | `POST` | `/v1/onboarding/sessions/send` | `onboarding:write` | Create an onboarding session and send its URL from an authorized WhatsApp number. |
 | `GET` | `/v1/onboarding/sessions/{token}` | opaque session token | Read or open a hosted onboarding session. |
@@ -573,6 +575,53 @@ When the contact chooses an option, subscribe to `message.quick_reply`:
 
 Route automation by `message.quick_reply.payload`; use `message.text` or
 `message.quick_reply.title` only as the label shown to the person.
+
+## Multichannel Interactive Buttons
+
+Use one contract for conversational buttons on WhatsApp, Messenger, Instagram,
+and Telegram. This operation is free-form conversation traffic, not a WhatsApp
+template:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/interactive \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "980912725115744",
+    "to": "5218661479075",
+    "body": "¿Qué quieres hacer?",
+    "buttons": [
+      { "type": "reply", "title": "Agendar", "payload": "schedule" },
+      { "type": "reply", "title": "Hablar con alguien", "payload": "agent" }
+    ]
+  }'
+```
+
+To open a page such as a map, use a public HTTPS URL:
+
+```json
+{
+  "type": "url",
+  "title": "Cómo llegar",
+  "url": "https://example.com/map"
+}
+```
+
+Common rules:
+
+- `buttons` contains 1–3 items and each `title` has at most 20 characters.
+- `reply` requires a stable `payload` of at most 64 UTF-8 bytes.
+- `url` requires a public HTTPS URL.
+- WhatsApp requires an open customer-service window. Outside it, use an
+  approved template.
+- WhatsApp accepts either up to three `reply` buttons or one `url` button; it
+  cannot mix both types in the same message. Easyhook rejects that combination
+  before contacting Meta.
+- Messenger, Instagram, and Telegram can mix reply and URL buttons.
+- URL clicks do not produce a selection webhook. Reply selections are
+  normalized as `message.quick_reply`.
+- The older `/v1/messages/quick-replies` endpoint remains available for
+  Messenger and Instagram menus with up to 13 temporary reply options.
 
 ## Gmail
 
@@ -1407,6 +1456,69 @@ Success response:
 }
 ```
 
+## WhatsApp Contact Metadata
+
+Use this endpoint to create or update a contact name stored by Easyhook for the
+WABA resolved from `from`:
+
+```http
+PUT /v1/contacts
+```
+
+```bash
+curl -X PUT https://api.easyhook.dev/v1/contacts \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: crm-contact-5214445087305-v3" \
+  -d '{
+    "from": "980912725115744",
+    "contact": "5214445087305",
+    "full_name": "Ana Garcia",
+    "preferred_name": "Ana",
+    "target": "easyhook"
+  }'
+```
+
+`from` accepts the connected phone or Meta Phone Number ID. `contact` accepts
+an international WhatsApp phone identifier or an opaque BSUID. Easyhook
+resolves the contact inside the WABA behind `from`; contacts are never shared
+between organizations or WABAs. At least one of `full_name` or
+`preferred_name` is required.
+
+`target` is required so the caller cannot confuse the two kinds of write:
+
+- `easyhook`: update only Easyhook's local contact metadata. A changed value
+  emits `contact.updated`; repeating the same state is a no-op.
+- `provider`: request a real write to the WhatsApp Business App address book.
+  Meta does not currently expose that operation, so Easyhook returns HTTP 422
+  with `provider_contact_write_unsupported` and changes nothing locally.
+
+```json
+{
+  "ok": true,
+  "changed": true,
+  "target": "easyhook",
+  "provider_contact_book_updated": false,
+  "account": { "id": "980912725115744", "phone": "5218661479075" },
+  "contact": {
+    "id": "5214445087305",
+    "phone": "5214445087305",
+    "user_id": null,
+    "full_name": "Ana Garcia",
+    "preferred_name": "Ana",
+    "name": "Ana",
+    "updated_at": "2026-08-12T18:30:00.000Z"
+  }
+}
+```
+
+This limitation is distinct from two supported Meta features: sending a
+contact card as a WhatsApp message and receiving provider-originated contact
+changes through `smb_app_state_sync`. Neither is a Cloud API write into the
+WhatsApp Business App address book. See Meta's official [contact-message
+request](https://www.postman.com/meta/whatsapp-business-platform/request/e9dulgq/send-contact-message)
+and [SMB App State Sync webhook reference](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/smb_app_state_sync).
+
 ## Consent: Opt-In / Opt-Out
 
 For business-initiated template messages, Easyhook requires WABA consent to be enabled and the contact to have opt-in recorded in Easyhook. If the WABA is not enabled, Easyhook returns:
@@ -1696,6 +1808,8 @@ Common errors:
 | `recipient_opted_out` | Easyhook has the recipient marked as opted out, so business-initiated templates are blocked. |
 | `customer_service_window_closed` | Free-form text/media is blocked outside the 24-hour window. If no matching contact or recent inbound event exists, the response includes `reason: "recipient_not_found_or_no_recent_inbound_message"`. |
 | `scheduled_customer_service_window_closed` | Scheduled free-form text/media would be outside the 24-hour window at `at`; the response has `delivery_state: "not_sent"` and permits template fallback. |
+| `conversation_policy_temporarily_unavailable` | Easyhook could not verify the WhatsApp service window due to a temporary database failure. No message was sent. The response includes `retryable: true`, `delivery_state: "not_sent"`, and `request_id`; retry shortly using the same `Idempotency-Key`. |
+| `insufficient_balance` | The organization wallet does not have enough balance for the operation. Recharge it before retrying. |
 | `scheduled_message_create_failed` | Easyhook could not persist or enqueue the schedule; inspect `retryable`, `delivery_state`, and `fallback_allowed` before retrying. |
 | `scheduled_delivery_not_configured` | Scheduled delivery is not configured for this backend deployment. |
 | `scheduled_message_not_cancellable` | The scheduled message is already processing, sent, failed, or cancelled. |

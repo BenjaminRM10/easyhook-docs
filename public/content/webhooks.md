@@ -284,6 +284,7 @@ Common event filters:
 | `message.reaction` | WhatsApp, Messenger, or Instagram reactions when the provider emits them. |
 | `message.edit` | WhatsApp, Messenger, or Instagram edits when the provider emits them. |
 | `message.button`, `message.interactive` | WhatsApp template-button, quick-reply, list, and Flow interactions. |
+| `message.quick_reply` | Reply-button selections normalized across WhatsApp, Messenger, Instagram, and Telegram. |
 | `message.file` | Messenger/Instagram file events. |
 | `status.*` | WhatsApp delivery, read, and failure statuses. |
 | `status.failed` | Only failed WhatsApp message statuses. |
@@ -296,6 +297,7 @@ Common event filters:
 | `account_update.*` | WhatsApp account connection updates. |
 | `onboarding.*` | Hosted onboarding lifecycle. |
 | `consent.updated` | A contact's service or marketing consent state changed. |
+| `contact.updated` | Easyhook-local WhatsApp contact metadata changed through the public API. |
 | `review.created` | A new Google Business Profile review. |
 | `review.updated` | A Google Business Profile review or business reply changed. |
 
@@ -562,17 +564,17 @@ Interactive quick replies and list selections use the same visible
 }
 ```
 
-For automation, prefer `message.button.payload`,
-`message.interactive.button_reply.id`, or
-`message.interactive.list_reply.id`. Use `message.text` only as the human
-label. If Meta omits an identifier, Easyhook leaves it absent rather than
-guessing it.
+For new multichannel automation, prefer `message.quick_reply.payload`.
+Easyhook also preserves the provider-specific WhatsApp fields
+`message.button.payload`, `message.interactive.button_reply.id`, and
+`message.interactive.list_reply.id` for compatibility. Use `message.text` only
+as the human label. If a provider omits an identifier, Easyhook leaves it
+absent rather than guessing it.
 
-### Messenger and Instagram quick replies
+### Multichannel quick replies
 
-Quick replies selected in Messenger or Instagram use the dedicated provider
-event filter `message.quick_reply`. The public event remains a normalized
-inbound message:
+Reply buttons selected in WhatsApp, Messenger, Instagram, or Telegram use the
+event filter `message.quick_reply`. The public event is normalized as:
 
 ```json
 {
@@ -989,6 +991,39 @@ The `smb_app_state_sync.*` filter receives contact and app-state records importe
 See Meta's [Business-scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) documentation and [WhatsApp username announcement](https://about.fb.com/news/2026/06/its-time-to-reserve-your-whatsapp-username/) for the provider transition.
 
 Subscribe to both `smb_app_state_sync.*` and `history.*` before starting coexistence synchronization when the destination needs both the imported contact state and historical conversations. State-sync events do not contain historical messages; history events do not replace contact-state updates.
+
+## Local Contact Metadata Updated
+
+Subscribe to `contact.updated` to receive changes made through `PUT /v1/contacts`. These events describe Easyhook-local metadata and are separate from provider-originated `smb_app_state_sync.*` events.
+
+```json
+{
+  "id": "event_uuid",
+  "type": "contact.updated",
+  "channel": "whatsapp",
+  "account": { "id": "980912725115744", "phone": "5218661479075" },
+  "contact": {
+    "id": "5214445087305",
+    "phone": "5214445087305",
+    "name": "Ana",
+    "full_name": "Ana Garcia",
+    "preferred_name": "Ana"
+  },
+  "contact_update": {
+    "type": "contact",
+    "action": "update",
+    "provider_id": "5214445087305",
+    "name": "Ana Garcia",
+    "preferred_name": "Ana",
+    "source": "easyhook_api",
+    "write_target": "easyhook",
+    "provider_contact_book_updated": false,
+    "timestamp": "2026-08-12T18:30:00.000Z"
+  }
+}
+```
+
+This event does **not** mean the WhatsApp Business App address book changed. Meta currently exposes contact/app-state synchronization toward providers, but no Cloud API operation to write a contact name back into that address book.
 
 ## Consent Updated
 

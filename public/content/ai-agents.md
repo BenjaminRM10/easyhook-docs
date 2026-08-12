@@ -208,6 +208,7 @@ invalidate successfully imported events.
 | --- | --- |
 | Validate key | `GET /v1/me` |
 | Send text | `POST /v1/messages/text` |
+| Send standardized reply or URL buttons | `POST /v1/messages/interactive` |
 | Send Messenger/Instagram quick replies | `POST /v1/messages/quick-replies` |
 | Send multichannel text | `POST /v1/messages/send` |
 | Send humanized multichannel text | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram, or Telegram; presence controls are best-effort) |
@@ -238,7 +239,28 @@ exactly one dynamic `media.link`, `media.id`, or reusable `media.name`. A
 dynamic override must match the approved image, video, or document header type;
 document media may also set `filename`.
 
-Messenger and Instagram share one quick-reply request shape:
+Use the standardized interactive endpoint when the workflow needs up to three
+reply or URL buttons across WhatsApp, Messenger, Instagram, or Telegram:
+
+```json
+{
+  "from": "<ACCOUNT_ID>",
+  "to": "<CONTACT_ID>",
+  "body": "¿Qué quieres hacer?",
+  "buttons": [
+    { "type": "reply", "title": "Agendar", "payload": "schedule" },
+    { "type": "url", "title": "Cómo llegar", "url": "https://example.com/map" }
+  ]
+}
+```
+
+Send this body to `POST /v1/messages/interactive`. WhatsApp accepts either up
+to three replies or one URL and cannot mix both types. URL clicks do not emit a
+selection event. Reply selections from all four providers use
+`message.quick_reply.payload`.
+
+Messenger and Instagram additionally share a larger temporary quick-reply menu
+through `POST /v1/messages/quick-replies`:
 
 ```json
 {
