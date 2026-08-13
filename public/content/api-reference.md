@@ -531,6 +531,11 @@ Public comments are separate from Messenger and Instagram Direct conversations.
 They never arrive as `message.received` and must not trigger private-message
 automations.
 
+Connect `facebook_comments` or `instagram_comments` independently from the DM
+channel. Both may use the same Page/account ID in `from`, but Easyhook resolves
+it only inside the API-key organization and only against a connected comments
+channel.
+
 List one post or media object's comments:
 
 ```bash
@@ -554,12 +559,12 @@ curl -X POST https://api.easyhook.dev/v1/comments/COMMENT_ID/reply \
 `messages:read` or `messages:write` remain compatible; newly created keys also
 include the explicit `comments:read` and `comments:write` scopes.
 
-Facebook requires `pages_read_engagement` and `pages_manage_engagement`, plus
+Facebook comments require `pages_read_engagement`, `pages_manage_engagement`
+and `pages_manage_metadata`, plus
 the Page `feed` webhook. Instagram with Facebook Login requires
 `instagram_basic`, `pages_read_engagement`, and `instagram_manage_comments`,
-plus the `comments` and `live_comments` webhook fields. Reauthorize an existing
-channel after Easyhook receives Advanced Access. A missing comment permission
-does not disconnect private messaging.
+plus the `comments` and `live_comments` webhook fields. Authorize the comments
+connection independently; missing comment permission does not disconnect private messaging.
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
 

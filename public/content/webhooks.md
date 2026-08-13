@@ -627,17 +627,29 @@ unknown optional fields and only process events that were actually delivered.
 
 ### Public comments
 
-Subscribe to `comment.*` for both Facebook and Instagram. Public comments are
-not DMs and are intentionally excluded from `message.*`.
+Connect and select provider `facebook_comments` or `instagram_comments`, then
+subscribe to `comment.*`. Public comments are not DMs and are intentionally
+excluded from `message.*`.
 
 ```json
 {
   "id": "delivery-event-id",
   "type": "comment.created",
-  "channel": "instagram",
+  "channel": "instagram_comments",
   "account": {
     "id": "17841400000000000",
     "name": "Easyhook"
+  },
+  "interaction": {
+    "kind": "comment",
+    "action": "created",
+    "object": {
+      "id": "18000000000000000",
+      "type": "media",
+      "text": "Conoce nuestro nuevo servicio",
+      "media_url": "https://...",
+      "permalink": "https://www.instagram.com/p/..."
+    }
   },
   "comment": {
     "id": "18000000000000001",
@@ -660,6 +672,7 @@ Deduplicate delivery with top-level `id`. Use `comment.id` when replying and
 `comment.post.id` to list the complete thread. Facebook emits create, update,
 and delete actions through `feed`; Instagram currently emits creates through
 `comments` and `live_comments`. Easyhook does not fabricate unsupported actions.
+`interaction.object` provides the publication context used by the Easyhook Inbox.
 
 ### WhatsApp deletions and system notices
 

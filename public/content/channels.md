@@ -102,9 +102,11 @@ certificación formal de Mercado Libre.
 
 Las Pages de Facebook y cuentas profesionales de Instagram pueden recibir
 `comment.*`, consultar comentarios por publicación y responder públicamente.
-Esta función está separada del Inbox porque un comentario público no es una
-conversación privada. Las conexiones existentes deben reautorizarse después de
-que Meta conceda `pages_manage_engagement` o `instagram_manage_comments`.
+Messenger, Instagram Direct, comentarios de Facebook y comentarios de Instagram
+son cuatro conexiones independientes. Cada una solicita únicamente sus permisos
+y debe autorizarse por separado. En el Inbox, Easyhook agrupa los comentarios por
+publicación y muestra el texto, imagen o video de contexto; una respuesta desde
+ese hilo se publica como comentario, nunca como mensaje privado.
 
 ## Telegram
 

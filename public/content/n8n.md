@@ -376,8 +376,13 @@ Easyhook creates the webhook subscription and stores its HMAC secret in n8n auto
 
 For public comments, select resource **Comments**:
 
+- In **Easyhook Trigger**, choose **Facebook Comments** or **Instagram Comments** and `comment.*`.
 - **List**: map `account.id` to From and `comment.post.id` to Post or Media ID.
 - **Reply**: map `account.id` to From and `comment.id` to Comment ID.
+
+`interaction.object` contains the publication text, media URL and permalink when
+Meta exposes them. Comments and Google reviews also appear in the Easyhook Inbox,
+but remain `comment.*` and `review.*` events in n8n.
 
 Do not route `comment.*` into a private-message auto-reply workflow. A public
 reply is visible on the post or media object.
