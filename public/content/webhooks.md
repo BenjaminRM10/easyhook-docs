@@ -293,6 +293,9 @@ Common event filters:
 | `message.button`, `message.interactive` | WhatsApp template-button, quick-reply, list, and Flow interactions. |
 | `message.quick_reply` | Reply-button selections normalized across WhatsApp, Messenger, Instagram, and Telegram. |
 | `message.file` | Messenger/Instagram file events. |
+| `comment.created` | A new public Facebook or Instagram comment or reply. |
+| `comment.updated` | A Facebook Page comment was edited. |
+| `comment.deleted` | A Facebook Page comment was removed. |
 | `status.*` | WhatsApp delivery, read, and failure statuses. |
 | `status.failed` | Only failed WhatsApp message statuses. |
 | `scheduled.*` | Scheduled message creation, successful provider acceptance, terminal execution failure, and cancellation. |
@@ -621,6 +624,42 @@ Instagram reactions and edits, and Instagram inline reply references. Meta does
 not expose Messenger or Instagram message deletion/unsend as an equivalent
 webhook, so Easyhook does not infer or fabricate those events. Always ignore
 unknown optional fields and only process events that were actually delivered.
+
+### Public comments
+
+Subscribe to `comment.*` for both Facebook and Instagram. Public comments are
+not DMs and are intentionally excluded from `message.*`.
+
+```json
+{
+  "id": "delivery-event-id",
+  "type": "comment.created",
+  "channel": "instagram",
+  "account": {
+    "id": "17841400000000000",
+    "name": "Easyhook"
+  },
+  "comment": {
+    "id": "18000000000000001",
+    "text": "Me interesa",
+    "action": "created",
+    "parent_id": null,
+    "author": {
+      "id": "17841400000000002",
+      "username": "cliente"
+    },
+    "post": {
+      "id": "18000000000000000",
+      "type": "media"
+    }
+  }
+}
+```
+
+Deduplicate delivery with top-level `id`. Use `comment.id` when replying and
+`comment.post.id` to list the complete thread. Facebook emits create, update,
+and delete actions through `feed`; Instagram currently emits creates through
+`comments` and `live_comments`. Easyhook does not fabricate unsupported actions.
 
 ### WhatsApp deletions and system notices
 

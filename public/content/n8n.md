@@ -22,6 +22,7 @@ Mercado Libre, and Google Business Profile reviews.
 - Create hosted onboarding links for supported channels
 - Send Easyhook opt-in and opt-out Flows
 - Receive Easyhook webhook events in n8n with the Easyhook Trigger node
+- List and reply to public Facebook or Instagram comments with **Comments**.
 - List Google reviews, get an aggregate rating, and publish public replies
 
 ## Google reviews
@@ -333,6 +334,7 @@ at least one compatible event. Names and values match the portal and
 Useful event scopes:
 
 - `message.*`: incoming WhatsApp/Messenger/Instagram messages
+- `comment.*`: public Facebook and Instagram comments; these are separate from DMs
 - `message.quick_reply`: WhatsApp, Messenger, Instagram, or Telegram reply-button selections with `message.text` and `message.quick_reply.payload`
 - `status.*`: message delivery/read/failure status
 - `template.*`: template status changes
@@ -371,6 +373,14 @@ Configure the **Easyhook Trigger** before connecting the WhatsApp Business App n
 5. Allow history sharing in the WhatsApp Business App and keep the app open while synchronization starts.
 
 Easyhook creates the webhook subscription and stores its HMAC secret in n8n automatically. Do not create a second portal webhook. `message.*` only covers live messages; it does not include history imports.
+
+For public comments, select resource **Comments**:
+
+- **List**: map `account.id` to From and `comment.post.id` to Post or Media ID.
+- **Reply**: map `account.id` to From and `comment.id` to Comment ID.
+
+Do not route `comment.*` into a private-message auto-reply workflow. A public
+reply is visible on the post or media object.
 
 Easyhook delivers synchronization data in batches of at most 100 events. One batch starts one workflow execution, and the trigger expands it into one n8n item per event. Historical inbound messages use `type: message.received`; historical outbound messages use `type: message.echo`. Both include `message.source: history`. Every expanded item also includes `_sync` with the session, cursor and progress metadata:
 

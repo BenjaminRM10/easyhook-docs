@@ -231,6 +231,8 @@ invalidate successfully imported events.
 Consent configuration is per WABA. Copy supports `language: "es" | "en"`, editable opt-in/opt-out headings and bodies, and a footer. Because Meta Flows are immutable after publication, save copy with `PATCH /v1/consent/config` and apply it with `POST /v1/consent/enable`; Easyhook creates a deterministic version and routes future sends to it. `auto_opt_in_enabled: true` optionally schedules Easyhook's opt-in Flow 23 hours after the first live inbound interaction. Do not recreate that timer in an agent or workflow. Easyhook revalidates the service window and current opt-in/opt-out state before dispatch. External consent recorded through `POST /v1/consent` must include auditable evidence supplied by the customer.
 | Hosted customer onboarding | `POST /v1/onboarding/sessions` |
 | Manage webhook subscriptions | `/v1/webhooks`; update only events with `PATCH /v1/webhooks/{id}` |
+| List public Facebook/Instagram comments | `GET /v1/comments?from=...&object_id=...` |
+| Reply publicly to a comment | `POST /v1/comments/{comment.id}/reply` |
 | List Google reviews / aggregate rating | `GET /v1/reviews`, `GET /v1/reviews/summary` |
 | Reply to a Google review | `PUT /v1/reviews/{review_id}/reply` |
 

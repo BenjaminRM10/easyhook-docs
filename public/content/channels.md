@@ -98,6 +98,14 @@ métricas, promociones, ventas/envíos ni otros tópicos si Easyhook se usará
 solamente para mensajería. No marques la app como certificada hasta recibir la
 certificación formal de Mercado Libre.
 
+## Comentarios públicos de Meta
+
+Las Pages de Facebook y cuentas profesionales de Instagram pueden recibir
+`comment.*`, consultar comentarios por publicación y responder públicamente.
+Esta función está separada del Inbox porque un comentario público no es una
+conversación privada. Las conexiones existentes deben reautorizarse después de
+que Meta conceda `pages_manage_engagement` o `instagram_manage_comments`.
+
 ## Telegram
 
 Telegram funciona mediante bots.
@@ -109,6 +117,7 @@ Telegram funciona mediante bots.
 
 Easyhook valida el bot, cifra el token y configura automáticamente el webhook
 con un secreto independiente. No debes crear otro webhook en Telegram.
+
 Telegram no tiene una ventana de servicio de 24 horas en Easyhook. El bot puede
 responder o enviar mensajes en cualquier momento permitido por Telegram.
 

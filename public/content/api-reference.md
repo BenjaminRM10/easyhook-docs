@@ -520,8 +520,46 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok text through a connected channel. |
 | `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok media by compatible provider reference or public link. |
 | `POST` | `/v1/messages/channel/media/upload` | `messages:write` | Upload media to Easyhook temporarily and send it through Messenger or Instagram. |
+| `GET` | `/v1/comments?from=...&object_id=...` | `comments:read` | List public comments on a Facebook Page post or Instagram media object. |
+| `POST` | `/v1/comments/{comment_id}/reply` | `comments:write` | Publish a public reply to a Facebook or Instagram comment. |
 
 Portal/admin endpoints exist for onboarding, API-key management, webhook management, and Meta webhook ingestion. They are listed near the end of this document so customers can recognize them, but new product integrations should use the recommended endpoints above.
+
+## Facebook And Instagram Public Comments
+
+Public comments are separate from Messenger and Instagram Direct conversations.
+They never arrive as `message.received` and must not trigger private-message
+automations.
+
+List one post or media object's comments:
+
+```bash
+curl "https://api.easyhook.dev/v1/comments?from=PAGE_OR_IG_ACCOUNT_ID&object_id=POST_OR_MEDIA_ID&limit=50" \
+  -H "Authorization: Bearer eh_live_xxx"
+```
+
+Continue with the returned `paging.after` cursor. `object_id` is available as
+`comment.post.id` in `comment.*` webhooks.
+
+Reply publicly:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/comments/COMMENT_ID/reply \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"from":"PAGE_OR_IG_ACCOUNT_ID","message":"Gracias por escribirnos."}'
+```
+
+`from` is always resolved inside the API-key organization. Existing keys with
+`messages:read` or `messages:write` remain compatible; newly created keys also
+include the explicit `comments:read` and `comments:write` scopes.
+
+Facebook requires `pages_read_engagement` and `pages_manage_engagement`, plus
+the Page `feed` webhook. Instagram with Facebook Login requires
+`instagram_basic`, `pages_read_engagement`, and `instagram_manage_comments`,
+plus the `comments` and `live_comments` webhook fields. Reauthorize an existing
+channel after Easyhook receives Advanced Access. A missing comment permission
+does not disconnect private messaging.
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
 
