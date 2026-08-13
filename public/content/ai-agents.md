@@ -143,6 +143,9 @@ asynchronously.
   `contact.phone` separately when present and never strip letters or punctuation
   from a BSUID.
 - Use `message.id` as the message idempotency key.
+- For TikTok, preserve `account.id`, `contact.id`, conversation IDs, and
+  `message.id` exactly. The business cannot initiate a conversation and may
+  send at most 10 replies within 48 hours after each user message.
 - Use webhook `id` as the idempotency key for non-message events.
 - For `message.type: button`, route automation with `message.button.payload`
   and use `message.button.text`/`message.text` as the visible label.
@@ -211,7 +214,7 @@ invalidate successfully imported events.
 | Send standardized reply or URL buttons | `POST /v1/messages/interactive` |
 | Send Messenger/Instagram quick replies | `POST /v1/messages/quick-replies` |
 | Send multichannel text | `POST /v1/messages/send` |
-| Send humanized multichannel text | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram, or Telegram; presence controls are best-effort) |
+| Send humanized multichannel text | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram, Telegram, or TikTok; presence controls are best-effort) |
 | Send media | `POST /v1/messages/media` |
 | Send template | `POST /v1/messages/template` |
 | Upload template header media | `POST /v1/templates/media` |

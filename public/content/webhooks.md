@@ -1,16 +1,16 @@
 # Easyhook Webhooks
 
-Last updated: 2026-08-10
+Last updated: 2026-08-12
 
 Easyhook sends one compact JSON object per event. The format is shared by
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email,
-Mercado Libre, and Google Business Profile.
+Mercado Libre, TikTok Business, and Google Business Profile.
 
 ## Principles
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
 - `channel` identifies the provider: `whatsapp`, `messenger`, `instagram`,
-  `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or
+  `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, or
   `google_business_profile`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
@@ -58,6 +58,13 @@ The same event from Messenger or Instagram only changes `channel` and the provid
   }
 }
 ```
+
+TikTok uses the same normalized envelope. `account.id` is the connected
+Business Account open ID; `contact.id`, conversation IDs, and message IDs are
+opaque provider identifiers and must not be reformatted. A TikTok reply-button
+selection uses the same `message.quick_reply` block as other supported
+channels. Provider privacy restrictions are emitted as a non-message event
+rather than fabricating unavailable message data.
 
 Email providers use the same event with email-specific fields:
 

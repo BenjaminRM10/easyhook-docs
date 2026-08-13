@@ -2,8 +2,9 @@
 
 Verified n8n community node for using Easyhook.
 
-Easyhook is a lightweight multichannel messaging API for WhatsApp, Telegram,
-Gmail, Outlook, generic IMAP/SMTP email, Mercado Libre, and Google Business Profile reviews.
+Easyhook is a lightweight multichannel messaging API for WhatsApp, Messenger,
+Instagram, Telegram, TikTok Business, Gmail, Outlook, generic IMAP/SMTP email,
+Mercado Libre, and Google Business Profile reviews.
 
 - `Message Action` groups cross-channel text and media sends.
 - `Message Control` groups read, typing, reply, and reaction actions and only
@@ -104,7 +105,7 @@ For scheduled text, media, or WhatsApp templates, add:
 - `Options > Idempotency Key`: optional stable key used only when retrying the same scheduled send
 
 Text and media scheduling works with WhatsApp, Messenger, Instagram, and
-Telegram. Mercado Libre supports scheduled text. Email scheduling is not part
+Telegram. TikTok and Mercado Libre support scheduled text. Email scheduling is not part
 of the current public contract.
 
 Use resource **Cancel Scheduled Message** when you need to cancel a send before processing begins. Reconciliation remains available through the Easyhook API and webhooks.
@@ -156,10 +157,18 @@ Other email operations:
 - Channel: select a compatible connected sender
 - Message ID: map the normalized webhook `message.id`
 
-WhatsApp supports all four controls. Messenger and Instagram support read,
-typing, and reply. Telegram supports typing, reply, and reaction. Unsupported
+WhatsApp supports all four controls. Messenger, Instagram, and TikTok support
+read, typing, and reply. Telegram supports typing, reply, and reaction. Unsupported
 provider/operation pairs are omitted from the sender list and rejected by the
 API without billing.
+
+### TikTok Business
+
+Choose `TikTok Business` in the trigger and map `account.id` directly to
+**From**. Map the opaque conversation/contact identifier from the incoming item
+to **To**. Do not add a prefix or convert it to a phone number. TikTok does not
+allow business-initiated conversations and limits the business to 10 replies
+within 48 hours after each user message.
 
 ### Send Reusable Media
 

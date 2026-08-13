@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-08-10
+Last updated: 2026-08-12
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -463,16 +463,16 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages?from=...` | `messages:read` | Read recent inbound and outbound WhatsApp messages with one contact. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, or Mercado Libre. |
+| `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, Mercado Libre, or TikTok Business. |
 | `POST` | `/v1/messages/quick-replies` | `messages:write` | Send one text prompt with 1–13 quick-reply buttons through Messenger or Instagram. |
-| `POST` | `/v1/messages/interactive` | `messages:write` | Send one prompt with up to three reply or URL buttons through WhatsApp, Messenger, Instagram, or Telegram. |
+| `POST` | `/v1/messages/interactive` | `messages:write` | Send one prompt with up to three supported reply or URL buttons through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. TikTok accepts reply buttons only. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram. Presence controls are best-effort and never replace the actual send. |
-| `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, or Telegram. |
-| `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, or Telegram. |
+| `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, Instagram, or TikTok Business. |
+| `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. |
+| `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. |
 | `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on WhatsApp or Telegram. |
-| `POST` | `/v1/messages/media` | `messages:write` | Send or schedule media through WhatsApp, Messenger, Instagram, or Telegram by organization media name or compatible provider reference. |
+| `POST` | `/v1/messages/media` | `messages:write` | Send or schedule compatible media through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. TikTok currently supports images. |
 | `POST` | `/v1/messages/template` | `messages:write` | Send or schedule approved WhatsApp templates. |
 | `POST` | `/v1/messages/flow` | `messages:write` | Send a published WhatsApp Flow inside the 24-hour window. |
 | `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Reconcile a scheduled message, its WAMID, execution failure, and latest Meta status. Existing `messages:write` keys remain compatible. |
@@ -517,8 +517,8 @@ Recommended customer API endpoints:
 | `POST` | `/v1/webhooks/{id}/replay` | any valid key | Retry failed delivery batches, optionally filtered by `sync_id`. |
 | `POST` | `/v1/webhooks/{id}/history-replays` | any valid key | Re-send stored messages or contacts for `phone_id` using `replay_type`. |
 | `GET` | `/v1/webhooks/{id}/history-replays/{replay_id}` | any valid key | Read persistent History replay progress. |
-| `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger, Instagram, or Telegram text through a connected channel. |
-| `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger, Instagram, or Telegram media by existing attachment id or public link. |
+| `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok text through a connected channel. |
+| `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok media by compatible provider reference or public link. |
 | `POST` | `/v1/messages/channel/media/upload` | `messages:write` | Upload media to Easyhook temporarily and send it through Messenger or Instagram. |
 
 Portal/admin endpoints exist for onboarding, API-key management, webhook management, and Meta webhook ingestion. They are listed near the end of this document so customers can recognize them, but new product integrations should use the recommended endpoints above.
@@ -870,6 +870,35 @@ storage and a public Easyhook download URL are not part of the first release.
 Disconnecting a Telegram channel removes its protected Telegram webhook before
 Easyhook deletes the encrypted bot token.
 
+## TikTok Business Messaging
+
+Connect TikTok from **Connect > TikTok Business**. Easyhook uses TikTok's
+account-holder authorization flow and requests only `message.list.read`,
+`message.list.send`, and `message.list.manage`. It does not request advertiser,
+campaign, pixel, measurement, or CTX permissions.
+
+TikTok Business Messaging is currently unavailable for Business Accounts
+registered in the United States, European Economic Area, Switzerland, or the
+United Kingdom. A business cannot initiate a new TikTok conversation. After a
+user messages the business, TikTok permits at most 10 business replies during
+the following 48 hours. Easyhook returns
+`tiktok_messaging_window_closed_or_quota_reached` when the provider rejects a
+send for this policy.
+
+Use the provider-native identifiers from the webhook without prefixes:
+
+- `account.id` is the connected TikTok Business Account open ID and is used as
+  `from`.
+- `contact.id` and the conversation identifier are opaque; preserve them
+  exactly and use the webhook destination as `to`.
+- `message.id` is the provider message ID and the message idempotency key.
+
+The standard text, reply, typing, read, interactive reply-button, image, and
+scheduled-text endpoints resolve TikTok from `from`. Incoming text, image,
+video, reply-button, read, and privacy events use the same normalized Easyhook
+envelope as other channels. Stored media uses a private Easyhook URL and must
+be downloaded with the organization API key.
+
 ## Conversations And Recent Messages
 
 Conversation reads are tenant-scoped by the API key and number-scoped by `from`. Public responses contain customer-visible phone numbers, provider message IDs, normalized message content, and delivery status. They do not expose tenant IDs, Supabase row IDs, token references, raw Meta payloads, or private storage URLs.
@@ -1083,7 +1112,7 @@ Parameters:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `provider` | no | `whatsapp` (default), `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, or `mercadolibre`. |
+| `provider` | no | `whatsapp` (default), `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or `tiktok`. |
 | `signup_mode` | no | `cloud_api` for a regular WhatsApp Business API connection, or `coexistence` for WhatsApp Business App coexistence. Defaults to `cloud_api`. |
 | `return_url` | no | HTTPS URL where the hosted page can send the customer after completion. |
 | `language` | no | `es` or `en`. Defaults to `es`. |
@@ -1129,7 +1158,7 @@ The hosted Easyhook page uses these token-scoped support endpoints internally:
 | `GET` | `/v1/onboarding/sessions/{token}` | Public opaque session token | Read/open a non-expired hosted onboarding session. |
 | `POST` | `/v1/onboarding/sessions/{token}/complete` | Public opaque session token | Exchange the Meta authorization code and complete the connection for the owning organization. |
 | `POST` | `/v1/onboarding/sessions/{token}/connect` | Public opaque session token | Complete Telegram, IMAP/SMTP, Messenger, or Instagram authorization. |
-| `POST` | `/v1/onboarding/sessions/{token}/oauth/start` | Public opaque session token | Start Gmail, Outlook, or Mercado Libre OAuth. |
+| `POST` | `/v1/onboarding/sessions/{token}/oauth/start` | Public opaque session token | Start Gmail, Outlook, Mercado Libre, or TikTok OAuth. |
 
 Customer applications normally create a session and redirect the user to the returned Easyhook `url`; they should not recreate the hosted page's token completion flow.
 
@@ -2141,6 +2170,7 @@ operations are not billed.
 | Messenger | Yes | Yes | Yes | No | Yes |
 | Instagram | Yes | Yes | Yes | No | Yes |
 | Telegram | No | Yes | Yes | Yes | Yes |
+| TikTok Business | Yes | Yes | Yes | No | Yes |
 | Gmail, Outlook, IMAP/SMTP | Use Email Only actions | No | Yes | No | No |
 | Mercado Libre | No | No | No | No | No |
 

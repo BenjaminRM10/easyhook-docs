@@ -1,9 +1,39 @@
 # Canales
 
-Easyhook reúne WhatsApp, Messenger, Instagram, Telegram, correo, Mercado Libre y Google Business Profile bajo una misma
+Easyhook reúne WhatsApp, Messenger, Instagram, Telegram, TikTok Business,
+correo, Mercado Libre y Google Business Profile bajo una misma
 organización, API key, wallet, Inbox y sistema de webhooks. El correo puede
 conectarse mediante Gmail, Outlook o IMAP/SMTP. Cada envío usa `from` para
 resolver el canal correcto dentro de la organización dueña de la API key.
+
+## TikTok Business
+
+TikTok se conecta con OAuth desde **Conectar > TikTok Business**. Easyhook
+solicita únicamente `message.list.read`, `message.list.send` y
+`message.list.manage`; no solicita acceso a campañas, anuncios, pixeles,
+medición ni CTX.
+
+TikTok no permite que el negocio inicie conversaciones. Después de que un
+usuario escribe, el negocio puede enviar hasta 10 respuestas durante las
+siguientes 48 horas. Actualmente TikTok no admite Business Accounts registrados
+en Estados Unidos, EEE, Suiza o Reino Unido para esta API.
+
+Usa `account.id` del webhook como `from` y conserva exactamente el identificador
+opaco de conversación/contacto como `to`. Easyhook estandariza texto,
+respuestas, indicador de escritura, leído, botones de respuesta e imágenes.
+La media recibida se guarda con una URL privada que requiere la API key para
+descargarse.
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/messages/text \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "tiktok-business-open-id",
+    "to": "tiktok-conversation-id",
+    "body": "Gracias por escribirnos."
+  }'
+```
 
 ## Google Business Profile
 
@@ -214,8 +244,8 @@ Texto breve para justificar `gmail.modify`:
 ## Webhooks multicanal
 
 En **Webhooks** puedes suscribirte a toda la organización o a un canal
-específico. Selecciona `telegram`, `gmail`, `outlook`, `imap_smtp` o
-`mercadolibre` y
+específico. Selecciona `telegram`, `gmail`, `outlook`, `imap_smtp`,
+`mercadolibre` o `tiktok` y
 `message.*` para recibir mensajes nuevos. El JSON mantiene el mismo contrato
 normalizado:
 

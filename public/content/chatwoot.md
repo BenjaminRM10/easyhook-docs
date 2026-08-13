@@ -2,8 +2,8 @@
 
 La integración conecta canales de Easyhook con bandejas API de Chatwoot. Easyhook se encarga del transporte; Chatwoot conserva contactos, conversaciones, agentes y automatizaciones.
 
-Los canales compatibles son WhatsApp, Messenger, Instagram, Telegram, Gmail,
-Outlook, correo IMAP/SMTP y Mercado Libre. Cada canal seleccionado crea su
+Los canales compatibles son WhatsApp, Messenger, Instagram, Telegram, TikTok
+Business, Gmail, Outlook, correo IMAP/SMTP y Mercado Libre. Cada canal seleccionado crea su
 propia bandeja para que identidades y conversaciones no se mezclen.
 
 ## Requisitos
@@ -33,6 +33,8 @@ Los nombres de bandeja se toman del canal conectado. Puedes renombrarlos despué
 - Las respuestas conservan el contexto nativo necesario: destinatario remoto
   para mensajería, pregunta o pack para Mercado Libre, y mensaje/hilo para
   correo.
+- TikTok conserva su conversación opaca, ventana de 48 horas y límite de 10
+  respuestas; Chatwoot no puede iniciar una conversación nueva.
 
 ## Importar contactos e historial
 
