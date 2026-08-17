@@ -5,9 +5,9 @@ Last updated: 2026-08-10
 This file is the entry point for a coding agent integrating Easyhook into
 another application. It is intentionally concise. The normative contracts are:
 
-1. [Public API](./public-api.md): every customer endpoint, request parameter,
+1. [Public API](/api-reference): every customer endpoint, request parameter,
    response, error, billing rule, and example.
-2. [Customer Webhooks](./customer-webhooks.md): subscription API, filters,
+2. [Customer Webhooks](/webhooks): subscription API, filters,
    security headers, normalized JSON field names, History batches, and retries.
 
 Do not invent fields from provider documentation or use old Easyhook examples found
@@ -282,7 +282,7 @@ through `POST /v1/messages/quick-replies`:
 Subscribe to `message.quick_reply` and route by
 `message.quick_reply.payload`. Keep `message.text` for display only.
 
-Read the corresponding section in `public-api.md` before implementing an
+Read the corresponding section in [Public API](/api-reference) before implementing an
 endpoint. That document defines all accepted parameters and mutually exclusive
 fields.
 

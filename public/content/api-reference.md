@@ -448,8 +448,8 @@ easyhook recharge 500 MXN to EH-130FF0EC \
 
 Run the same command with `--dry-run` to validate the organization, project,
 currency and resulting balance without writing. Setup and security details are
-documented in [`docs/admin/wallet-cli.md`](../admin/wallet-cli.md). Admins must
-not edit `wallets.balance_cents` directly.
+documented in the private administrator runbook. Admins must not edit
+`wallets.balance_cents` directly.
 
 ## Endpoint Index
 
@@ -2264,7 +2264,7 @@ Create the customer webhook subscription with the `history.*` filter before conn
 
 During coexistence onboarding, the business must allow history sharing in the WhatsApp Business App and should keep the app open while the initial synchronization starts. Meta error `2593109` means history sharing is disabled; Easyhook normalizes it as `type: sync.failed` for `history.*` subscribers.
 
-Consumers receive an Easyhook batch rather than Meta's raw callback. Process each normalized element in `events`. Build the conversation key from `account.id + ":" + (contact.user_id ?? contact.id)`, deduplicate with `message.id`, order a conversation by `message.timestamp`, and prevent live auto-reply logic when `message.source` is `history`. Deliveries are at-least-once and retry up to five times. WhatsApp can supply a stable Business-scoped User ID (BSUID) instead of a phone; Easyhook preserves it in `contact.id`/`contact.user_id` and stores a phone alias when Meta supplies one. The complete mapping contract is documented in [Customer Webhooks: Coexistence History](./customer-webhooks.md#coexistence-history).
+Consumers receive an Easyhook batch rather than Meta's raw callback. Process each normalized element in `events`. Build the conversation key from `account.id + ":" + (contact.user_id ?? contact.id)`, deduplicate with `message.id`, order a conversation by `message.timestamp`, and prevent live auto-reply logic when `message.source` is `history`. Deliveries are at-least-once and retry up to five times. WhatsApp can supply a stable Business-scoped User ID (BSUID) instead of a phone; Easyhook preserves it in `contact.id`/`contact.user_id` and stores a phone alias when Meta supplies one. The complete mapping contract is documented in [Customer Webhooks: Coexistence History](/webhooks#coexistence-history).
 
 The same BSUID can be used as `to` for normal WhatsApp sends. Authentication
 templates that use one-tap, zero-tap, or copy-code delivery still require a
@@ -2297,7 +2297,7 @@ Only one active replay of each type is allowed per webhook and number. Poll `GET
 
 The same coexistence synchronization request also asks Meta for WhatsApp Business App contact/state data. Subscribe to `smb_app_state_sync.*` before synchronization to receive each imported record as a normalized `contact.updated` event under `contact_update`.
 
-State sync and history are complementary: `smb_app_state_sync.*` carries contact/app updates, while `history.*` carries historical messages. An integration rebuilding both contacts and conversations must subscribe to both filters before starting the sync. See [Customer Webhooks: Coexistence App State Sync](./customer-webhooks.md#coexistence-app-state-sync) for the payload and identity rules.
+State sync and history are complementary: `smb_app_state_sync.*` carries contact/app updates, while `history.*` carries historical messages. An integration rebuilding both contacts and conversations must subscribe to both filters before starting the sync. See [Customer Webhooks: Coexistence App State Sync](/webhooks#coexistence-app-state-sync) for the payload and identity rules.
 
 ### Reactions And Unsupported WhatsApp Messages
 
@@ -3096,7 +3096,7 @@ The tokenized `/v1/integrations/chatwoot/events/...` and
 server-to-server by Easyhook and Chatwoot. Customers must not construct or call
 them manually.
 
-Customer webhook admin parameters are documented in [Customer Webhooks](./customer-webhooks.md). In short, `POST /v1/hooks` accepts `tenant_id`, `name`, `url`, `events`, `providers`, `scope_type`, `scope_ref`, `auth_type`, and `auth_header_name`.
+Customer webhook admin parameters are documented in [Customer Webhooks](/webhooks). In short, `POST /v1/hooks` accepts `tenant_id`, `name`, `url`, `events`, `providers`, `scope_type`, `scope_ref`, `auth_type`, and `auth_header_name`.
 
 Webhook routing uses three separate filters:
 
