@@ -21,6 +21,11 @@ conversaciones asignadas a mí, conversaciones sin asignar, atribución del agen
 y chats privados o grupales del equipo. En organizaciones de una sola persona,
 estos controles permanecen ocultos para conservar una experiencia simple.
 
+Los propietarios y administradores pueden abrir el engrane junto al estado de
+presencia en el encabezado del Inbox y activar o desactivar la **autoasignación**.
+Cuando está activa, Easyhook reparte las conversaciones nuevas en rotación entre
+los integrantes disponibles con rol propietario, administrador o agente.
+
 ## Capacidades del Inbox
 
 - Búsqueda remota y filtros combinables por canal, no leídas, fijadas y asignación.
@@ -38,6 +43,11 @@ para mensajería: conectar canales, recargar wallet, crear API keys o administra
 webhooks se realiza desde el portal web. Incluye notificaciones configurables,
 deep links a la conversación, cache local, borradores y preferencia de idioma
 ES/EN.
+
+Sin filtros seleccionados, las notificaciones incluyen todas las organizaciones
+a las que la cuenta tiene acceso. La selección de canales y la preferencia de
+conversaciones asignadas se guardan por organización, para que un canal con el
+mismo identificador en dos organizaciones no comparta configuración.
 
 El APK oficial se descarga desde **Portal > Integraciones > Easyhook móvil**.
 Android puede advertir que la instalación proviene fuera de Play Store mientras
