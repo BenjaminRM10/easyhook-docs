@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-08-12
+Last updated: 2026-08-20
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -382,17 +382,36 @@ Billable in V1:
 | Usage | Fee |
 | --- | --- |
 | Public customer API call that executes a supported operation | `0.01 MXN` or `0.001 USD` |
+| Easyhook Inbox operation sent to a provider (send, reply, reaction, typing, read receipt, or email action) | `0.01 MXN` or `0.001 USD` |
 | Media transfer beyond included quota | `3 MXN / GB` or `0.20 USD / GB` |
 | Reusable media storage beyond included quota | `3 MXN / GB / month` or `0.20 USD / GB / month` |
 | Received chat media storage beyond included quota | `3 MXN / GB / month` or `0.20 USD / GB / month` |
 
 Not billable:
 
-- Portal/admin actions, including Inbox, template management, Flow management, consent setup, logs, connection sync, and manual testing from the portal.
+- Portal UI-only actions, including Inbox search, filters, navigation, pins, realtime refreshes, template management, Flow management, consent setup, logs, connection sync, and manual testing from **Probar API**.
 - Meta webhooks used internally to update Easyhook state.
 - Incoming messages and every Easyhook delivery to customer webhook subscriptions, including message, status, template, Flow, onboarding, account, and contact events.
 - Meta template/message charges. Those stay between the customer and Meta.
 - Media storage upload itself.
+
+`Probar API` is free only through the authenticated portal flow. The portal
+requires a single-use Cloudflare Turnstile verification, applies shared per-IP,
+per-user, and per-organization burst limits, and sends a short-lived
+server-signed assertion to the Easyhook API. Copying the public API request into
+a script does not reproduce those controls and normal public API billing
+applies. Portal sessions require a new sign-in after 7 days. The portal
+currently has no daily free-operation quota.
+
+Customer webhook relay is free as a companion to Easyhook usage, not an
+unlimited standalone event bus. Organizations without wallet balance, a
+successful top-up in the last 90 days, or charged Easyhook usage in that period
+receive up to 25,000 **live** relayed events per calendar month. Commercially
+active organizations are not subject to that evaluation allowance. Coexistence
+history synchronization and explicit History replays do not consume the live
+relay allowance; they remain bounded by their own job and replay limits. Provider
+ingestion and the Easyhook Inbox continue even when the live customer relay
+allowance is exhausted.
 
 Included media quotas in V1:
 
@@ -448,8 +467,8 @@ easyhook recharge 500 MXN to EH-130FF0EC \
 
 Run the same command with `--dry-run` to validate the organization, project,
 currency and resulting balance without writing. Setup and security details are
-documented in the private administrator runbook. Admins must not edit
-`wallets.balance_cents` directly.
+documented in [`docs/admin/wallet-cli.md`](/api-reference). Admins must
+not edit `wallets.balance_cents` directly.
 
 ## Endpoint Index
 
@@ -463,16 +482,16 @@ Recommended customer API endpoints:
 | `GET` | `/v1/conversations/{contact}/messages?from=...` | `messages:read` | Read recent inbound and outbound WhatsApp messages with one contact. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
 | `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, Mercado Libre, or TikTok Business. |
+| `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, Mercado Libre, or TikTok Business Messaging. |
 | `POST` | `/v1/messages/quick-replies` | `messages:write` | Send one text prompt with 1–13 quick-reply buttons through Messenger or Instagram. |
-| `POST` | `/v1/messages/interactive` | `messages:write` | Send one prompt with up to three supported reply or URL buttons through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. TikTok accepts reply buttons only. |
+| `POST` | `/v1/messages/interactive` | `messages:write` | Send supported reply or URL buttons through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok accepts reply buttons only. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
 | `POST` | `/v1/messages/humanized-text` | `messages:write` | Humanized text for WhatsApp, Messenger, Instagram, and Telegram. Presence controls are best-effort and never replace the actual send. |
-| `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, Instagram, or TikTok Business. |
-| `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. |
-| `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. |
+| `POST` | `/v1/messages/read` | `messages:write` | Mark read on WhatsApp, Messenger, Instagram, or TikTok Business Messaging. |
+| `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. |
+| `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. |
 | `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on WhatsApp or Telegram. |
-| `POST` | `/v1/messages/media` | `messages:write` | Send or schedule compatible media through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business. TikTok currently supports images. |
+| `POST` | `/v1/messages/media` | `messages:write` | Send or schedule compatible media through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok currently supports images. |
 | `POST` | `/v1/messages/template` | `messages:write` | Send or schedule approved WhatsApp templates. |
 | `POST` | `/v1/messages/flow` | `messages:write` | Send a published WhatsApp Flow inside the 24-hour window. |
 | `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Reconcile a scheduled message, its WAMID, execution failure, and latest Meta status. Existing `messages:write` keys remain compatible. |
@@ -520,51 +539,8 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok text through a connected channel. |
 | `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok media by compatible provider reference or public link. |
 | `POST` | `/v1/messages/channel/media/upload` | `messages:write` | Upload media to Easyhook temporarily and send it through Messenger or Instagram. |
-| `GET` | `/v1/comments?from=...&object_id=...` | `comments:read` | List public comments on a Facebook Page post or Instagram media object. |
-| `POST` | `/v1/comments/{comment_id}/reply` | `comments:write` | Publish a public reply to a Facebook or Instagram comment. |
 
 Portal/admin endpoints exist for onboarding, API-key management, webhook management, and Meta webhook ingestion. They are listed near the end of this document so customers can recognize them, but new product integrations should use the recommended endpoints above.
-
-## Facebook And Instagram Public Comments
-
-Public comments are separate from Messenger and Instagram Direct conversations.
-They never arrive as `message.received` and must not trigger private-message
-automations.
-
-Connect `facebook_comments` or `instagram_comments` independently from the DM
-channel. Both may use the same Page/account ID in `from`, but Easyhook resolves
-it only inside the API-key organization and only against a connected comments
-channel.
-
-List one post or media object's comments:
-
-```bash
-curl "https://api.easyhook.dev/v1/comments?from=PAGE_OR_IG_ACCOUNT_ID&object_id=POST_OR_MEDIA_ID&limit=50" \
-  -H "Authorization: Bearer eh_live_xxx"
-```
-
-Continue with the returned `paging.after` cursor. `object_id` is available as
-`comment.post.id` in `comment.*` webhooks.
-
-Reply publicly:
-
-```bash
-curl -X POST https://api.easyhook.dev/v1/comments/COMMENT_ID/reply \
-  -H "Authorization: Bearer eh_live_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{"from":"PAGE_OR_IG_ACCOUNT_ID","message":"Gracias por escribirnos."}'
-```
-
-`from` is always resolved inside the API-key organization. Existing keys with
-`messages:read` or `messages:write` remain compatible; newly created keys also
-include the explicit `comments:read` and `comments:write` scopes.
-
-Facebook comments require `pages_read_engagement`, `pages_manage_engagement`
-and `pages_manage_metadata`, plus
-the Page `feed` webhook. Instagram with Facebook Login requires
-`instagram_basic`, `pages_read_engagement`, and `instagram_manage_comments`,
-plus the `comments` and `live_comments` webhook fields. Authorize the comments
-connection independently; missing comment permission does not disconnect private messaging.
 
 Use `POST /v1/messages/reaction` with `from`, `to`, `message_id`, and `emoji`. An empty `emoji` removes the current reaction.
 
@@ -877,9 +853,10 @@ cursor, then polls only new inbox messages. Use TLS, an app password, or a
 provider-specific SMTP credential; never use a personal password when the mail
 provider supports app passwords.
 
-Customer API sends through Gmail, Outlook, and IMAP/SMTP all consume the same
-wallet operation, `message.email.send`. Sends from the Easyhook portal remain
-portal operations and do not create customer API usage charges.
+Customer API sends through Gmail, Outlook, and IMAP/SMTP consume
+`message.email.send`. Provider operations from the Easyhook Inbox use the
+equivalent `inbox.*` operation and the same per-operation price. UI-only Inbox
+work does not consume wallet balance.
 
 The WhatsApp 24-hour customer-service window does not apply to email or
 Telegram. These channels can send at any time permitted by their provider.
@@ -915,14 +892,25 @@ Easyhook deletes the encrypted bot token.
 
 ## TikTok Business Messaging
 
-Connect TikTok from **Connect > TikTok Business**. Easyhook uses TikTok's
-account-holder authorization flow and requests only `message.list.read`,
-`message.list.send`, and `message.list.manage`. It does not request advertiser,
-campaign, pixel, measurement, or CTX permissions.
+Connect TikTok from **Connect > TikTok Business Messaging**. Easyhook uses
+TikTok's account-holder authorization flow. It requests
+`message.list.read`, `message.list.send`, and `message.list.manage` for
+messaging, plus `user.info.basic`, `user.account.type`, `user.info.username`,
+and `user.info.profile` to identify the connected business account. It does not
+request advertiser, campaign, pixel, measurement, or CTX permissions.
+
+The selected TikTok profile must already be a **Business Account**. Easyhook
+checks the account type during OAuth and returns
+`tiktok_business_account_required` without storing the connection when TikTok
+reports a personal account. For connections created before this validation,
+the same error is returned on send instead of incorrectly requesting another
+reconnection. Change the account type in TikTok and then authorize it again.
 
 TikTok Business Messaging is currently unavailable for Business Accounts
 registered in the United States, European Economic Area, Switzerland, or the
-United Kingdom. A business cannot initiate a new TikTok conversation. After a
+United Kingdom. Easyhook preserves this provider restriction as
+`tiktok_business_messaging_region_unsupported`; reconnecting the same account
+does not resolve it. A business cannot initiate a new TikTok conversation. After a
 user messages the business, TikTok permits at most 10 business replies during
 the following 48 hours. Easyhook returns
 `tiktok_messaging_window_closed_or_quota_reached` when the provider rejects a
@@ -932,8 +920,10 @@ Use the provider-native identifiers from the webhook without prefixes:
 
 - `account.id` is the connected TikTok Business Account open ID and is used as
   `from`.
-- `contact.id` and the conversation identifier are opaque; preserve them
-  exactly and use the webhook destination as `to`.
+- `contact.id` is the stable remote user identifier. Preserve it exactly and
+  use it as `to` for later calls.
+- `message.thread_id` is the provider conversation identifier. Easyhook also
+  accepts it as `to` for backward compatibility and provider-level debugging.
 - `message.id` is the provider message ID and the message idempotency key.
 
 The standard text, reply, typing, read, interactive reply-button, image, and
@@ -1173,7 +1163,8 @@ Response:
     "url": "https://www.easyhook.dev/connect/onboarding/onb_xxx",
     "organization": {
       "name": "appcreatorbr",
-      "slug": "appcreatorbr"
+      "slug": "appcreatorbr",
+      "logo_url": "https://project.supabase.co/storage/v1/object/public/organization-logos/tenant/logo.png"
     },
     "signup_mode": "cloud_api",
     "language": "es",
@@ -1193,6 +1184,10 @@ the channel under the organization that owns the API key. Subscribe to
 `onboarding.*` webhooks to receive completion events in your app. Sessions
 expire after at most one hour and are consumed after the first successful
 completion.
+
+When the organization has uploaded a logo in the Easyhook portal, `organization.logo_url`
+is included automatically and the hosted page displays that brand. Clients do not send or
+override the logo when creating a session.
 
 The hosted Easyhook page uses these token-scoped support endpoints internally:
 
@@ -1310,7 +1305,9 @@ Rules:
   international prefix.
 - A WhatsApp recipient can also be the opaque BSUID received in `contact.user_id`,
   `message.from_user_id`, or `status.recipient_user_id`. Pass it unchanged in
-  `to`; do not add `+`, remove punctuation, or validate it as E.164.
+  Easyhook's `to`; do not add `+`, remove punctuation, or validate it as E.164.
+  Easyhook sends phone numbers to Meta in `to` and BSUID/parent-BSUID values in
+  Meta's dedicated `recipient` field.
 - Do not send national-only numbers. Easyhook does not guess a country because
   the same leading digits can identify a different valid country calling code.
 - The `from` sender must belong to the tenant that owns the API key.
@@ -2213,7 +2210,7 @@ operations are not billed.
 | Messenger | Yes | Yes | Yes | No | Yes |
 | Instagram | Yes | Yes | Yes | No | Yes |
 | Telegram | No | Yes | Yes | Yes | Yes |
-| TikTok Business | Yes | Yes | Yes | No | Yes |
+| TikTok Business Messaging | Yes | Yes | Yes | No | Yes |
 | Gmail, Outlook, IMAP/SMTP | Use Email Only actions | No | Yes | No | No |
 | Mercado Libre | No | No | No | No | No |
 
@@ -2266,7 +2263,7 @@ During coexistence onboarding, the business must allow history sharing in the Wh
 
 Consumers receive an Easyhook batch rather than Meta's raw callback. Process each normalized element in `events`. Build the conversation key from `account.id + ":" + (contact.user_id ?? contact.id)`, deduplicate with `message.id`, order a conversation by `message.timestamp`, and prevent live auto-reply logic when `message.source` is `history`. Deliveries are at-least-once and retry up to five times. WhatsApp can supply a stable Business-scoped User ID (BSUID) instead of a phone; Easyhook preserves it in `contact.id`/`contact.user_id` and stores a phone alias when Meta supplies one. The complete mapping contract is documented in [Customer Webhooks: Coexistence History](/webhooks#coexistence-history).
 
-The same BSUID can be used as `to` for normal WhatsApp sends. Authentication
+The same BSUID or eligible parent BSUID can be used as Easyhook's `to` for normal WhatsApp sends. Easyhook maps it to Meta's dedicated `recipient` property. Authentication
 templates that use one-tap, zero-tap, or copy-code delivery still require a
 phone number; Meta can reject a BSUID destination with error `131062`.
 
@@ -3605,6 +3602,208 @@ Success response:
 ```json
 { "ok": true, "wamid": "wamid..." }
 ```
+
+## Facebook And Instagram Comments
+
+Comments are public interactions and are intentionally separate from private
+messages. They do not appear as `message.received` and do not open a messaging
+conversation.
+
+List comments on one Facebook post or Instagram media object:
+
+```bash
+curl "https://api.easyhook.dev/v1/comments?from=17841400000000000&object_id=18000000000000000&limit=50" \
+  -H "Authorization: Bearer eh_live_xxx"
+```
+
+`from` must resolve to a Messenger Page or Instagram professional account owned
+by the API-key organization. `object_id` is `comment.post.id` from a webhook or
+the provider-native post/media ID. Continue pagination with the returned
+`paging.after` cursor.
+
+Reply publicly:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/comments/18000000000000001/reply \
+  -H "Authorization: Bearer eh_live_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{"from":"17841400000000000","message":"Gracias por escribirnos."}'
+```
+
+The response includes both the immediate parent and the stable thread root:
+
+```json
+{
+  "ok": true,
+  "comment": {
+    "id": "18000000000000002",
+    "parent_id": "18000000000000001",
+    "root_id": "18000000000000001",
+    "text": "Gracias por escribirnos."
+  }
+}
+```
+
+Webhook comments and replies carry the same `comment.root_id`. Group public
+comment conversations by `account.id + comment.root_id`; use `parent_id` only
+to render the immediate reply relationship. A top-level Page or Instagram
+account comment starts its own thread even when it belongs to the same post.
+Facebook and Instagram use the same normalized comment contract. The webhook
+`channel` is `facebook_comments` or `instagram_comments`; it is never the
+private-message provider `messenger` or `instagram`.
+
+New API keys include `comments:read` and `comments:write`. Existing keys with
+`messages:read`/`messages:write` remain compatible. Facebook live comment
+webhooks require the Page `feed` subscription. Public replies require
+`pages_manage_engagement`; reconciling existing posts and comments additionally
+requires `pages_read_user_content` together with `pages_read_engagement`.
+Instagram requires `instagram_basic`,
+`pages_manage_metadata`, `pages_read_engagement`, and
+`instagram_manage_comments`. With Facebook Login, Easyhook enables the linked
+Facebook Page subscription through `/{page-id}/subscribed_apps`; the Instagram
+`comments` and `live_comments` fields remain configured on the app-level
+Instagram webhook subscription. Easyhook keeps private Messenger/Instagram
+messaging separate from public-comment permissions and failures. Meta grants
+permissions per asset: a permission for one Page or Instagram account does not
+authorize another selected in the same OAuth flow.
+
+Page webhooks are not a historical import. Easyhook receives changes produced
+after the Page installs the `feed` subscription. Older comments and Page-authored
+replies made directly in Facebook can only be reconciled when Meta grants the
+read permissions for that exact Page.
+
+During channel connection, Easyhook validates the provider webhook subscription
+and granular asset targets before storing the comment channel as active.
+Facebook can connect in read-only mode when live delivery is available but
+reply access is not. The response reports `comment_access.mode: "read_only"`;
+reply attempts return `social_comment_reply_permission_required` before
+billing. If the OAuth authorization omits a permission required for reading,
+the connection returns HTTP `403` with
+`error: "social_comment_permission_required"`, `provider`,
+`missing_permissions`, and `required_permissions`. If the token contains the
+scopes but Meta rejects the app capability, it returns
+`error: "social_comment_capability_unavailable"` and `capability`. Approved
+permissions are never labeled as missing merely because another permission is
+unavailable. A rejected subscription never creates an active comment channel.
+
+## Easyhook Live Chat
+
+Live Chat is an Easyhook-owned channel for browser applications. A frontend can
+use it without operating a separate backend and without exposing a normal
+Easyhook API key. Create and configure the widget in the portal, then copy the
+publishable key (`eh_chat_pk_...`) into the website.
+
+The publishable key only identifies one widget. It does not grant access to the
+organization, Inbox, Supabase, other contacts, or other conversations. Configure
+an exact origin allowlist and render Cloudflare Turnstile before bootstrapping a
+visitor session.
+
+Create a session:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/live-chat/sessions \
+  -H 'Origin: https://shop.example' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "public_key":"eh_chat_pk_xxx",
+    "display_name":"Ada",
+    "email":"ada@example.com",
+    "turnstile_token":"TURNSTILE_RESPONSE"
+  }'
+```
+
+Anonymous clients cannot choose `visitor_id`; Easyhook generates a fresh
+`ehusr_...` identity so one browser cannot claim another visitor's history. The
+response also includes `conversation_id` (`ehconv_...`), a 15-minute access
+token and a rotating refresh token. Store the tokens only for this browser.
+
+For a signed-in application user, the customer's backend first creates a
+five-minute identity token with its Easyhook API key:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/live-chat/identity-tokens \
+  -H 'Authorization: Bearer eh_live_xxx' -H 'Content-Type: application/json' \
+  -d '{"widget_id":"WIDGET_UUID","external_user_id":"usr_42","roles":["buyer"]}'
+```
+
+Pass the returned `identity_token` to session bootstrap. Roles are opaque
+customer metadata; Easyhook enforces the signed identity, conversation
+membership and allowed chat action, while the customer remains responsible for
+its own business authorization rules.
+
+Send a text message with a client-generated idempotency identifier:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/live-chat/sessions/current/messages \
+  -H 'Origin: https://shop.example' \
+  -H 'Authorization: Bearer eh_chat_session_xxx' \
+  -H 'Content-Type: application/json' \
+  -d '{"body":"Necesito ayuda","client_message_id":"web_01JABCDEF"}'
+```
+
+Use the same endpoint with `type` equal to `image`, `video`, `audio`,
+`document`, or `sticker` and provide `file_name`, `file_type`, and
+`file_base64`. `reply_to` quotes another message and `forwarded_from` preserves
+the original message identifier when the application forwards content.
+
+Edits, deletes, reactions, reads and typing use an idempotent action:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/live-chat/sessions/current/actions \
+  -H 'Origin: https://shop.example' \
+  -H 'Authorization: Bearer eh_chat_session_xxx' \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"reaction","message_id":"lc_xxx","emoji":"❤️","client_action_id":"action_01JABCDEF"}'
+```
+
+Read new messages:
+
+```bash
+curl 'https://api.easyhook.dev/v1/live-chat/sessions/current/messages?after=2026-08-18T20:00:00.000Z&limit=50' \
+  -H 'Origin: https://shop.example' \
+  -H 'Authorization: Bearer eh_chat_session_xxx'
+```
+
+Rotate the session before the access token expires:
+
+```bash
+curl -X POST https://api.easyhook.dev/v1/live-chat/sessions/refresh \
+  -H 'Origin: https://shop.example' \
+  -H 'Content-Type: application/json' \
+  -d '{"refresh_token":"eh_chat_refresh_xxx"}'
+```
+
+Refresh tokens are single-use. A successful refresh invalidates both previous
+tokens and returns a new pair.
+
+For application-owned direct conversations and groups, a trusted backend uses
+`POST /v1/live-chat/app/conversations` with `widget_id`, `from`, `kind`,
+`members`, and (for groups) `title`. Scoped clients list
+`/sessions/current/conversations`, then read/send under
+`/sessions/current/conversations/{ehconv_id}/messages` and use the sibling
+`actions` and `state` endpoints. The server always infers `from` from the scoped
+session; clients send to an `ehconv_...` conversation and cannot forge another
+sender.
+
+The server validates the session and its original origin on every request.
+Bootstrap and session operations have independent sustained limits; rate-limit
+responses are HTTP `429` with `Retry-After`. Invalid/expired sessions return
+`401`, a mismatched origin returns `403`, and unavailable Turnstile verification
+fails closed. Durable text/media, stickers, replies, forwarding metadata,
+reactions, edits, deletion tombstones and per-member read cursors are enabled.
+Typing is an expiring signal exposed through `state`; tenant agents also receive
+it through the private Inbox Broadcast topic.
+
+The installable `easyhook-chat.js` widget renders text and protected media,
+stickers, replies, reactions, edits, deletion tombstones, read state and typing.
+It uses the scoped session endpoints only; it never embeds an organization API
+key or Supabase credential.
+
+Inbound visitor messages use the normal `message.text` webhook envelope with
+`channel: "live_chat"`, and appear in the multichannel Inbox. Live Chat sends
+and durable actions use the wallet operation ledger with client idempotency
+keys. Read/list polling is not billed, preventing duplicate charges from
+refresh or reconnect behavior.
 
 ## Documentation Rule
 

@@ -1,10 +1,10 @@
 # Easyhook Webhooks
 
-Last updated: 2026-08-12
+Last updated: 2026-08-20
 
 Easyhook sends one compact JSON object per event. The format is shared by
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email,
-Mercado Libre, TikTok Business, and Google Business Profile.
+Mercado Libre, TikTok Business Messaging, and Google Business Profile.
 
 ## Principles
 
@@ -60,8 +60,11 @@ The same event from Messenger or Instagram only changes `channel` and the provid
 ```
 
 TikTok uses the same normalized envelope. `account.id` is the connected
-Business Account open ID; `contact.id`, conversation IDs, and message IDs are
-opaque provider identifiers and must not be reformatted. A TikTok reply-button
+Business Account open ID, `contact.id` is the stable TikTok user identifier,
+and `message.thread_id` is the conversation identifier required by TikTok.
+All three values and message IDs are opaque and must not be reformatted.
+Easyhook accepts either `contact.id` or `message.thread_id` as `to` for an
+existing TikTok conversation. A TikTok reply-button
 selection uses the same `message.quick_reply` block as other supported
 channels. Provider privacy restrictions are emitted as a non-message event
 rather than fabricating unavailable message data.
@@ -293,9 +296,6 @@ Common event filters:
 | `message.button`, `message.interactive` | WhatsApp template-button, quick-reply, list, and Flow interactions. |
 | `message.quick_reply` | Reply-button selections normalized across WhatsApp, Messenger, Instagram, and Telegram. |
 | `message.file` | Messenger/Instagram file events. |
-| `comment.created` | A new public Facebook or Instagram comment or reply. |
-| `comment.updated` | A Facebook Page comment was edited. |
-| `comment.deleted` | A Facebook Page comment was removed. |
 | `status.*` | WhatsApp delivery, read, and failure statuses. |
 | `status.failed` | Only failed WhatsApp message statuses. |
 | `scheduled.*` | Scheduled message creation, successful provider acceptance, terminal execution failure, and cancellation. |
@@ -303,6 +303,7 @@ Common event filters:
 | `flow.submission.*` | WhatsApp Flow responses. |
 | `smb_message_echo.*` | Messages/reactions sent from the WhatsApp Business App in coexistence. |
 | `smb_app_state_sync.*` | Coexistence contact/app updates. |
+| `user_preferences.*` | WhatsApp marketing preference changes. |
 | `history.*` | Coexistence history synchronization. |
 | `account_update.*` | WhatsApp account connection updates. |
 | `onboarding.*` | Hosted onboarding lifecycle. |
@@ -348,6 +349,7 @@ separately for imported conversations. These families never overlap.
 | `template.components_changed` | `template` |
 | `account.updated` | `account_update` |
 | `contact.updated` | `contact_update` |
+| `user.preference_updated` | `user_preference` |
 | `consent.updated` | `consent` |
 | `review.created` | `review` |
 | `review.updated` | `review` |
@@ -485,6 +487,7 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | `id` | string | Routable remote provider ID. For WhatsApp this can be a phone or a Business-scoped User ID (BSUID); it is not guaranteed to contain only digits. |
 | `phone` | string or null | WhatsApp phone in international digits while Meta supplies it. It can be absent for username-first conversations. |
 | `user_id` | string or null | WhatsApp BSUID, such as `MX.1030980939667977`. Prefer it as the stable contact key when present. |
+| `parent_user_id` | string or null | Optional parent BSUID, such as `MX.ENT.11815799212886844830`, when Meta has enabled linked-portfolio identity for the business. |
 | `username` | string or null | Optional WhatsApp username without `@`. |
 | `country_code` | string or null | Optional country code supplied by WhatsApp. |
 | `name` | string | Provider-supplied contact/profile name, when available. |
@@ -625,55 +628,6 @@ not expose Messenger or Instagram message deletion/unsend as an equivalent
 webhook, so Easyhook does not infer or fabricate those events. Always ignore
 unknown optional fields and only process events that were actually delivered.
 
-### Public comments
-
-Connect and select provider `facebook_comments` or `instagram_comments`, then
-subscribe to `comment.*`. Public comments are not DMs and are intentionally
-excluded from `message.*`.
-
-```json
-{
-  "id": "delivery-event-id",
-  "type": "comment.created",
-  "channel": "instagram_comments",
-  "account": {
-    "id": "17841400000000000",
-    "name": "Easyhook"
-  },
-  "interaction": {
-    "kind": "comment",
-    "action": "created",
-    "object": {
-      "id": "18000000000000000",
-      "type": "media",
-      "text": "Conoce nuestro nuevo servicio",
-      "media_url": "https://...",
-      "permalink": "https://www.instagram.com/p/..."
-    }
-  },
-  "comment": {
-    "id": "18000000000000001",
-    "text": "Me interesa",
-    "action": "created",
-    "parent_id": null,
-    "author": {
-      "id": "17841400000000002",
-      "username": "cliente"
-    },
-    "post": {
-      "id": "18000000000000000",
-      "type": "media"
-    }
-  }
-}
-```
-
-Deduplicate delivery with top-level `id`. Use `comment.id` when replying and
-`comment.post.id` to list the complete thread. Facebook emits create, update,
-and delete actions through `feed`; Instagram currently emits creates through
-`comments` and `live_comments`. Easyhook does not fabricate unsupported actions.
-`interaction.object` provides the publication context used by the Easyhook Inbox.
-
 ### WhatsApp deletions and system notices
 
 Subscribe to the provider event names `message.revoke` and `message.system`.
@@ -756,7 +710,9 @@ Consumer rules:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `message_id` | string | Provider message ID whose status changed. |
-| `recipient_id` | string | Recipient provider ID, when supplied. |
+| `recipient_id` | string | Recipient phone number, when Meta supplies it. |
+| `recipient_user_id` | string | Recipient BSUID. Meta includes it for WhatsApp status events. |
+| `parent_recipient_user_id` | string | Optional parent BSUID for eligible linked portfolios. |
 | `timestamp` | ISO 8601 string | Provider status time. |
 | `conversation` | object | Meta conversation/pricing-window metadata. |
 | `pricing` | object | Meta pricing fields, passed through as a compact object. |
@@ -799,7 +755,7 @@ without assuming a fixed provider error schema.
 | `status` | string | Session status. |
 | `url` | string | Hosted onboarding URL, when applicable. |
 | `expires_at` | ISO 8601 string | Session expiration. |
-| `organization` | object | Owning Easyhook organization display data. |
+| `organization` | object | Owning Easyhook organization display data: `name`, `slug`, and optional public `logo_url`. |
 | `signup_mode` | string | `cloud_api` or `coexistence`. |
 | `customer_name`, `customer_email` | string | Optional caller references. |
 | `return_url` | string | Caller return URL. |
@@ -948,7 +904,7 @@ Treat each element of `events` as one normalized message. The outer object is an
 - Sort imported messages by `message.timestamp`, not by webhook arrival time. Separate conversations can be processed concurrently, so global delivery order is not meaningful.
 - For `message.direction: in`, `contact` is the sender and `account` is the receiving Easyhook number.
 - For `message.direction: out`, `account` is the sender and `contact` is the recipient.
-- WhatsApp usernames can hide the person's phone number. Meta then identifies the contact with a Business-scoped User ID (BSUID), such as `MX.1030980939667977`. Easyhook stores phone/BSUID aliases when Meta supplies both and preserves the BSUID in `contact.user_id`. `contact.phone`, `message.from`, `message.to`, and status `recipient_id` can be absent or contain an opaque BSUID. Never require digits, invent a phone, or strip letters and punctuation from these identifiers.
+- WhatsApp usernames can hide the person's phone number. Meta then identifies the contact with a Business-scoped User ID (BSUID), such as `MX.1030980939667977`. Easyhook stores phone/BSUID aliases when Meta supplies both and preserves the BSUID in `contact.user_id`; eligible linked portfolios also receive `contact.parent_user_id`. `contact.phone` and status `recipient_id` can be absent, while normalized `message.from`/`message.to` remain routable with the phone or BSUID. Never require digits, invent a phone, or strip letters and punctuation from these identifiers.
 - During Meta's transition window a webhook can contain both `contact.phone` and `contact.user_id`; store both. A later webhook can contain only the BSUID and still belongs to the same contact.
 - In rare historical records, Meta can omit every remote-contact field. Easyhook emits `type: sync.failed` with `error.code: missing_remote_contact` and `error.provider_message_id` instead of publishing an unusable `message.received` or `message.echo`. Keep the rest of the import and record this item as terminal unless Meta later supplies the missing identity.
 - Do not trigger live auto-replies, consent keyword detection, or other real-time inbound automations when `message.source === "history"` unless replay behavior is explicitly intended.
@@ -1032,6 +988,7 @@ The `smb_app_state_sync.*` filter receives contact and app-state records importe
   "contact": {
     "id": "5214445087305",
     "user_id": "MX.1030980939667977",
+    "parent_user_id": "MX.ENT.11815799212886844830",
     "name": "Customer"
   },
   "contact_update": {
@@ -1039,13 +996,18 @@ The `smb_app_state_sync.*` filter receives contact and app-state records importe
     "action": "update",
     "provider_id": "5214445087305",
     "user_id": "MX.1030980939667977",
+    "parent_user_id": "MX.ENT.11815799212886844830",
     "name": "Customer",
     "timestamp": "2026-07-18T15:20:00.000Z"
   }
 }
 ```
 
-`contact_update.type` and `contact_update.action` preserve Meta's record classification. Consumers must not hardcode a closed list of values. Retain both `contact_update.provider_id` and `contact_update.user_id`, and process repeated updates idempotently. The BSUID is opaque and must not be reformatted as a phone number.
+`contact_update.type` and `contact_update.action` preserve Meta's record classification. Consumers must not hardcode a closed list of values. Retain `contact_update.provider_id`, `contact_update.user_id`, and optional `contact_update.parent_user_id`, and process repeated updates idempotently. BSUIDs are opaque and must not be reformatted as phone numbers.
+
+## WhatsApp User Preferences
+
+Subscribe to `user_preferences.*` to receive Meta marketing-preference changes as `user.preference_updated`. The normalized `contact` retains phone, BSUID, parent BSUID, and username when supplied; `user_preference` contains `category`, `detail`, `value`, and `timestamp`. Phone fields may be absent for username-enabled users.
 
 See Meta's [Business-scoped User IDs](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids) documentation and [WhatsApp username announcement](https://about.fb.com/news/2026/06/its-time-to-reserve-your-whatsapp-username/) for the provider transition.
 
@@ -1372,6 +1334,56 @@ hex_hmac_sha256(secret, raw_request_body)
 ```
 
 The secret is returned only when the subscription is created.
+
+## Facebook And Instagram Comments
+
+Subscribe to `comment.*` or one of `comment.created`, `comment.updated`, and
+`comment.deleted`. Instagram currently emits `comment.created` for `comments`
+and `live_comments`; Facebook Page `feed` also identifies edits and removals.
+
+```json
+{
+  "id": "event-id",
+  "type": "comment.created",
+  "channel": "instagram_comments",
+  "account": {
+    "id": "17841400000000000",
+    "name": "Easyhook"
+  },
+  "comment": {
+    "id": "18000000000000001",
+    "text": "Me interesa",
+    "action": "created",
+    "parent_id": null,
+    "root_id": "18000000000000001",
+    "author": {
+      "id": "17841400000000002",
+      "username": "cliente"
+    },
+    "post": {
+      "id": "18000000000000000",
+      "type": "media"
+    }
+  }
+}
+```
+
+Use top-level `id` for delivery idempotency and `comment.id` as the stable
+provider comment ID. A comment is public content, not a DM: do not route it
+through message auto-reply logic. Reply with
+`POST /v1/comments/{comment.id}/reply`. `comment.post.type` is `post`, `media`,
+or `live`. Use `comment.root_id` as the stable thread key: the root comment and
+all of its nested replies share that value. `comment.parent_id` identifies the
+immediate parent when Meta supplies one; do not use the post ID as a thread key.
+The payload shape is identical for Facebook and Instagram comments. Only
+`channel` (`facebook_comments` or `instagram_comments`) and the provider-native
+post/media values differ, so one consumer can handle both without treating
+either as a private Messenger or Instagram conversation.
+
+These events are live change notifications, not a historical import. Meta does
+not replay comments that existed before the account installed the webhook
+subscription. Deduplicate repeated deliveries by top-level `id`; do not infer
+that a missing historical comment was deleted.
 
 ## n8n
 

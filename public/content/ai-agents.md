@@ -1,6 +1,6 @@
 # Easyhook Agent Integration Guide
 
-Last updated: 2026-08-10
+Last updated: 2026-08-20
 
 This file is the entry point for a coding agent integrating Easyhook into
 another application. It is intentionally concise. The normative contracts are:
@@ -135,17 +135,21 @@ asynchronously.
 
 - Use `type` to choose the payload block.
 - Use `channel` to distinguish `whatsapp`, `messenger`, `instagram`, `telegram`,
-  `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, and
+  `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, and
   `google_business_profile`.
 - For WhatsApp, use `account.id + ":" + (contact.user_id ?? contact.id)` as the
   conversation identity. `contact.id`, `message.from`, `message.to`, and status
   recipients can be opaque BSUIDs rather than phone numbers. Preserve
   `contact.phone` separately when present and never strip letters or punctuation
   from a BSUID.
+  Parent BSUIDs can also appear as `contact.parent_user_id`; preserve them as
+  opaque aliases and send them unchanged through Easyhook's `to` field.
 - Use `message.id` as the message idempotency key.
-- For TikTok, preserve `account.id`, `contact.id`, conversation IDs, and
-  `message.id` exactly. The business cannot initiate a conversation and may
-  send at most 10 replies within 48 hours after each user message.
+- For TikTok, preserve the opaque `account.id`, stable `contact.id`,
+  `message.thread_id`, and `message.id`. Do not add prefixes or treat them as
+  phone numbers. Use either `contact.id` or `message.thread_id` as `to`. A
+  business may send at most 10 replies within 48 hours after each user message
+  and cannot initiate a conversation.
 - Use webhook `id` as the idempotency key for non-message events.
 - For `message.type: button`, route automation with `message.button.payload`
   and use `message.button.text`/`message.text` as the visible label.
@@ -211,10 +215,9 @@ invalidate successfully imported events.
 | --- | --- |
 | Validate key | `GET /v1/me` |
 | Send text | `POST /v1/messages/text` |
-| Send standardized reply or URL buttons | `POST /v1/messages/interactive` |
 | Send Messenger/Instagram quick replies | `POST /v1/messages/quick-replies` |
 | Send multichannel text | `POST /v1/messages/send` |
-| Send humanized multichannel text | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram, Telegram, or TikTok; presence controls are best-effort) |
+| Send humanized multichannel text | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram, or Telegram; presence controls are best-effort) |
 | Send media | `POST /v1/messages/media` |
 | Send template | `POST /v1/messages/template` |
 | Upload template header media | `POST /v1/templates/media` |
@@ -231,10 +234,34 @@ invalidate successfully imported events.
 Consent configuration is per WABA. Copy supports `language: "es" | "en"`, editable opt-in/opt-out headings and bodies, and a footer. Because Meta Flows are immutable after publication, save copy with `PATCH /v1/consent/config` and apply it with `POST /v1/consent/enable`; Easyhook creates a deterministic version and routes future sends to it. `auto_opt_in_enabled: true` optionally schedules Easyhook's opt-in Flow 23 hours after the first live inbound interaction. Do not recreate that timer in an agent or workflow. Easyhook revalidates the service window and current opt-in/opt-out state before dispatch. External consent recorded through `POST /v1/consent` must include auditable evidence supplied by the customer.
 | Hosted customer onboarding | `POST /v1/onboarding/sessions` |
 | Manage webhook subscriptions | `/v1/webhooks`; update only events with `PATCH /v1/webhooks/{id}` |
-| List public Facebook/Instagram comments | `GET /v1/comments?from=...&object_id=...` |
-| Reply publicly to a comment | `POST /v1/comments/{comment.id}/reply` |
 | List Google reviews / aggregate rating | `GET /v1/reviews`, `GET /v1/reviews/summary` |
 | Reply to a Google review | `PUT /v1/reviews/{review_id}/reply` |
+| Create a signed Live Chat identity | `POST /v1/live-chat/identity-tokens` |
+
+## Inbox, Teams, Mobile, And Live Chat
+
+Easyhook's web Inbox and Android app use the same normalized conversations,
+media library, delivery states, reactions, replies, templates, read receipts,
+typing signals, pins, unread state, and wallet ledger as the public API. A
+provider action sent from either Inbox is billable at the normal operation
+price; browsing, filters, local cache, realtime refreshes, and notification
+delivery are not billed.
+
+Organizations can invite members as `administrator`, `developer`, or `agent`.
+Roles are scoped per organization: one person may administer one organization
+and act as an agent in another. Assignment, presence, team conversations, and
+agent attribution are shown only when an organization has multiple members.
+The Android app admits owners, administrators, and agents; channel connection,
+wallet management, keys, and webhooks remain in the web portal.
+
+Easyhook Live Chat is a first-party channel with no external messaging
+provider. Browser clients use a publishable widget key plus short-lived scoped
+sessions; authenticated apps mint five-minute identity tokens from their own
+backend. Never embed a normal Easyhook API key in a browser or mobile client.
+Live Chat supports direct and group conversations, text, media, stickers,
+replies, forwarding metadata, reactions, edits, deletion tombstones, read
+cursors, and typing. See the complete session and action contract in the Public
+API reference.
 
 For multimedia template headers, upload the approval example with
 `POST /v1/templates/media`. Supplying `template_name`, `template_language`, and
@@ -282,7 +309,7 @@ through `POST /v1/messages/quick-replies`:
 Subscribe to `message.quick_reply` and route by
 `message.quick_reply.payload`. Keep `message.text` for display only.
 
-Read the corresponding section in [Public API](/api-reference) before implementing an
+Read the corresponding section in `public-api.md` before implementing an
 endpoint. That document defines all accepted parameters and mutually exclusive
 fields.
 

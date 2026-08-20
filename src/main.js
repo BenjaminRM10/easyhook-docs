@@ -7,6 +7,8 @@ const pages = [
   { group: "Primeros pasos", slug: "getting-started", label: "Empezar" },
   { group: "Primeros pasos", slug: "onboarding", label: "Conectar WhatsApp" },
   { group: "Primeros pasos", slug: "channels", label: "Canales" },
+  { group: "Producto", slug: "inbox-mobile", label: "Inbox y app móvil" },
+  { group: "Producto", slug: "live-chat", label: "Live Chat" },
   { group: "Canales", slug: "google-business-profile", label: "Google Reviews" },
   { group: "API", slug: "api-reference", label: "Referencia completa" },
   { group: "Eventos", slug: "webhooks", label: "Webhooks" },
