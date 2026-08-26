@@ -6,7 +6,7 @@ This document is the source of truth for customer-facing API behavior. Every API
 
 ## Telecom (provider-neutral preview)
 
-Easyhook exposes number inventory, purchasing, SMS/MMS, PSTN calls and WhatsApp Calling through a provider-neutral contract. Number-search results separate `activation_price` (one-time), `monthly_price` (recurring), and `due_today` (activation plus the first month). A purchase must confirm all three amounts and include an `Idempotency-Key`; Easyhook rechecks the exact inventory and rejects any price change before charging the wallet.
+Easyhook exposes number inventory, purchasing, SMS/MMS, PSTN calls and WhatsApp Calling through a provider-neutral contract. Number-search results separate `activation_price` (one-time), `initial_period_price` (the prorated remainder of the UTC purchase month), `monthly_price` (recurring from the next month), and `due_today` (activation plus the initial period). Results also expose the period boundaries and the next renewal date. A purchase must confirm every expected amount and include an `Idempotency-Key`; Easyhook rechecks the exact inventory and rejects any price change before charging the wallet. Later rent is charged in advance on the first day of each month.
 
 - `GET /v1/telecom/capabilities`
 - `GET /v1/telecom/numbers`
@@ -382,7 +382,7 @@ Do not send `tenant_id` to public endpoints. Easyhook resolves the tenant from t
 
 ## Wallet And Billing
 
-Easyhook is usage-based. There is no monthly platform-plan requirement. Purchased telecom numbers can have a one-time activation charge, recurring rent, and metered messaging or voice usage.
+Easyhook is usage-based. There is no monthly platform-plan requirement. Purchased telecom numbers can have a one-time activation charge, a prorated initial calendar-month period, recurring rent charged in advance on the first day of later months, and metered messaging or voice usage.
 
 Wallets are scoped by organization/tenant. Each organization has its own balance, billing currency, usage ledger, top-ups, API charges, and media overage charges. If the same customer creates multiple organizations, each organization is funded separately. The billing currency is fixed by the first funded top-up and cannot be mixed while the wallet has balance or paid history.
 
