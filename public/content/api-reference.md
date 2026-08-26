@@ -4,6 +4,17 @@ Last updated: 2026-08-20
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
+## Telecom (provider-neutral preview)
+
+Easyhook exposes number inventory, purchasing, SMS/MMS, PSTN calls and WhatsApp Calling through a provider-neutral contract. Number-search results separate `activation_price` (one-time), `monthly_price` (recurring), and `due_today` (activation plus the first month). A purchase must confirm all three amounts and include an `Idempotency-Key`; Easyhook rechecks the exact inventory and rejects any price change before charging the wallet.
+
+- `GET /v1/telecom/capabilities`
+- `GET /v1/telecom/numbers`
+- `GET /v1/telecom/numbers/available`
+- `POST /v1/telecom/numbers/orders`
+- `POST /v1/messages/sms`
+- `POST /v1/calls`
+
 ## Base URL
 
 Production API URL:
@@ -371,7 +382,7 @@ Do not send `tenant_id` to public endpoints. Easyhook resolves the tenant from t
 
 ## Wallet And Billing
 
-Easyhook is usage-based. There is no monthly plan requirement and no per-number fee in V1.
+Easyhook is usage-based. There is no monthly platform-plan requirement. Purchased telecom numbers can have a one-time activation charge, recurring rent, and metered messaging or voice usage.
 
 Wallets are scoped by organization/tenant. Each organization has its own balance, billing currency, usage ledger, top-ups, API charges, and media overage charges. If the same customer creates multiple organizations, each organization is funded separately. The billing currency is fixed by the first funded top-up and cannot be mixed while the wallet has balance or paid history.
 
