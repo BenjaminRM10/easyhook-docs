@@ -30,6 +30,11 @@ organization. Prefer the provider-native `account.id` received in Easyhook
 webhooks. WhatsApp also accepts its connected international number; do not add
 `page_` or `ig_` prefixes.
 
+`channel` is normally optional. If one `from` is connected to more than one
+compatible channel, Easyhook returns `409 ambiguous_sender` and lists
+`available_channels`; retry with the intended value such as `whatsapp` or
+`sms`. Never guess or silently fall back.
+
 For WhatsApp, always include the international country calling code. Easyhook
 accepts E.164, digits-only international values, spaces, hyphens, parentheses,
 dots, and the `00` international prefix. It does not infer a country from a
@@ -214,9 +219,10 @@ invalidate successfully imported events.
 | Goal | Endpoint |
 | --- | --- |
 | Validate key | `GET /v1/me` |
+| List senders | `GET /v1/senders` |
+| Disconnect a sender after explicit confirmation | `DELETE /v1/senders/{account_id}` |
 | Send text | `POST /v1/messages/text` |
 | Send Messenger/Instagram quick replies | `POST /v1/messages/quick-replies` |
-| Send multichannel text | `POST /v1/messages/send` |
 | Send humanized multichannel text | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram, or Telegram; presence controls are best-effort) |
 | Send media | `POST /v1/messages/media` |
 | Send template | `POST /v1/messages/template` |

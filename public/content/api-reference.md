@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-08-20
+Last updated: 2026-08-22
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -12,7 +12,7 @@ Easyhook exposes number inventory, purchasing, SMS/MMS, PSTN calls and WhatsApp 
 - `GET /v1/telecom/numbers`
 - `GET /v1/telecom/numbers/available`
 - `POST /v1/telecom/numbers/orders`
-- `POST /v1/messages/sms`
+- `POST /v1/messages/text` with `channel: "sms"` when needed
 - `POST /v1/calls`
 
 ## Base URL
@@ -45,6 +45,10 @@ Resource selectors are resolved only inside that organization:
   same resource.
 - Easyhook never falls back to another phone or WABA when a selector cannot be
   resolved.
+- `channel` is optional when `from` identifies exactly one compatible sender.
+  When the same value belongs to more than one channel, Easyhook returns
+  `409 ambiguous_sender` with `available_channels`; retry with an explicit
+  `channel` instead of guessing.
 
 Expected isolation errors:
 
@@ -56,6 +60,7 @@ Expected isolation errors:
 | `404` | `waba_not_found` | The WABA is missing from this organization, including when it belongs to another organization. |
 | `409` | `sender_phone_mismatch` | `from` and `phone_id` identify different owned phones. |
 | `409` | `sender_waba_mismatch` | The selected sender does not belong to the supplied WABA. |
+| `409` | `ambiguous_sender` | The same `from` is connected to multiple compatible channels; send `channel`. |
 
 These rules apply to messages, media, templates, Flows, consent, read/typing
 actions, scheduling, conversations, reviews, webhooks, and reusable assets.
@@ -168,6 +173,13 @@ Available MCP tools:
 `list_conversations` and `get_recent_messages` use billable customer API reads.
 `wait_for_message` is not billed. A wait timeout is a normal result and must not
 be interpreted as permission for an agent to continue indefinitely.
+
+Hosted onboarding supports WhatsApp, Messenger, Instagram, Facebook Comments,
+Instagram Comments, Telegram, TikTok, Gmail, Outlook, Mercado Libre, and custom
+email where applicable. Disconnecting a sender is intentionally not exposed as
+an MCP tool because it is a destructive tenant-administration action. Use the
+tenant-scoped REST operation `DELETE /v1/senders/{account_id}` from an approved
+management flow.
 
 ## Chatwoot
 
@@ -417,7 +429,7 @@ currently has no daily free-operation quota.
 Customer webhook relay is free as a companion to Easyhook usage, not an
 unlimited standalone event bus. Organizations without wallet balance, a
 successful top-up in the last 90 days, or charged Easyhook usage in that period
-receive up to 25,000 **live** relayed events per calendar month. Commercially
+receive up to 10,000 **live** relayed events per calendar month. Commercially
 active organizations are not subject to that evaluation allowance. Coexistence
 history synchronization and explicit History replays do not consume the live
 relay allowance; they remain bounded by their own job and replay limits. Provider
@@ -478,7 +490,7 @@ easyhook recharge 500 MXN to EH-130FF0EC \
 
 Run the same command with `--dry-run` to validate the organization, project,
 currency and resulting balance without writing. Setup and security details are
-documented in [`docs/admin/wallet-cli.md`](/api-reference). Admins must
+documented in the internal wallet administration runbook. Admins must
 not edit `wallets.balance_cents` directly.
 
 ## Endpoint Index
@@ -489,11 +501,12 @@ Recommended customer API endpoints:
 | --- | --- | --- | --- |
 | `GET` | `/v1/me` | any valid key | Validate an API key and inspect its tenant/scopes. Useful for n8n credential tests. |
 | `GET` | `/v1/senders` | any valid key | List provider-native sender identifiers. Use `account_id` as `from`. |
+| `GET` | `/v1/senders/{account_id}/health` | any valid key | Read the normalized health of one tenant-owned sender without exposing provider credentials. |
+| `DELETE` | `/v1/senders/{account_id}` | `onboarding:write` | Disconnect a tenant-owned channel by its provider-native sender identifier. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations?from=...` | `messages:read` | List recent WhatsApp conversations for one tenant-owned sender. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages?from=...` | `messages:read` | Read recent inbound and outbound WhatsApp messages with one contact. Existing `messages:write` keys remain compatible. |
 | `GET` | `/v1/conversations/{contact}/messages/wait?from=...` | `messages:read` | Wait for the next inbound WhatsApp message from one contact. Intended for bounded MCP/agent conversations. |
-| `POST` | `/v1/messages/send` | `messages:write` | Forward-compatible unified text send endpoint. `from` can be WhatsApp, Messenger, or Instagram. |
-| `POST` | `/v1/messages/text` | `messages:write` | Send or schedule text. `from` decides WhatsApp, Messenger, Instagram, Telegram, Mercado Libre, or TikTok Business Messaging. |
+| `POST` | `/v1/messages/text` | `messages:write` | Canonical text endpoint for WhatsApp, Telefonía/SMS, Messenger, Instagram, Telegram, Mercado Libre and TikTok. Send `channel` only when `from` is ambiguous. |
 | `POST` | `/v1/messages/quick-replies` | `messages:write` | Send one text prompt with 1–13 quick-reply buttons through Messenger or Instagram. |
 | `POST` | `/v1/messages/interactive` | `messages:write` | Send supported reply or URL buttons through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok accepts reply buttons only. |
 | `POST` | `/v1/messages/email` | `messages:write` | Send a new email or reply through Gmail, Outlook, or a connected IMAP/SMTP account. |
@@ -502,7 +515,7 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/reply` | `messages:write` | Contextual reply on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. |
 | `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. |
 | `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on WhatsApp or Telegram. |
-| `POST` | `/v1/messages/media` | `messages:write` | Send or schedule compatible media through WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok currently supports images. |
+| `POST` | `/v1/messages/media` | `messages:write` | Send compatible media through WhatsApp, Telefonía/MMS, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok currently supports images; scheduled MMS is not yet supported. |
 | `POST` | `/v1/messages/template` | `messages:write` | Send or schedule approved WhatsApp templates. |
 | `POST` | `/v1/messages/flow` | `messages:write` | Send a published WhatsApp Flow inside the 24-hour window. |
 | `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Reconcile a scheduled message, its WAMID, execution failure, and latest Meta status. Existing `messages:write` keys remain compatible. |
@@ -547,7 +560,8 @@ Recommended customer API endpoints:
 | `POST` | `/v1/webhooks/{id}/replay` | any valid key | Retry failed delivery batches, optionally filtered by `sync_id`. |
 | `POST` | `/v1/webhooks/{id}/history-replays` | any valid key | Re-send stored messages or contacts for `phone_id` using `replay_type`. |
 | `GET` | `/v1/webhooks/{id}/history-replays/{replay_id}` | any valid key | Read persistent History replay progress. |
-| `POST` | `/v1/messages/channel/text` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok text through a connected channel. |
+| `POST` | `/v1/messages/channel/text` | `messages:write` | Deprecated compatibility alias; new integrations use `/v1/messages/text`. |
+| `POST` | `/v1/messages/sms` | `messages:write` | Deprecated compatibility alias for Telefonía; new integrations use `/v1/messages/text` with `channel: "sms"` when needed. |
 | `POST` | `/v1/messages/channel/media` | `messages:write` | Send Messenger, Instagram, Telegram, or TikTok media by compatible provider reference or public link. |
 | `POST` | `/v1/messages/channel/media/upload` | `messages:write` | Upload media to Easyhook temporarily and send it through Messenger or Instagram. |
 
@@ -1194,7 +1208,11 @@ When the customer completes authorization on the hosted page, Easyhook stores
 the channel under the organization that owns the API key. Subscribe to
 `onboarding.*` webhooks to receive completion events in your app. Sessions
 expire after at most one hour and are consumed after the first successful
-completion.
+completion. Completion delivery is persisted in Easyhook's webhook outbox and
+retried with the same idempotency guarantees as message events. The payload
+includes `onboarding.connection` with the connected channel's canonical
+`account_id`, display name, provider, and its Easyhook channel reference when
+that provider uses a channel record.
 
 When the organization has uploaded a logo in the Easyhook portal, `organization.logo_url`
 is included automatically and the hosted page displays that brand. Clients do not send or
@@ -1210,6 +1228,15 @@ The hosted Easyhook page uses these token-scoped support endpoints internally:
 | `POST` | `/v1/onboarding/sessions/{token}/oauth/start` | Public opaque session token | Start Gmail, Outlook, Mercado Libre, or TikTok OAuth. |
 
 Customer applications normally create a session and redirect the user to the returned Easyhook `url`; they should not recreate the hosted page's token completion flow.
+
+For Messenger, Easyhook matches the selected Page against Meta's asset-specific
+`pages_messaging` grant. It does not substitute a different Page that was only
+granted for comments or another permission. If completion returns
+`meta_page_access_unavailable`, Meta authorized the business login but did not
+expose a usable messaging credential for the selected Page. Confirm that the
+same Facebook user has full access to that Page, select it in Facebook Login for
+Business, grant `pages_messaging`, and retry the hosted session. The response
+includes Meta's diagnostic message when available.
 
 To create the same hosted session and immediately send its URL from a WhatsApp number owned by the API-key organization, use:
 
@@ -1281,6 +1308,52 @@ Use `from` as the customer-visible sender identifier. Do not use internal Supaba
 The canonical value is the `account.id` delivered in Easyhook webhooks. The same
 value can be passed directly as `from`, regardless of provider. `GET /v1/senders`
 returns every sender available to the API key with its canonical `account_id`.
+Each sender also includes a `health` object. Query one sender directly with:
+
+```http
+GET /v1/senders/{account_id}/health
+Authorization: Bearer eh_live_...
+```
+
+`health.status` is `connected`, `unreachable`,
+`reauthorization_required`, or `unknown`. `unreachable` represents a provider
+or network failure that may be temporary. `reauthorization_required` means the
+credential or provider asset is no longer usable and the customer must reconnect
+that channel. `checked_at`, `code`, and the sanitized `message` are included for
+diagnostics; credentials and provider tokens are never returned.
+
+For push-based monitoring, subscribe a customer webhook to
+`channel.health_changed`. Easyhook emits it only when the normalized health
+state changes, not after every periodic check.
+
+To disconnect a sender without opening the Easyhook portal, URL-encode that
+canonical value and call:
+
+```http
+DELETE /v1/senders/{account_id}
+Authorization: Bearer eh_live_...
+```
+
+Example response:
+
+```json
+{
+  "ok": true,
+  "provider": "instagram",
+  "account_id": "17841401731804358",
+  "disconnected": true,
+  "secret_removed": true
+}
+```
+
+The operation is tenant-scoped and idempotent. Repeating it after the sender
+has already been removed returns `200` with `already_disconnected: true`.
+Easyhook removes its stored channel and credentials; provider-side assets and
+business accounts are not deleted.
+
+This REST operation is the supported automation contract. It is also available
+in the portal API explorer as a copyable request, but execution stays disabled
+there to prevent an accidental destructive test.
 
 For WhatsApp, use the Meta Phone Number ID from `account.id`:
 
@@ -1895,7 +1968,7 @@ Common errors:
 | `scheduled_message_not_cancellable` | The scheduled message is already processing, sent, failed, or cancelled. |
 | `meta_send_failed` | Meta rejected the send request; response includes sanitized Meta details. |
 
-## Send Message
+## Deprecated Text Alias
 
 Endpoint:
 
@@ -1903,7 +1976,9 @@ Endpoint:
 POST /v1/messages/send
 ```
 
-This is the forward-compatible unified send endpoint. It resolves `from` against the API key tenant.
+This compatibility alias resolves `from` against the API-key tenant and returns
+the `Deprecation: true` response header. New integrations use
+`POST /v1/messages/text`.
 
 Current public behavior:
 
@@ -2415,7 +2490,7 @@ If no recent inbound message exists, Easyhook returns:
 
 
 
-## Send Multichannel Text Message
+## Deprecated Multichannel Text Alias
 
 Endpoint:
 
@@ -2423,7 +2498,9 @@ Endpoint:
 POST /v1/messages/channel/text
 ```
 
-This endpoint sends free-form text through a connected non-WhatsApp channel. It remains available for explicit channel sends, but `/v1/messages/text` is the preferred standardized endpoint.
+This endpoint remains only for backward compatibility and returns
+`Deprecation: true`. Use `/v1/messages/text` and, only when necessary, the
+explicit `channel` discriminator.
 
 Required fields:
 

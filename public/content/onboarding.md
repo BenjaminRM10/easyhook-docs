@@ -92,11 +92,44 @@ curl -X POST https://api.easyhook.dev/v1/onboarding/sessions/send \
   }'
 ```
 
-`provider` acepta `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
-`outlook`, `imap_smtp`, `mercadolibre` o `tiktok`. `signup_mode` se usa solamente con
+`provider` acepta `whatsapp`, `messenger`, `instagram`, `facebook_comments`,
+`instagram_comments`, `telegram`, `gmail`, `outlook`, `imap_smtp`,
+`mercadolibre` o `tiktok`. `signup_mode` se usa solamente con
 WhatsApp y acepta `coexistence` o `cloud_api`. El enlace expira en un máximo de
 una hora y se consume al completar una conexión. Enviarlo desde un número de
 WhatsApp requiere una ventana de atención abierta.
+
+El evento `onboarding.completed` entra en la misma cola durable que los demás
+webhooks del cliente. Easyhook conserva el intento, aplica reintentos con
+backoff y registra cada entrega para que una respuesta temporalmente fallida no
+se pierda.
+
+### Messenger: Pages disponibles
+
+En Messenger, Easyhook enumera únicamente Pages que el usuario autorizó de
+forma específica para `pages_messaging`; no toma como suficiente que el usuario
+tenga acceso administrativo a la Page o que haya autorizado otros permisos.
+Si Meta completa el login pero no entrega un token de Page con ese permiso,
+Easyhook responde `meta_page_access_unavailable`. Repite la autorización y
+selecciona explícitamente la Page correcta dentro de Facebook Login for
+Business.
+
+## Desconectar un canal por API
+
+Obtén primero el identificador canónico con `GET /v1/senders` y usa su
+`account_id`:
+
+```bash
+curl -X DELETE https://api.easyhook.dev/v1/senders/ACCOUNT_ID \
+  -H "Authorization: Bearer $EASYHOOK_API_KEY"
+```
+
+La operación sólo puede afectar canales de la organización dueña de la API key
+y requiere `onboarding:write`; las keys existentes con `messages:write`
+conservan compatibilidad. La desconexión elimina credenciales de Easyhook,
+detiene renovaciones y webhooks administrados por Easyhook, y no borra el
+historial ya recibido. Usa esta llamada únicamente después de una confirmación
+explícita del usuario; no se expone como herramienta destructiva del MCP.
 
 TikTok abre el OAuth de cuenta Business y solicita únicamente
 `message.list.read`, `message.list.send` y `message.list.manage`. La cuenta debe

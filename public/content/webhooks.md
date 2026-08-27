@@ -13,9 +13,35 @@ Mercado Libre, TikTok Business Messaging, and Google Business Profile.
   `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, or
   `google_business_profile`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
+- For Telefonía, `account.id` is always the purchased business number for both
+  inbound and outbound events. SMS/MMS use `channel: "sms"`; call lifecycle
+  events use `channel: "voice"`.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
 - Provider-specific details used for debugging remain in the `X-Easyhook-Provider-Event` header.
 - Raw Meta payloads remain internal and are not forwarded.
+
+### Telefonía
+
+```json
+{
+  "id": "event_uuid",
+  "type": "call.initiated",
+  "channel": "voice",
+  "account": { "id": "+13125550100" },
+  "contact": { "id": "+13125550999", "phone": "+13125550999" },
+  "call": {
+    "id": "call_uuid",
+    "direction": "inbound",
+    "from": "+13125550999",
+    "to": "+13125550100",
+    "status": "ringing",
+    "occurred_at": "2026-08-26T20:00:00.000Z"
+  }
+}
+```
+
+Call types are `call.initiated`, `call.answered`, `call.ended`, and
+`call.cost_updated`. SMS/MMS reuse `message.*` and the same `account.id`.
 
 ## Text Message
 
@@ -1257,6 +1283,12 @@ Subscribe to `onboarding.*` to receive hosted signup lifecycle events:
     "signup_mode": "coexistence",
     "return_url": "https://app.example.com/settings/whatsapp",
     "metadata": { "external_customer_id": "cus_123" },
+    "connection": {
+      "channel_id": "channel_uuid",
+      "account_id": "980912725115744",
+      "display_name": "Support",
+      "provider": "whatsapp"
+    },
     "waba": { "id": "909330258580490", "name": "Business" },
     "phone": {
       "id": "980912725115744",
@@ -1266,6 +1298,10 @@ Subscribe to `onboarding.*` to receive hosted signup lifecycle events:
   }
 }
 ```
+
+`onboarding.completed` is written to the same persistent outbox used by other
+customer webhook events. Use the normal Easyhook delivery id/idempotency
+contract: retries do not represent a second channel connection.
 
 ## Google Business Profile Reviews
 
@@ -1384,6 +1420,33 @@ These events are live change notifications, not a historical import. Meta does
 not replay comments that existed before the account installed the webhook
 subscription. Deduplicate repeated deliveries by top-level `id`; do not infer
 that a missing historical comment was deleted.
+
+## Channel health
+
+Subscribe to `channel.health_changed` to learn when a connected WhatsApp,
+Messenger, Instagram, email, or other supported sender changes health state.
+The event is emitted only on a state transition:
+
+```json
+{
+  "id": "event_uuid",
+  "type": "channel.health_changed",
+  "channel": "messenger",
+  "account": { "id": "852736564589134", "name": "Easyhook" },
+  "channel_health": {
+    "status": "reauthorization_required",
+    "previous_status": "connected",
+    "action_required": true,
+    "checked_at": "2026-08-22T09:19:07.211Z",
+    "code": "meta_asset_unavailable",
+    "message": "Provider asset is unavailable to the current credential"
+  }
+}
+```
+
+Treat `unreachable` as potentially temporary and `reauthorization_required` as
+an explicit reconnect prompt. Consumers can reconcile current state at any time
+with `GET /v1/senders` or `GET /v1/senders/{account_id}/health`.
 
 ## n8n
 
