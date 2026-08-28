@@ -4,18 +4,28 @@ Last updated: 2026-08-20
 
 Easyhook sends one compact JSON object per event. The format is shared by
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email,
-Mercado Libre, TikTok Business Messaging, and Google Business Profile.
+Mercado Libre, TikTok Business Messaging, Google Business Profile, SMS/MMS,
+and voice calls.
+
+Telecom number lifecycle events use `number.*`, including `number.renewal_due`,
+`number.renewed`, `number.grace` and `number.released`. Subscribe with provider
+`sms`, `voice` or `*` as appropriate.
+
+Telecom subscriptions use provider `sms` or `voice`. Supported selectors include
+`message.*` and `call.*`; concrete events currently include `message.received`,
+`message.status`, `call.initiated`, `call.answered`, and `call.hangup`.
 
 ## Principles
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
 - `channel` identifies the provider: `whatsapp`, `messenger`, `instagram`,
   `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, or
-  `google_business_profile`.
+  `google_business_profile`, `sms`, or `voice`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - For Telefonía, `account.id` is always the purchased business number for both
   inbound and outbound events. SMS/MMS use `channel: "sms"`; call lifecycle
-  events use `channel: "voice"`.
+  events use `channel: "voice"`. The modality never changes the connection
+  identity.
 - Blocks that do not apply are omitted. Easyhook does not send placeholder `null` fields.
 - Provider-specific details used for debugging remain in the `X-Easyhook-Provider-Event` header.
 - Raw Meta payloads remain internal and are not forwarded.
@@ -41,7 +51,8 @@ Mercado Libre, TikTok Business Messaging, and Google Business Profile.
 ```
 
 Call types are `call.initiated`, `call.answered`, `call.ended`, and
-`call.cost_updated`. SMS/MMS reuse `message.*` and the same `account.id`.
+`call.cost_updated`. SMS/MMS reuse the normal `message.*` block and the same
+business number in `account.id`.
 
 ## Text Message
 
@@ -787,6 +798,33 @@ without assuming a fixed provider error schema.
 | `return_url` | string | Caller return URL. |
 | `metadata` | object | Caller-supplied correlation metadata. |
 | `waba`, `phone` | object | Connected Meta asset details after completion. |
+
+### `call`
+
+Voice events use provider `voice` for normalized routing events and retain the
+underlying provider (`telnyx` or `whatsapp`) in `data.provider`.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `call_id` | UUID string | Stable Easyhook call identity. |
+| `provider` | string | `telnyx` or `whatsapp`. |
+| `direction` | string | `inbound` or `outbound`. |
+| `from`, `to` | string | Normalized calling parties. |
+| `endpoint_id` | UUID string | The one endpoint currently offered or holding the call. |
+| `external_agent_id` | string | Customer-defined API/SIP agent identity, when applicable. |
+| `sequence` | integer | Routing attempt number. |
+| `lease_until` | ISO 8601 string | Time at which Easyhook advances to another endpoint. |
+| `conversation_type`, `conversation_id` | string | Linked inbox conversation, when one could be resolved. |
+
+Subscribe to `call.offered` to ring a customer application and atomically call
+`POST /v1/calls/{id}/actions/claim`. `call.claimed` confirms the winner;
+provider lifecycle events such as `call.ringing`, `call.answered`,
+`call.connect`, `call.hangup`, and `call.terminate` reconcile final state. Do
+not ring an endpoint that was not named in the current `call.offered` event.
+
+WhatsApp call-permission replies arrive as an inbound interactive message with
+`message.interactive.call_permission_reply` containing Meta's response,
+permanence, expiration timestamp, and response source.
 
 ### `sync`
 

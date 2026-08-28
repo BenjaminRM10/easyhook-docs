@@ -11,11 +11,13 @@ const pages = [
   { group: "Producto", slug: "live-chat", label: "Live Chat" },
   { group: "Canales", slug: "google-business-profile", label: "Google Reviews" },
   { group: "API", slug: "api-reference", label: "Referencia completa" },
+  { group: "API", slug: "telecom", label: "Telefonía" },
   { group: "Eventos", slug: "webhooks", label: "Webhooks" },
   { group: "Integraciones", slug: "n8n", label: "n8n" },
   { group: "Integraciones", slug: "ai-agents", label: "Agentes y MCP" },
   { group: "Integraciones", slug: "agent-skill", label: "Skill para agentes" },
   { group: "Integraciones", slug: "chatwoot", label: "Chatwoot" },
+  { group: "Integraciones", slug: "supabase-auth", label: "Supabase Auth" },
 ];
 
 const app = document.querySelector("#app");

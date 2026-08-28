@@ -1,12 +1,12 @@
 # Easyhook Public API
 
-Last updated: 2026-08-22
+Last updated: 2026-08-27
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
-## Telecom (provider-neutral preview)
+## Telecom
 
-Easyhook exposes number inventory, purchasing, SMS/MMS, PSTN calls and WhatsApp Calling through a provider-neutral contract. Number-search results separate `activation_price` (one-time), `initial_period_price` (the prorated remainder of the UTC purchase month), `monthly_price` (recurring from the next month), and `due_today` (activation plus the initial period). Results also expose the period boundaries and the next renewal date. A purchase must confirm every expected amount and include an `Idempotency-Key`; Easyhook rechecks the exact inventory and rejects any price change before charging the wallet. Later rent is charged in advance on the first day of each month.
+The number, SMS/MMS and call contract is provider-neutral. See [Telefonía](/telecom) for capability checks, schemas, security and billing lifecycle.
 
 - `GET /v1/telecom/capabilities`
 - `GET /v1/telecom/numbers`
@@ -14,6 +14,32 @@ Easyhook exposes number inventory, purchasing, SMS/MMS, PSTN calls and WhatsApp 
 - `POST /v1/telecom/numbers/orders`
 - `POST /v1/messages/text` with `channel: "sms"` when needed
 - `POST /v1/calls`
+- `POST /v1/consent` with `channel: "voice"` to record opt-in/opt-out for AI outreach
+- `GET /v1/calls/{callId}`
+- `POST /v1/calls/{callId}/actions/hangup`
+
+The carrier callback is private infrastructure and is not a customer-authenticated endpoint.
+
+SMS and MMS return `maximum_reserved_cost` rather than a quoted final price.
+The hold is reduced to the final Easyhook tariff after the carrier confirms
+the billable amount, and the unused portion is returned. Inbound SMS/MMS are
+reserved and settled from the signed `message.received` callback's carrier
+cost because there is no preceding customer request and no later inbound
+`message.finalized` event.
+
+Inbound carrier voice similarly reserves a refundable 60-minute maximum before
+ringing an Easyhook endpoint. The final charge uses the signed `call.cost`
+`total_cost` and billed duration, applies the current Easyhook voice tariff,
+and returns the unused hold.
+
+`POST /v1/calls` also accepts `handler: "ai"` for outbound phone calls. It
+uses the distinct outbound ElevenLabs agent bound to the Easyhook number, bridges it only after
+the destination answers, and accepts a bounded scalar `context` object for
+per-call variables. AI outreach requires explicit voice consent recorded via
+`POST /v1/consent` and is throttled to one attempt per hour and three per
+rolling 24 hours per tenant/number/contact. A successful AI call returns
+`202` without a WebRTC token; media flows directly between Telnyx and
+ElevenLabs.
 
 ## Base URL
 
@@ -394,7 +420,7 @@ Do not send `tenant_id` to public endpoints. Easyhook resolves the tenant from t
 
 ## Wallet And Billing
 
-Easyhook is usage-based. There is no monthly platform-plan requirement. Purchased telecom numbers can have a one-time activation charge, a prorated initial calendar-month period, recurring rent charged in advance on the first day of later months, and metered messaging or voice usage.
+Easyhook is usage-based. There is no monthly platform-plan requirement. Telecom numbers are an explicit exception: each purchased number can have a one-time activation charge, a prorated initial calendar-month period, recurring rent charged in advance on the first day of later months, and metered messaging or voice usage as documented in [Telefonía](/telecom).
 
 Wallets are scoped by organization/tenant. Each organization has its own balance, billing currency, usage ledger, top-ups, API charges, and media overage charges. If the same customer creates multiple organizations, each organization is funded separately. The billing currency is fixed by the first funded top-up and cannot be mixed while the wallet has balance or paid history.
 
@@ -516,6 +542,21 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/typing` | `messages:write` | Show typing on WhatsApp, Messenger, Instagram, Telegram, or TikTok Business Messaging. |
 | `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on WhatsApp or Telegram. |
 | `POST` | `/v1/messages/media` | `messages:write` | Send compatible media through WhatsApp, Telefonía/MMS, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok currently supports images; scheduled MMS is not yet supported. |
+| `GET` | `/v1/telecom/capabilities` | `telephony:read` | Discover normalized Telnyx and WhatsApp Calling capabilities. |
+| `GET` | `/v1/call-routing` | `telephony:read` | Read the organization call distribution policy. |
+| `PATCH` | `/v1/call-routing` | `telephony:write` | Configure assigned-first, round-robin, or API-only routing. |
+| `POST` | `/v1/call-endpoints` | `telephony:write` | Register or heartbeat one web, mobile, API or SIP answering endpoint. |
+| `POST` | `/v1/call-endpoints/{id}/token` | `telephony:write` | Issue a short-lived WebRTC JWT for an existing endpoint. |
+| `POST` | `/v1/whatsapp/calling/permissions` | `telephony:write` | Send Meta's explicit business-initiated call permission request. |
+| `POST` | `/v1/calls` | `telephony:write` | Start a prepaid Telnyx or WhatsApp call with an enforced maximum duration; `handler: "ai"` starts a consented outbound ElevenLabs call. |
+| `POST` | `/v1/consent` | `telephony:write` or `messages:write` | Record tenant-scoped voice opt-in/opt-out evidence (or existing messaging consent). |
+| `GET` | `/v1/calls/{id}` | `telephony:read` | Read normalized state, duration, assignment and failure details. |
+| `GET` | `/v1/calls/{id}/signaling` | `telephony:read` | Read the outbound WhatsApp SDP answer when it becomes available. |
+| `POST` | `/v1/calls/{id}/actions/claim` | `telephony:write` | Atomically claim an offered call; exactly one endpoint wins. |
+| `POST` | `/v1/calls/{id}/actions/pre-accept` | `telephony:write` | Pre-accept an inbound WhatsApp call with an SDP answer. |
+| `POST` | `/v1/calls/{id}/actions/accept` | `telephony:write` | Accept a claimed WhatsApp call. |
+| `POST` | `/v1/calls/{id}/actions/decline` | `telephony:write` | Decline this endpoint and route to the next available agent. |
+| `POST` | `/v1/calls/{id}/actions/hangup` | `telephony:write` | Terminate through the underlying provider. |
 | `POST` | `/v1/messages/template` | `messages:write` | Send or schedule approved WhatsApp templates. |
 | `POST` | `/v1/messages/flow` | `messages:write` | Send a published WhatsApp Flow inside the 24-hour window. |
 | `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Reconcile a scheduled message, its WAMID, execution failure, and latest Meta status. Existing `messages:write` keys remain compatible. |

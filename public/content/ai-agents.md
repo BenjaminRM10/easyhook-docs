@@ -332,6 +332,21 @@ resolve to the same WABA; otherwise Easyhook returns
 without falling back to the supplied WABA. Never retry either error against a
 different WABA automatically.
 
+## Agentes de voz con ElevenLabs
+
+ElevenLabs es una integración opcional para números Easyhook con voz. La
+organización conecta su propia API key en **Portal > Integraciones** y asigna
+un agente para llamadas entrantes. Puede asignar un segundo agente, distinto,
+para llamadas salientes: sus instrucciones y primer mensaje normalmente no son
+los mismos que los de quien contesta.
+
+Easyhook conserva el número, el enrutamiento, el consentimiento y el cobro. El
+audio viaja directamente entre Telnyx y ElevenLabs; n8n puede atender las tools
+del agente sin entrar en el bucle de audio. Las campañas salientes usan
+`POST /v1/calls` con `handler: "ai"` y requieren opt-in de voz explícito para
+ese número y contacto. Consulta [Telefonía](/telecom) para el contrato y los
+límites.
+
 ## Acceptance Checklist
 
 - API key remains server-side.

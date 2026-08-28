@@ -323,6 +323,20 @@ Under **Template**:
 - **Create** submits the requested template and returns the same warning when
   its selected classification may be inconsistent.
 
+### Voice AI Calls
+
+Version `0.2.39` adds **Voice Call**:
+
+- **Record Consent** stores explicit opt-in or opt-out evidence for one
+  Easyhook number and contact.
+- **Start AI Call** starts the distinct outbound ElevenLabs agent assigned to
+  that number. It requires a maximum duration and stable idempotency key.
+- **Get Call** reads normalized state; **Hang Up** terminates it.
+
+Easyhook still enforces tenant ownership, consent, outreach frequency, number
+capabilities, wallet reservation, and final carrier settlement. n8n provides
+the automation and agent tools; it is not placed in the real-time audio path.
+
 ### Webhook Automation
 
 Easyhook webhooks are handled with **Easyhook Trigger**. It is not a polling node: activation creates a `/v1/webhooks` subscription for the n8n Production URL and deactivation removes it. Deliveries are authenticated automatically with `X-Easyhook-Signature: sha256=<hex>`.
