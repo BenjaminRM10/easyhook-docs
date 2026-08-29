@@ -105,10 +105,9 @@ that same callback, returning any unused balance.
 }
 ```
 
-For outbound AI campaigns, configure a second ElevenLabs agent for the number.
-The inbound agent answers customers; the outbound agent initiates campaigns
-with its own first message, prompt and tools. Easyhook does not allow both
-directions to share the same agent because their opening behavior is different.
+For outbound AI campaigns, select an ElevenLabs agent for the number. It may be
+the same agent used for inbound calls or a separate agent with its own first
+message, prompt and tools. Easyhook never selects an outbound agent implicitly.
 Easyhook originates the PSTN leg, waits until the person answers, and then
 bridges it over SIP to the configured outbound agent; audio is not proxied
 through Easyhook. The agent receives the optional per-call `context` as
@@ -234,7 +233,9 @@ secret vault and exposes only the connection status and the organization's agent
 names. The key is never returned to a browser, mobile app or customer webhook.
 
 The portal assigns an inbound ElevenLabs Conversational AI agent and,
-optionally, a distinct outbound agent to an active Easyhook Telnyx number.
+optionally, an outbound agent to an active Easyhook Telnyx number. Both roles
+may use the same agent; Easyhook does not select one implicitly for outbound
+calls.
 Easyhook imports the public number for inbound routing and uses a private,
 non-dialable SIP identifier for outbound routing. Telnyx sends audio directly
 to ElevenLabs; Easyhook does not proxy or transcribe the audio. Each number has
@@ -247,11 +248,16 @@ its own binding:
 `human_transfer_enabled` is independent from those initial-answer modes. When
 enabled, Easyhook installs a managed `transfer_to_number` system tool on the
 selected ElevenLabs agent. A transfer requested during an active AI
-conversation uses SIP REFER to an opaque HMAC-signed Easyhook target; Easyhook
-verifies the binding, organization, number and active call session before
-offering the call only to eligible human portal/mobile endpoints. Other agent
-tools and customer transfer rules are preserved. `api_only` routing never rings
-Easyhook human clients.
+conversation uses SIP REFER to an opaque HMAC-signed Easyhook target. Easyhook
+verifies the binding, organization, number and active call session before it
+either offers the call to eligible portal/mobile endpoints (`team`) or transfers
+it to the configured E.164 destination (`external_phone`). External transfers
+are sent through Easyhook's Telnyx connection only after a tenant-scoped wallet
+reservation; the destination leg has its own provider reference, one-hour
+maximum and final-cost settlement. The configured phone number is never sent to
+ElevenLabs. Other agent tools and customer transfer rules are preserved.
+`api_only` routing never rings Easyhook human clients when the destination is
+`team`.
 
 Portal-admin routes are:
 
@@ -260,9 +266,11 @@ Portal-admin routes are:
 - `GET /admin/integrations/elevenlabs/agents`
 - `GET /admin/telecom/voice-ai`
 - `PUT /admin/telecom/numbers/{number_id}/voice-ai` with inbound `agent_id`,
-  optional distinct `outbound_agent_id`, `mode`,
+  optional `outbound_agent_id` (which may equal `agent_id`), `mode`,
   optional `answer_timeout_seconds` (`8`–`30`) and
-  `human_transfer_enabled`
+  `human_transfer_enabled`; managed transfer configuration uses
+  `human_transfer_destination` (`team` or `external_phone`) and requires
+  `human_transfer_phone_number` in E.164 format for `external_phone`
 - `DELETE /admin/telecom/numbers/{number_id}/voice-ai`
 
 The agent's system prompt, voice, knowledge base and tools remain managed in
@@ -287,6 +295,7 @@ Subscribe with provider `sms`, `voice` or `whatsapp`:
 - `call.connect`
 - `call.ringing`
 - `call.accepted`
+- `call.transfer_started`
 - `call.terminate`
 - `number.renewal_due`
 - `number.renewed`

@@ -33,7 +33,8 @@ ringing an Easyhook endpoint. The final charge uses the signed `call.cost`
 and returns the unused hold.
 
 `POST /v1/calls` also accepts `handler: "ai"` for outbound phone calls. It
-uses the distinct outbound ElevenLabs agent bound to the Easyhook number, bridges it only after
+uses the outbound ElevenLabs agent explicitly bound to the Easyhook number
+(which may also be its inbound agent), bridges it only after
 the destination answers, and accepts a bounded scalar `context` object for
 per-call variables. AI outreach requires explicit voice consent recorded via
 `POST /v1/consent` and is throttled to one attempt per hour and three per

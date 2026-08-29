@@ -1,6 +1,6 @@
 # Easyhook Webhooks
 
-Last updated: 2026-08-20
+Last updated: 2026-08-28
 
 Easyhook sends one compact JSON object per event. The format is shared by
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email,
@@ -13,7 +13,8 @@ Telecom number lifecycle events use `number.*`, including `number.renewal_due`,
 
 Telecom subscriptions use provider `sms` or `voice`. Supported selectors include
 `message.*` and `call.*`; concrete events currently include `message.received`,
-`message.status`, `call.initiated`, `call.answered`, and `call.hangup`.
+`message.status`, `call.initiated`, `call.answered`, `call.hangup`, and
+`call.transfer_started`.
 
 ## Principles
 
@@ -815,12 +816,16 @@ underlying provider (`telnyx` or `whatsapp`) in `data.provider`.
 | `sequence` | integer | Routing attempt number. |
 | `lease_until` | ISO 8601 string | Time at which Easyhook advances to another endpoint. |
 | `conversation_type`, `conversation_id` | string | Linked inbox conversation, when one could be resolved. |
+| `transfer_destination` | E.164 string | Configured external destination when `call.transfer_started` is emitted. |
 
 Subscribe to `call.offered` to ring a customer application and atomically call
 `POST /v1/calls/{id}/actions/claim`. `call.claimed` confirms the winner;
 provider lifecycle events such as `call.ringing`, `call.answered`,
 `call.connect`, `call.hangup`, and `call.terminate` reconcile final state. Do
 not ring an endpoint that was not named in the current `call.offered` event.
+`call.transfer_started` confirms that Easyhook reserved the tenant wallet and
+accepted a managed transfer to the configured external number; final carrier
+usage is still reconciled by the normal signed Telnyx lifecycle.
 
 WhatsApp call-permission replies arrive as an inbound interactive message with
 `message.interactive.call_permission_reply` containing Meta's response,

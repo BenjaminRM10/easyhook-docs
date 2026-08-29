@@ -329,7 +329,7 @@ Version `0.2.39` adds **Voice Call**:
 
 - **Record Consent** stores explicit opt-in or opt-out evidence for one
   Easyhook number and contact.
-- **Start AI Call** starts the distinct outbound ElevenLabs agent assigned to
+- **Start AI Call** starts the explicitly selected outbound ElevenLabs agent assigned to
   that number. It requires a maximum duration and stable idempotency key.
 - **Get Call** reads normalized state; **Hang Up** terminates it.
 
