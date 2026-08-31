@@ -105,9 +105,10 @@ that same callback, returning any unused balance.
 }
 ```
 
-For outbound AI campaigns, select an ElevenLabs agent for the number. It may be
-the same agent used for inbound calls or a separate agent with its own first
-message, prompt and tools. Easyhook never selects an outbound agent implicitly.
+For outbound AI campaigns, select an ElevenLabs agent for the outbound role.
+It may be the same agent used for inbound calls or a different one. A separate
+agent is useful when the opening message, prompt or tools differ, but Easyhook
+does not require that separation.
 Easyhook originates the PSTN leg, waits until the person answers, and then
 bridges it over SIP to the configured outbound agent; audio is not proxied
 through Easyhook. The agent receives the optional per-call `context` as
@@ -221,7 +222,13 @@ External endpoints use `external_agent_id`. A `sip` endpoint must provide a vali
 
 Default team routing is deliberately quiet: assigned available agent first, then least-recently-offered agent; owners/admins are fallback. Exactly one endpoint rings for 20 seconds. Cloud Tasks expires the lease and offers the next compatible endpoint. API/SIP endpoints participate in the same order, so customer applications can answer without using the Easyhook inbox, but Easyhook never offers a provider leg to an endpoint that cannot carry its media.
 
-Read or update the policy with `GET /v1/call-routing` and `PATCH /v1/call-routing`. Strategies are `assigned_then_round_robin` (default), `round_robin`, and `api_only`; configurable bounds are 8–30 seconds per attempt and 1–10 attempts. Multiple devices belonging to one agent remain separate endpoints, but only the selected endpoint receives the private offer. A declined or expired offer advances to the next eligible endpoint instead of ringing every device.
+Read or update the organization policy with `GET /v1/call-routing` and
+`PATCH /v1/call-routing`. The policy is universal: it controls ordinary inbound
+calls, AI fallback and an AI-requested human handoff. `destinations` is an
+ordered list containing Portal, mobile and multiple tenant-owned E.164 external
+phones. Only one destination is offered at a time; same-priority external
+phones can use round-robin or random selection. Bounds are 8–30 seconds per
+attempt and 1–20 attempts. `api_only` disables managed human destinations.
 
 Portal and mobile use the same runtime through server-authorized `/admin/calls/*` routes. The Vercel portal exposes only an allowlist under `/api/calls/*`, preserves the authenticated tenant/actor signature and never sends a customer API key to the browser or phone. Calls initiated from an inbox use the same provider-usage wallet reservation.
 
@@ -248,16 +255,10 @@ its own binding:
 `human_transfer_enabled` is independent from those initial-answer modes. When
 enabled, Easyhook installs a managed `transfer_to_number` system tool on the
 selected ElevenLabs agent. A transfer requested during an active AI
-conversation uses SIP REFER to an opaque HMAC-signed Easyhook target. Easyhook
-verifies the binding, organization, number and active call session before it
-either offers the call to eligible portal/mobile endpoints (`team`) or transfers
-it to the configured E.164 destination (`external_phone`). External transfers
-are sent through Easyhook's Telnyx connection only after a tenant-scoped wallet
-reservation; the destination leg has its own provider reference, one-hour
-maximum and final-cost settlement. The configured phone number is never sent to
-ElevenLabs. Other agent tools and customer transfer rules are preserved.
-`api_only` routing never rings Easyhook human clients when the destination is
-`team`.
+conversation uses SIP REFER to an opaque HMAC-signed Easyhook target, then uses
+the same organization-wide destination policy. ElevenLabs never receives the
+real external phone list. External PSTN legs are wallet-reserved and settled
+from verified provider cost events.
 
 Portal-admin routes are:
 
@@ -268,9 +269,7 @@ Portal-admin routes are:
 - `PUT /admin/telecom/numbers/{number_id}/voice-ai` with inbound `agent_id`,
   optional `outbound_agent_id` (which may equal `agent_id`), `mode`,
   optional `answer_timeout_seconds` (`8`–`30`) and
-  `human_transfer_enabled`; managed transfer configuration uses
-  `human_transfer_destination` (`team` or `external_phone`) and requires
-  `human_transfer_phone_number` in E.164 format for `external_phone`
+  `human_transfer_enabled`
 - `DELETE /admin/telecom/numbers/{number_id}/voice-ai`
 
 The agent's system prompt, voice, knowledge base and tools remain managed in

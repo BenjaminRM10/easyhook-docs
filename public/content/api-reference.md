@@ -545,7 +545,7 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/media` | `messages:write` | Send compatible media through WhatsApp, Telefonía/MMS, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok currently supports images; scheduled MMS is not yet supported. |
 | `GET` | `/v1/telecom/capabilities` | `telephony:read` | Discover normalized Telnyx and WhatsApp Calling capabilities. |
 | `GET` | `/v1/call-routing` | `telephony:read` | Read the organization call distribution policy. |
-| `PATCH` | `/v1/call-routing` | `telephony:write` | Configure assigned-first, round-robin, or API-only routing. |
+| `PATCH` | `/v1/call-routing` | `telephony:write` | Configure the ordered organization-wide destinations used by direct inbound calls, AI fallback and AI human handoff. |
 | `POST` | `/v1/call-endpoints` | `telephony:write` | Register or heartbeat one web, mobile, API or SIP answering endpoint. |
 | `POST` | `/v1/call-endpoints/{id}/token` | `telephony:write` | Issue a short-lived WebRTC JWT for an existing endpoint. |
 | `POST` | `/v1/whatsapp/calling/permissions` | `telephony:write` | Send Meta's explicit business-initiated call permission request. |
