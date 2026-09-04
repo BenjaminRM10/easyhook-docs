@@ -1960,7 +1960,7 @@ Common errors:
 | `phone_or_flow_not_found` | The selected Flow could not be resolved for the WABA behind `from`. |
 | `template_not_approved` | The template exists but is not approved by Meta. |
 | `flow_not_published` | The Flow exists locally but is not published in Meta, so it cannot be sent. |
-| `consent_not_enabled` | WABA consent has not been activated; enable it before sending business-initiated templates. |
+| `consent_not_enabled` | The managed WABA consent Flow has not been activated; enable it before trying to send that Flow. |
 | `opt_in_required` | Template send needs known opt-in recorded in Easyhook. |
 | `recipient_opted_out` | Easyhook has the recipient marked as opted out, so business-initiated templates are blocked. |
 | `customer_service_window_closed` | Free-form text/media is blocked outside the 24-hour window. If no matching contact or recent inbound event exists, the response includes `reason: "recipient_not_found_or_no_recent_inbound_message"`. |
