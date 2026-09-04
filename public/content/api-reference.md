@@ -1176,7 +1176,7 @@ Parameters:
 | `provider` | no | `whatsapp` (default), `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, or `tiktok`. |
 | `signup_mode` | no | `cloud_api` for a regular WhatsApp Business API connection, or `coexistence` for WhatsApp Business App coexistence. Defaults to `cloud_api`. |
 | `return_url` | no | HTTPS URL where the hosted page can send the customer after completion. |
-| `language` | no | `es` or `en`. Defaults to `es`. |
+| `language` | no | `es`, `en`, or `pt-BR`. Defaults to `es`. |
 | `metadata` | no | JSON object echoed back in onboarding webhooks. |
 | `expires_in_seconds` | no | Lifetime from `300` to `3600` seconds. Defaults to one hour. |
 
@@ -1781,7 +1781,7 @@ Requires `flows:read`. Also accepts `waba_id` or `phone_id` for legacy/admin usa
 PATCH /v1/consent/config
 ```
 
-Requires `flows:write`. Use this to save copy and add customer-specific opt-out keywords. Fixed Easyhook opt-out keywords are still enforced. `language` accepts `es` or `en` and controls Easyhook-managed labels.
+Requires `flows:write`. Use this to save copy and add customer-specific opt-out keywords. Fixed Easyhook opt-out keywords are still enforced. `language` accepts `es`, `en`, or `pt-BR` and controls Easyhook-managed labels.
 
 Message and form copy are intentionally separate:
 

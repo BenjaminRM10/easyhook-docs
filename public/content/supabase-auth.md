@@ -22,7 +22,7 @@ firma único e instalar el hook correspondiente a ese proyecto.
 1. En Easyhook, abre **Integraciones → Supabase Auth** y conecta tu cuenta de
    Supabase.
 2. Selecciona el proyecto y el modo de entrega.
-3. Elige el número SMS o el número y template de WhatsApp que corresponda.
+3. Elige el número SMS o el número y template de WhatsApp que corresponda, junto con el idioma (`es`, `en` o `pt-BR`).
 4. Confirma la conexión. Si ya existía un Send SMS Hook, Easyhook te mostrará
    que será reemplazado y conservará su configuración para restaurarla al
    desconectar.
@@ -65,7 +65,7 @@ también el token generado por tu frontend:
 
 ```ts
 const { error } = await supabase.auth.signInWithOtp({
-  phone: "+525566006997",
+  phone: "+15550100003",
   options: {
     captchaToken,
     shouldCreateUser: false
@@ -81,7 +81,7 @@ Verifica el código con Supabase:
 
 ```ts
 const { data, error } = await supabase.auth.verifyOtp({
-  phone: "+525566006997",
+  phone: "+15550100003",
   token: code,
   type: "sms"
 })
