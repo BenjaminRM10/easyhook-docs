@@ -148,9 +148,9 @@ back to the inbound agent.
 set to `ai`; WhatsApp Calling does not use the ElevenLabs SIP bridge. The
 response for an AI call is `202` with the normal call resource and no WebRTC
 token. The same call can still be read and hung up through the standard call
-endpoints. Wallet billing remains Easyhook's normal API fee plus rounded
-Telnyx voice usage; the customer separately consumes the minutes included in
-their ElevenLabs plan.
+endpoints. Wallet billing starts only when the call connects and settles the
+rounded Telnyx voice usage; the customer separately consumes the minutes
+included in their ElevenLabs plan.
 
 Use `channel: "phone"` for PSTN and `channel: "whatsapp"` for WhatsApp
 Calling when the same `from` can resolve to both. It is optional otherwise.
@@ -414,6 +414,12 @@ patterns are rejected. When the rate deck contains origin-dependent prices, the
 importer stores the maximum applicable cost for every destination prefix so a
 call is never reserved using an optimistic carrier rate.
 
+Large rate decks are uploaded in bounded chunks and published only after the
+declared row count is complete. A carrier notice with a future effective time
+must be imported with that exact `valid_from`; the previous version ends at the
+same instant and remains authoritative until then. Future rows never affect a
+quote early, and an incomplete staged import never becomes billable.
+
 USD/MXN uses Banco de México SIE series `SF43718` (FIX). Each observation has a
 bounded expiry and the 5% exchange-protection margin is applied only when converting the
 USD customer amount into an MXN wallet charge. If Banxico or Twilio cannot be
@@ -423,6 +429,7 @@ The internal synchronization routes are not customer API endpoints:
 
 - `POST /internal/telecom/pricing/fx/sync`
 - `POST /internal/telecom/pricing/benchmarks/sync`
+- `POST /internal/telecom/messages/reconcile`
 
 They accept only the configured Cloud Scheduler OIDC identity or the existing
 administrative token. Runs are audited without storing source credentials or
@@ -445,7 +452,16 @@ outbound call that never reaches the provider releases its reservation after
 two minutes; a late provider start is terminated and cannot revive the canceled
 call. WhatsApp Calling reserves the requested maximum and settles rounded actual
 minutes on termination. The ordinary Easyhook API-operation fee remains a
-separate wallet entry.
+separate wallet entry for non-call operations; starting and hanging up a call
+do not create additional operation fees.
+
+Outbound SMS/MMS normally settles from the signed `message.finalized` webhook.
+As defense against exhausted carrier webhook retries, the internal reconciler
+checks aged, provider-linked holds against Telnyx's Message Detail Record and
+settles only when the carrier has published an authoritative USD cost. Missing,
+unavailable or cost-less records remain reserved for a later run; Easyhook never
+refunds a carrier operation merely because a lookup failed. Production runs the
+reconciler every five minutes with the same Cloud Scheduler OIDC boundary.
 
 Rent is charged in advance on calendar months. A purchase charges activation plus the prorated remainder of its UTC calendar month; subsequent renewals are due on the first day of every month. Renewal notices are emitted 7, 3 and 1 day before renewal. If renewal cannot be paid, usage is paused and the number enters a seven-day grace period. Only after grace expires does the provider release run; a failed provider release is retried and never marked complete locally first. Production runs `easyhook-telecom-renewals` daily at 06:15 `America/Monterrey`; Cloud Scheduler signs an OIDC request to `POST /internal/telecom/renewals/process` and the backend accepts only the configured service-account email and audience (or the existing administrative token for controlled operations).
 

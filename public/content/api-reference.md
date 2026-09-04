@@ -1677,23 +1677,24 @@ and [SMB App State Sync webhook reference](https://developers.facebook.com/docum
 
 ## Consent: Opt-In / Opt-Out
 
-For business-initiated template messages, Easyhook requires WABA consent to be enabled and the contact to have opt-in recorded in Easyhook. If the WABA is not enabled, Easyhook returns:
+For business-initiated template messages, Easyhook requires the contact to have
+opt-in recorded in Easyhook. The opt-in can come from the managed WhatsApp Flow
+or from `POST /v1/consent` when the customer collected auditable permission in
+another system. Enabling managed WABA consent is required only to send the
+Easyhook opt-in or opt-out Flow; it is not required for externally recorded
+consent.
 
-```json
-{
-  "error": "consent_not_enabled",
-  "message": "Consent is not enabled for this WhatsApp Business Account.",
-  "required_action": "enable_waba_consent"
-}
-```
-
-If the WABA is enabled but the contact has not opted in, Easyhook returns:
+If the contact has not opted in and the managed Flow is enabled, Easyhook
+returns:
 
 ```json
 { "error": "opt_in_required", "required_action": "send_consent_flow" }
 ```
 
-Consent is configured per WABA. If WABA consent is not enabled, Easyhook still allows normal 24-hour session replies, but blocks business-initiated templates with `consent_not_enabled`.
+If the managed Flow is disabled, `required_action` is `record_opt_in`. API
+clients can record consent through `POST /v1/consent` or enable managed consent
+and send the Flow. `consent_not_enabled` is returned only when a client tries to
+send the Easyhook consent Flow while that WABA feature is disabled.
 
 The Easyhook record is an operational safeguard, not a substitute for valid permission. The customer remains responsible for collecting truthful, explicit and auditable consent under Meta policy and applicable law. Configure Meta billing separately in [WhatsApp Manager](https://business.facebook.com/latest/settings/whatsapp_account); the Easyhook wallet does not pay Meta's template charges. See Meta's [opt-in guidance](https://developers.facebook.com/docs/whatsapp/overview/getting-opt-in/) and [pricing documentation](https://developers.facebook.com/docs/whatsapp/pricing/).
 
