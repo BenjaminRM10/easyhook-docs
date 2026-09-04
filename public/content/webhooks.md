@@ -62,11 +62,11 @@ business number in `account.id`.
   "type": "message.received",
   "channel": "whatsapp",
   "account": {
-    "id": "980912725115744",
-    "phone": "5218661479075"
+    "id": "123456789012345",
+    "phone": "15550100002"
   },
   "contact": {
-    "id": "5214445087305",
+    "id": "15550100004",
     "name": "webgeoapm"
   },
   "message": {
@@ -85,7 +85,7 @@ The same event from Messenger or Instagram only changes `channel` and the provid
   "id": "event_uuid",
   "type": "message.received",
   "channel": "instagram",
-  "account": { "id": "17841401731804358" },
+  "account": { "id": "17841400000000001" },
   "contact": { "id": "IGSID_VALUE", "name": "Customer" },
   "message": {
     "id": "mid...",
@@ -256,11 +256,11 @@ Available scopes:
 ```
 
 ```json
-{ "type": "phone", "from": "5218661479075" }
+{ "type": "phone", "from": "15550100002" }
 ```
 
 ```json
-{ "type": "waba", "from": "5218661479075" }
+{ "type": "waba", "from": "15550100002" }
 ```
 
 ```json
@@ -437,7 +437,7 @@ Subscribe to `scheduled.*` together with `status.*` when an application schedule
   "id": "easyhook_event_uuid",
   "type": "scheduled.sent",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
   "scheduled_message": {
     "id": "scheduled_message_uuid",
     "client_reference": "crm-reminder-456",
@@ -461,7 +461,7 @@ Later Meta status events remain standard `message.sent`, `message.delivered`, `m
     "message_id": "wamid.HBg...",
     "scheduled_message_id": "scheduled_message_uuid",
     "client_reference": "crm-reminder-456",
-    "recipient_id": "5215551112222",
+    "recipient_id": "13125550199",
     "timestamp": "2026-07-03T00:30:03.000Z"
   }
 }
@@ -475,7 +475,7 @@ Failed status events preserve Meta's `errors` array and add a normalized
   "type": "message.failed",
   "status": {
     "message_id": "wamid.HBg...",
-    "recipient_id": "5215551112222",
+    "recipient_id": "13125550199",
     "errors": [{
       "code": 131053,
       "title": "Media upload error",
@@ -503,6 +503,19 @@ Use `status.error.code` for application logic and retain the raw `errors`
 array for diagnostics. A `message.failed` event is terminal unless the
 normalized error explicitly reports `retryable: true`.
 
+For common WhatsApp delivery failures, `status.error.details` also includes
+an actionable `category` and `action`. When Meta publishes a safe retry
+window, Easyhook includes `retry_after_seconds` in the same object:
+
+| Meta code | `category` | Recommended handling |
+| --- | --- | --- |
+| `130472` | `recipient_experiment` | Do not retry automatically. Use another channel or wait until the recipient is no longer in the Meta experiment. |
+| `131026` | `recipient_unreachable` | Verify that the recipient can message the business, has not blocked it, accepted the current WhatsApp terms, and uses a current app version. |
+| `131049` | `marketing_frequency_limit` | Do not retry the marketing template for at least `86400` seconds. |
+
+These fields are guidance for the failed delivery only; they do not authorize
+a different message category, recipient, sender, or tenant fallback.
+
 Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-level `id`, message statuses by `status.message_id` plus public `type`, and reconcile with `GET /v1/scheduled-messages/{id}` after webhook downtime.
 
 ### `account`
@@ -519,8 +532,8 @@ Treat webhook delivery as at-least-once. Deduplicate lifecycle events by top-lev
 | --- | --- | --- |
 | `id` | string | Routable remote provider ID. For WhatsApp this can be a phone or a Business-scoped User ID (BSUID); it is not guaranteed to contain only digits. |
 | `phone` | string or null | WhatsApp phone in international digits while Meta supplies it. It can be absent for username-first conversations. |
-| `user_id` | string or null | WhatsApp BSUID, such as `MX.1030980939667977`. Prefer it as the stable contact key when present. |
-| `parent_user_id` | string or null | Optional parent BSUID, such as `MX.ENT.11815799212886844830`, when Meta has enabled linked-portfolio identity for the business. |
+| `user_id` | string or null | WhatsApp BSUID, such as `MX.EXAMPLE_CONTACT_ID`. Prefer it as the stable contact key when present. |
+| `parent_user_id` | string or null | Optional parent BSUID, such as `MX.ENT.EXAMPLE_PARENT_ID`, when Meta has enabled linked-portfolio identity for the business. |
 | `username` | string or null | Optional WhatsApp username without `@`. |
 | `country_code` | string or null | Optional country code supplied by WhatsApp. |
 | `name` | string | Provider-supplied contact/profile name, when available. |
@@ -627,8 +640,8 @@ event filter `message.quick_reply`. The public event is normalized as:
   "id": "event_uuid",
   "type": "message.received",
   "channel": "instagram",
-  "account": { "id": "17841401731804358" },
-  "contact": { "id": "27481212444850810" },
+  "account": { "id": "17841400000000001" },
+  "contact": { "id": "17841400000000002" },
   "message": {
     "id": "mid...",
     "direction": "in",
@@ -673,8 +686,8 @@ top-level `type` is `message.received`; route the operation with
   "id": "event_uuid",
   "type": "message.received",
   "channel": "whatsapp",
-  "account": { "id": "109489555192993", "phone": "5218441010369" },
-  "contact": { "id": "5218445625711" },
+  "account": { "id": "123456789012347", "phone": "15550100005" },
+  "contact": { "id": "15550100006" },
   "message": {
     "id": "wamid.edit-event",
     "type": "edit",
@@ -713,8 +726,8 @@ top-level `type` is `message.received`; route the operation with
     "type": "system",
     "system": {
       "type": "user_changed_number",
-      "body": "User A changed from 5218447301597 to 5218446730750",
-      "wa_id": "5218446730750"
+      "body": "User A changed from 15550100007 to 15550100008",
+      "wa_id": "15550100008"
     },
     "timestamp": "2026-07-30T02:34:03.000Z"
   }
@@ -887,14 +900,14 @@ Complete batch envelope:
       "id": "event_uuid",
       "type": "message.received",
       "channel": "whatsapp",
-      "account": { "id": "980912725115744", "phone": "5218661479075" },
-      "contact": { "id": "5214445087305" },
+      "account": { "id": "123456789012345", "phone": "15550100002" },
+      "contact": { "id": "15550100004" },
       "message": {
         "id": "wamid...",
         "direction": "in",
         "source": "history",
-        "from": "5214445087305",
-        "to": "5218661479075",
+        "from": "15550100004",
+        "to": "15550100002",
         "type": "text",
         "text": "Previous message",
         "timestamp": "2026-07-01T10:00:00.000Z"
@@ -938,18 +951,18 @@ The business must allow history sharing in the WhatsApp Business App during coex
   "id": "event_uuid",
   "type": "message.echo",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
-  "contact": { "id": "5214445087305" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
+  "contact": { "id": "15550100004" },
   "message": {
     "id": "wamid...",
     "direction": "out",
     "source": "history",
-    "from": "5218661479075",
-    "to": "5214445087305",
+    "from": "15550100002",
+    "to": "15550100004",
     "type": "text",
     "text": "Previous reply",
     "history": {
-      "thread_id": "5214445087305",
+      "thread_id": "15550100004",
       "status": "READ",
       "phase": 1,
       "chunk_order": 2,
@@ -968,7 +981,7 @@ Treat each element of `events` as one normalized message. The outer object is an
 - Sort imported messages by `message.timestamp`, not by webhook arrival time. Separate conversations can be processed concurrently, so global delivery order is not meaningful.
 - For `message.direction: in`, `contact` is the sender and `account` is the receiving Easyhook number.
 - For `message.direction: out`, `account` is the sender and `contact` is the recipient.
-- WhatsApp usernames can hide the person's phone number. Meta then identifies the contact with a Business-scoped User ID (BSUID), such as `MX.1030980939667977`. Easyhook stores phone/BSUID aliases when Meta supplies both and preserves the BSUID in `contact.user_id`; eligible linked portfolios also receive `contact.parent_user_id`. `contact.phone` and status `recipient_id` can be absent, while normalized `message.from`/`message.to` remain routable with the phone or BSUID. Never require digits, invent a phone, or strip letters and punctuation from these identifiers.
+- WhatsApp usernames can hide the person's phone number. Meta then identifies the contact with a Business-scoped User ID (BSUID), such as `MX.EXAMPLE_CONTACT_ID`. Easyhook stores phone/BSUID aliases when Meta supplies both and preserves the BSUID in `contact.user_id`; eligible linked portfolios also receive `contact.parent_user_id`. `contact.phone` and status `recipient_id` can be absent, while normalized `message.from`/`message.to` remain routable with the phone or BSUID. Never require digits, invent a phone, or strip letters and punctuation from these identifiers.
 - During Meta's transition window a webhook can contain both `contact.phone` and `contact.user_id`; store both. A later webhook can contain only the BSUID and still belongs to the same contact.
 - In rare historical records, Meta can omit every remote-contact field. Easyhook emits `type: sync.failed` with `error.code: missing_remote_contact` and `error.provider_message_id` instead of publishing an unusable `message.received` or `message.echo`. Keep the rest of the import and record this item as terminal unless Meta later supplies the missing identity.
 - Do not trigger live auto-replies, consent keyword detection, or other real-time inbound automations when `message.source === "history"` unless replay behavior is explicitly intended.
@@ -1046,21 +1059,21 @@ The `smb_app_state_sync.*` filter receives contact and app-state records importe
   "type": "contact.updated",
   "channel": "whatsapp",
   "account": {
-    "id": "980912725115744",
-    "phone": "5218661479075"
+    "id": "123456789012345",
+    "phone": "15550100002"
   },
   "contact": {
-    "id": "5214445087305",
-    "user_id": "MX.1030980939667977",
-    "parent_user_id": "MX.ENT.11815799212886844830",
+    "id": "15550100004",
+    "user_id": "MX.EXAMPLE_CONTACT_ID",
+    "parent_user_id": "MX.ENT.EXAMPLE_PARENT_ID",
     "name": "Customer"
   },
   "contact_update": {
     "type": "contact",
     "action": "update",
-    "provider_id": "5214445087305",
-    "user_id": "MX.1030980939667977",
-    "parent_user_id": "MX.ENT.11815799212886844830",
+    "provider_id": "15550100004",
+    "user_id": "MX.EXAMPLE_CONTACT_ID",
+    "parent_user_id": "MX.ENT.EXAMPLE_PARENT_ID",
     "name": "Customer",
     "timestamp": "2026-07-18T15:20:00.000Z"
   }
@@ -1086,10 +1099,10 @@ Subscribe to `contact.updated` to receive changes made through `PUT /v1/contacts
   "id": "event_uuid",
   "type": "contact.updated",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
   "contact": {
-    "id": "5214445087305",
-    "phone": "5214445087305",
+    "id": "15550100004",
+    "phone": "15550100004",
     "name": "Ana",
     "full_name": "Ana Garcia",
     "preferred_name": "Ana"
@@ -1097,7 +1110,7 @@ Subscribe to `contact.updated` to receive changes made through `PUT /v1/contacts
   "contact_update": {
     "type": "contact",
     "action": "update",
-    "provider_id": "5214445087305",
+    "provider_id": "15550100004",
     "name": "Ana Garcia",
     "preferred_name": "Ana",
     "source": "easyhook_api",
@@ -1122,10 +1135,10 @@ and is never included in the customer webhook.
   "id": "event_uuid",
   "type": "consent.updated",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744" },
-  "contact": { "id": "5218661479075" },
+  "account": { "id": "123456789012345" },
+  "contact": { "id": "15550100002" },
   "consent": {
-    "contact": "5218661479075",
+    "contact": "15550100002",
     "scope": "marketing",
     "status": "opt_out",
     "previous_status": "opt_in",
@@ -1151,8 +1164,8 @@ Media fields are normalized across channels. `url` is included when Easyhook sto
   "id": "event_uuid",
   "type": "message.received",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
-  "contact": { "id": "5214445087305", "name": "Customer" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
+  "contact": { "id": "15550100004", "name": "Customer" },
   "message": {
     "id": "wamid...",
     "type": "image",
@@ -1196,8 +1209,8 @@ WhatsApp circular video notes currently arrive from Meta as unsupported messages
   "id": "event_uuid",
   "type": "message.received",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
-  "contact": { "id": "5214445087305" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
+  "contact": { "id": "15550100004" },
   "message": {
     "id": "wamid.reaction",
     "type": "reaction",
@@ -1219,8 +1232,8 @@ An empty `emoji` removes the previous reaction. Reactions sent from the connecte
   "id": "event_uuid",
   "type": "message.delivered",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
-  "contact": { "id": "5214445087305" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
+  "contact": { "id": "15550100004" },
   "status": {
     "message_id": "wamid...",
     "timestamp": "2026-07-11T16:37:02.000Z"
@@ -1287,8 +1300,8 @@ With current per-message pricing, Meta can omit the legacy `conversation` block 
   "id": "event_uuid",
   "type": "flow.submitted",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
-  "contact": { "id": "5214445087305" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
+  "contact": { "id": "15550100004" },
   "flow": {
     "submission_id": "submission_uuid",
     "id": "META_FLOW_ID",
@@ -1297,7 +1310,7 @@ With current per-message pricing, Meta can omit the legacy `conversation` block 
     "action": "complete",
     "screen": "LEAD",
     "data": {
-      "name": "Benjamin",
+      "name": "Example User",
       "service_opt_in": true
     }
   }
@@ -1323,14 +1336,14 @@ Subscribe to `onboarding.*` to receive hosted signup lifecycle events:
     "metadata": { "external_customer_id": "cus_123" },
     "connection": {
       "channel_id": "channel_uuid",
-      "account_id": "980912725115744",
+      "account_id": "123456789012345",
       "display_name": "Support",
       "provider": "whatsapp"
     },
-    "waba": { "id": "909330258580490", "name": "Business" },
+    "waba": { "id": "123456789012348", "name": "Business" },
     "phone": {
-      "id": "980912725115744",
-      "display_phone": "+52 1 866 147 9075",
+      "id": "123456789012345",
+      "display_phone": "+1 312 555 0100",
       "quality": "GREEN"
     }
   }
@@ -1382,7 +1395,7 @@ The event is emitted only on a state transition:
   "id": "event_uuid",
   "type": "channel.health_changed",
   "channel": "messenger",
-  "account": { "id": "852736564589134", "name": "Easyhook" },
+  "account": { "id": "123456789012346", "name": "Easyhook" },
   "channel_health": {
     "status": "reauthorization_required",
     "previous_status": "connected",
