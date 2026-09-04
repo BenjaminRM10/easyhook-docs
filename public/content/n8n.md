@@ -4,7 +4,7 @@ Verified n8n community node for using Easyhook.
 
 Easyhook is a lightweight multichannel messaging API for WhatsApp, Messenger,
 Instagram, Telegram, TikTok Business, Gmail, Outlook, generic IMAP/SMTP email,
-Mercado Libre, and Google Business Profile reviews.
+and Mercado Libre.
 
 - `Message Action` groups cross-channel text and media sends.
 - `Message Control` groups read, typing, reply, and reaction actions and only
@@ -22,20 +22,6 @@ Mercado Libre, and Google Business Profile reviews.
 - Create hosted onboarding links for supported channels
 - Send Easyhook opt-in and opt-out Flows
 - Receive Easyhook webhook events in n8n with the Easyhook Trigger node
-- List and reply to public Facebook or Instagram comments with **Comments**.
-- List Google reviews, get an aggregate rating, and publish public replies
-
-## Google reviews
-
-Use **Review** with `List Reviews`, `Get Rating`, or `Reply to Review`. The
-location selector loads only Google Business Profile locations connected to the
-API-key organization. For replies, map `review.id` and enter the public reply.
-
-To automate new reviews, use **Easyhook Trigger**, provider **Google Business
-Profile**, and event `review.created` or `review.updated`. The trigger registers
-the webhook and HMAC secret automatically. Treat updates as idempotent by
-top-level event `id`; the same `review.id` may legitimately appear again after
-the review or business reply changes.
 
 ## Install
 
@@ -348,7 +334,6 @@ at least one compatible event. Names and values match the portal and
 Useful event scopes:
 
 - `message.*`: incoming WhatsApp/Messenger/Instagram messages
-- `comment.*`: public Facebook and Instagram comments; these are separate from DMs
 - `message.quick_reply`: WhatsApp, Messenger, Instagram, or Telegram reply-button selections with `message.text` and `message.quick_reply.payload`
 - `status.*`: message delivery/read/failure status
 - `template.*`: template status changes
@@ -387,19 +372,6 @@ Configure the **Easyhook Trigger** before connecting the WhatsApp Business App n
 5. Allow history sharing in the WhatsApp Business App and keep the app open while synchronization starts.
 
 Easyhook creates the webhook subscription and stores its HMAC secret in n8n automatically. Do not create a second portal webhook. `message.*` only covers live messages; it does not include history imports.
-
-For public comments, select resource **Comments**:
-
-- In **Easyhook Trigger**, choose **Facebook Comments** or **Instagram Comments** and `comment.*`.
-- **List**: map `account.id` to From and `comment.post.id` to Post or Media ID.
-- **Reply**: map `account.id` to From and `comment.id` to Comment ID.
-
-`interaction.object` contains the publication text, media URL and permalink when
-Meta exposes them. Comments and Google reviews also appear in the Easyhook Inbox,
-but remain `comment.*` and `review.*` events in n8n.
-
-Do not route `comment.*` into a private-message auto-reply workflow. A public
-reply is visible on the post or media object.
 
 Easyhook delivers synchronization data in batches of at most 100 events. One batch starts one workflow execution, and the trigger expands it into one n8n item per event. Historical inbound messages use `type: message.received`; historical outbound messages use `type: message.echo`. Both include `message.source: history`. Every expanded item also includes `_sync` with the session, cursor and progress metadata:
 

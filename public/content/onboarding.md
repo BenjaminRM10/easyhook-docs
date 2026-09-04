@@ -92,9 +92,8 @@ curl -X POST https://api.easyhook.dev/v1/onboarding/sessions/send \
   }'
 ```
 
-`provider` acepta `whatsapp`, `messenger`, `instagram`, `facebook_comments`,
-`instagram_comments`, `telegram`, `gmail`, `outlook`, `imap_smtp`,
-`mercadolibre` o `tiktok`. `signup_mode` se usa solamente con
+`provider` acepta `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
+`outlook`, `imap_smtp`, `mercadolibre` o `tiktok`. `signup_mode` se usa solamente con
 WhatsApp y acepta `coexistence` o `cloud_api`. El enlace expira en un máximo de
 una hora y se consume al completar una conexión. Enviarlo desde un número de
 WhatsApp requiere una ventana de atención abierta.

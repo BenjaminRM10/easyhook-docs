@@ -1,8 +1,8 @@
 # Canales
 
 Easyhook reúne WhatsApp, Messenger, Instagram, Telegram, TikTok Business,
-correo, Mercado Libre y Google Business Profile bajo una misma
-organización, API key, wallet, Inbox y sistema de webhooks. El correo puede
+correo y Mercado Libre bajo una misma organización, API key, wallet, Inbox y
+sistema de webhooks. El correo puede
 conectarse mediante Gmail, Outlook o IMAP/SMTP. Cada envío usa `from` para
 resolver el canal correcto dentro de la organización dueña de la API key.
 
@@ -34,13 +34,6 @@ curl -X POST https://api.easyhook.dev/v1/messages/text \
     "body": "Gracias por escribirnos."
   }'
 ```
-
-## Google Business Profile
-
-Google Business Profile se conecta con OAuth y cada ubicación elegida aparece
-como un canal independiente de reseñas. Desde **Reseñas** puedes consultar la
-calificación agregada, leer reseñas y publicar o editar la respuesta pública
-del negocio. Consulta la [guía completa](/google-business-profile).
 
 ## Mercado Libre
 
@@ -97,16 +90,6 @@ No habilites Client Credentials, publicaciones, publicidad, facturación,
 métricas, promociones, ventas/envíos ni otros tópicos si Easyhook se usará
 solamente para mensajería. No marques la app como certificada hasta recibir la
 certificación formal de Mercado Libre.
-
-## Comentarios públicos de Meta
-
-Las Pages de Facebook y cuentas profesionales de Instagram pueden recibir
-`comment.*`, consultar comentarios por publicación y responder públicamente.
-Messenger, Instagram Direct, comentarios de Facebook y comentarios de Instagram
-son cuatro conexiones independientes. Cada una solicita únicamente sus permisos
-y debe autorizarse por separado. En el Inbox, Easyhook agrupa los comentarios por
-publicación y muestra el texto, imagen o video de contexto; una respuesta desde
-ese hilo se publica como comentario, nunca como mensaje privado.
 
 ## Telegram
 

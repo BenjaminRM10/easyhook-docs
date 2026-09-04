@@ -3,7 +3,7 @@
 La skill oficial incluye la referencia completa de la API y los webhooks de
 Easyhook. Enseña a un agente a integrar mensajería multicanal, media, templates,
 Flows, consentimiento, programación, onboarding, History, correo, Mercado Libre,
-reseñas de Google Business Profile, n8n, Chatwoot y MCP sin inventar campos ni
+n8n, Chatwoot y MCP sin inventar campos ni
 usar identificadores internos.
 
 El paquete contiene tres referencias versionadas junto con la skill:

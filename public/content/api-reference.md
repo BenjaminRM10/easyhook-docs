@@ -90,59 +90,7 @@ Expected isolation errors:
 | `409` | `ambiguous_sender` | The same `from` is connected to multiple compatible channels; send `channel`. |
 
 These rules apply to messages, media, templates, Flows, consent, read/typing
-actions, scheduling, conversations, reviews, webhooks, and reusable assets.
-
-## Google Business Profile Reviews
-
-Google Business Profile locations use the provider-native resource name from
-`account.id`, for example `accounts/123/locations/456`. Obtain connected values
-with `GET /v1/senders`; never send an internal Easyhook channel UUID.
-
-API keys require `reviews:read` for list/summary and `reviews:write` for replies.
-Every operation is tenant-scoped and returns
-`google_business_location_not_found` when the selected location does not belong
-to the API-key organization.
-
-### List Reviews
-
-```bash
-curl "https://api.easyhook.dev/v1/reviews?from=accounts%2F123%2Flocations%2F456&page_size=20" \
-  -H "Authorization: Bearer $EASYHOOK_API_KEY"
-```
-
-Optional query fields are `page_size` (1-50), `page_token`, and `order_by`.
-The response contains `account`, aggregate `rating`, normalized `reviews`, and
-`next_page_token`.
-
-### Get Aggregate Rating
-
-```bash
-curl "https://api.easyhook.dev/v1/reviews/summary?from=accounts%2F123%2Flocations%2F456" \
-  -H "Authorization: Bearer $EASYHOOK_API_KEY"
-```
-
-```json
-{
-  "account": { "id": "accounts/123/locations/456", "name": "Sucursal Centro" },
-  "rating": { "average": 4.8, "total": 126 }
-}
-```
-
-### Reply To A Review
-
-```bash
-curl -X PUT https://api.easyhook.dev/v1/reviews/review_abc/reply \
-  -H "Authorization: Bearer $EASYHOOK_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "from": "accounts/123/locations/456",
-    "comment": "Gracias por compartir tu experiencia."
-  }'
-```
-
-Google publishes the reply on the Business Profile. Repeating the operation for
-the same review updates the existing reply. Use `review.id` from a list result
-or webhook; do not construct it from reviewer data.
+actions, scheduling, conversations, webhooks, and reusable assets.
 
 ## MCP For AI Agents
 
@@ -201,9 +149,8 @@ Available MCP tools:
 `wait_for_message` is not billed. A wait timeout is a normal result and must not
 be interpreted as permission for an agent to continue indefinitely.
 
-Hosted onboarding supports WhatsApp, Messenger, Instagram, Facebook Comments,
-Instagram Comments, Telegram, TikTok, Gmail, Outlook, Mercado Libre, and custom
-email where applicable. Disconnecting a sender is intentionally not exposed as
+Hosted onboarding supports WhatsApp, Messenger, Instagram, Telegram, TikTok,
+Gmail, Outlook, Mercado Libre, and custom email where applicable. Disconnecting a sender is intentionally not exposed as
 an MCP tool because it is a destructive tenant-administration action. Use the
 tenant-scoped REST operation `DELETE /v1/senders/{account_id}` from an approved
 management flow.
@@ -590,9 +537,6 @@ Recommended customer API endpoints:
 | `POST` | `/v1/onboarding/sessions/{token}/complete` | opaque session token | Complete WhatsApp embedded signup. |
 | `POST` | `/v1/onboarding/sessions/{token}/connect` | opaque session token | Complete a direct hosted channel connection. |
 | `POST` | `/v1/onboarding/sessions/{token}/oauth/start` | opaque session token | Start a hosted provider OAuth flow. |
-| `GET` | `/v1/reviews?from=...` | `reviews:read` | List normalized Google Business Profile reviews and aggregate rating for one connected location. |
-| `GET` | `/v1/reviews/summary?from=...` | `reviews:read` | Read the aggregate rating and total review count for one connected location. |
-| `PUT` | `/v1/reviews/{review_id}/reply` | `reviews:write` | Publish or update the business reply to a Google review. |
 | `GET` | `/v1/webhooks` | any valid key | List webhook subscriptions owned by the API-key organization. |
 | `GET` | `/v1/webhooks/options?provider=...&scope_type=...` | any valid key | Discover compatible providers, event filters, scopes, and public sender identifiers. |
 | `POST` | `/v1/webhooks` | any valid key | Create a webhook subscription; its HMAC/auth secret is returned once. |
@@ -3732,89 +3676,6 @@ Success response:
 ```json
 { "ok": true, "wamid": "wamid..." }
 ```
-
-## Facebook And Instagram Comments
-
-Comments are public interactions and are intentionally separate from private
-messages. They do not appear as `message.received` and do not open a messaging
-conversation.
-
-List comments on one Facebook post or Instagram media object:
-
-```bash
-curl "https://api.easyhook.dev/v1/comments?from=17841400000000000&object_id=18000000000000000&limit=50" \
-  -H "Authorization: Bearer eh_live_xxx"
-```
-
-`from` must resolve to a Messenger Page or Instagram professional account owned
-by the API-key organization. `object_id` is `comment.post.id` from a webhook or
-the provider-native post/media ID. Continue pagination with the returned
-`paging.after` cursor.
-
-Reply publicly:
-
-```bash
-curl -X POST https://api.easyhook.dev/v1/comments/18000000000000001/reply \
-  -H "Authorization: Bearer eh_live_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{"from":"17841400000000000","message":"Gracias por escribirnos."}'
-```
-
-The response includes both the immediate parent and the stable thread root:
-
-```json
-{
-  "ok": true,
-  "comment": {
-    "id": "18000000000000002",
-    "parent_id": "18000000000000001",
-    "root_id": "18000000000000001",
-    "text": "Gracias por escribirnos."
-  }
-}
-```
-
-Webhook comments and replies carry the same `comment.root_id`. Group public
-comment conversations by `account.id + comment.root_id`; use `parent_id` only
-to render the immediate reply relationship. A top-level Page or Instagram
-account comment starts its own thread even when it belongs to the same post.
-Facebook and Instagram use the same normalized comment contract. The webhook
-`channel` is `facebook_comments` or `instagram_comments`; it is never the
-private-message provider `messenger` or `instagram`.
-
-New API keys include `comments:read` and `comments:write`. Existing keys with
-`messages:read`/`messages:write` remain compatible. Facebook live comment
-webhooks require the Page `feed` subscription. Public replies require
-`pages_manage_engagement`; reconciling existing posts and comments additionally
-requires `pages_read_user_content` together with `pages_read_engagement`.
-Instagram requires `instagram_basic`,
-`pages_manage_metadata`, `pages_read_engagement`, and
-`instagram_manage_comments`. With Facebook Login, Easyhook enables the linked
-Facebook Page subscription through `/{page-id}/subscribed_apps`; the Instagram
-`comments` and `live_comments` fields remain configured on the app-level
-Instagram webhook subscription. Easyhook keeps private Messenger/Instagram
-messaging separate from public-comment permissions and failures. Meta grants
-permissions per asset: a permission for one Page or Instagram account does not
-authorize another selected in the same OAuth flow.
-
-Page webhooks are not a historical import. Easyhook receives changes produced
-after the Page installs the `feed` subscription. Older comments and Page-authored
-replies made directly in Facebook can only be reconciled when Meta grants the
-read permissions for that exact Page.
-
-During channel connection, Easyhook validates the provider webhook subscription
-and granular asset targets before storing the comment channel as active.
-Facebook can connect in read-only mode when live delivery is available but
-reply access is not. The response reports `comment_access.mode: "read_only"`;
-reply attempts return `social_comment_reply_permission_required` before
-billing. If the OAuth authorization omits a permission required for reading,
-the connection returns HTTP `403` with
-`error: "social_comment_permission_required"`, `provider`,
-`missing_permissions`, and `required_permissions`. If the token contains the
-scopes but Meta rejects the app capability, it returns
-`error: "social_comment_capability_unavailable"` and `capability`. Approved
-permissions are never labeled as missing merely because another permission is
-unavailable. A rejected subscription never creates an active comment channel.
 
 ## Easyhook Live Chat
 

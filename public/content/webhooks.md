@@ -4,8 +4,7 @@ Last updated: 2026-08-28
 
 Easyhook sends one compact JSON object per event. The format is shared by
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP email,
-Mercado Libre, TikTok Business Messaging, Google Business Profile, SMS/MMS,
-and voice calls.
+Mercado Libre, TikTok Business Messaging, SMS/MMS, and voice calls.
 
 Telecom number lifecycle events use `number.*`, including `number.renewal_due`,
 `number.renewed`, `number.grace` and `number.released`. Subscribe with provider
@@ -20,8 +19,8 @@ Telecom subscriptions use provider `sms` or `voice`. Supported selectors include
 
 - `id` is the only Easyhook UUID exposed. Use it to deduplicate events.
 - `channel` identifies the provider: `whatsapp`, `messenger`, `instagram`,
-  `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, or
-  `google_business_profile`, `sms`, or `voice`.
+  `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`,
+  or `voice`.
 - Account, contact, and message identifiers come from Meta, not from Easyhook's database.
 - For Telefonía, `account.id` is always the purchased business number for both
   inbound and outbound events. SMS/MMS use `channel: "sms"`; call lifecycle
@@ -210,7 +209,7 @@ Creation fields:
 | --- | --- | --- |
 | `name` | yes | Human-readable subscription name. |
 | `url` | yes | Public HTTPS destination. HTTP and invalid URLs are rejected. |
-| `providers` | yes | One or more providers: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `google_business_profile`, or `*`. Select `*` alone. |
+| `providers` | yes | One or more providers: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`, `voice`, or `*`. Select `*` alone. Calls use `voice` here even when `data.provider` is `whatsapp`. |
 | `events` | yes | One or more compatible filters from `/v1/webhooks/options`. Empty is rejected. Select `*` alone for every event. |
 | `scope` | no | Public nested scope object. Defaults to the whole organization. |
 | `auth_type` | no | `hmac` (default), `bearer`, `custom_header`, or `none`. |
@@ -271,8 +270,8 @@ Available scopes:
 For `phone` and `waba`, Easyhook resolves the internal scope from the WhatsApp
 number. A WABA subscription receives matching events from all numbers currently
 connected to that WABA. For `channel`, use the public alias returned for a
-Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, Mercado Libre, or
-Google Business Profile channel. Internal
+Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP, or Mercado Libre
+channel. Internal
 scope IDs and Meta Business Portfolio IDs are never needed.
 
 WhatsApp scope numbers follow the same international normalization as the
@@ -288,7 +287,7 @@ curl "https://api.easyhook.dev/v1/webhooks/options?provider=whatsapp&scope_type=
 ```
 
 `provider` accepts `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`,
-`outlook`, `imap_smtp`, `mercadolibre`, `google_business_profile`, or `*`.
+`outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`, `voice`, or `*`.
 `scope_type` accepts `organization`, `waba`,
 `phone`, or `channel`. The response filters incompatible combinations and
 returns `providers`, `events`, `scope_types`, and `scope_identifiers`.
@@ -318,7 +317,7 @@ Providers:
 - `outlook`
 - `imap_smtp`
 - `mercadolibre`
-- `google_business_profile`
+- `tiktok`
 - `*`
 
 Common event filters:
@@ -347,8 +346,6 @@ Common event filters:
 | `onboarding.*` | Hosted onboarding lifecycle. |
 | `consent.updated` | A contact's service or marketing consent state changed. |
 | `contact.updated` | Easyhook-local WhatsApp contact metadata changed through the public API. |
-| `review.created` | A new Google Business Profile review. |
-| `review.updated` | A Google Business Profile review or business reply changed. |
 
 Email providers use the same `message.*` subscription as the other channels.
 Their normalized `message` block adds `subject`, optional `html`, `thread_id`,
@@ -389,8 +386,6 @@ separately for imported conversations. These families never overlap.
 | `contact.updated` | `contact_update` |
 | `user.preference_updated` | `user_preference` |
 | `consent.updated` | `consent` |
-| `review.created` | `review` |
-| `review.updated` | `review` |
 | `onboarding.created` | `onboarding` |
 | `onboarding.completed` | `onboarding` |
 | `sync.failed` | `sync` for lifecycle failures, or `error` for a terminal item/provider error |
@@ -1346,44 +1341,6 @@ Subscribe to `onboarding.*` to receive hosted signup lifecycle events:
 customer webhook events. Use the normal Easyhook delivery id/idempotency
 contract: retries do not represent a second channel connection.
 
-## Google Business Profile Reviews
-
-Choose provider `google_business_profile` and subscribe to `review.created`,
-`review.updated`, or `review.*`. Scope `channel` limits delivery to one connected
-location; organization scope receives every selected location.
-
-```json
-{
-  "id": "event-id",
-  "type": "review.created",
-  "channel": "google_business_profile",
-  "account": {
-    "id": "accounts/123/locations/456",
-    "name": "Sucursal Centro"
-  },
-  "review": {
-    "id": "review_abc",
-    "name": "accounts/123/locations/456/reviews/review_abc",
-    "rating": 5,
-    "comment": "Excelente atención",
-    "reviewer": {
-      "name": "Ana",
-      "photo_url": "https://example.com/photo.jpg",
-      "is_anonymous": false
-    },
-    "created_at": "2026-08-04T18:10:00Z",
-    "updated_at": "2026-08-04T18:10:00Z",
-    "reply": null
-  }
-}
-```
-
-Google Pub/Sub sends only a change notification. Easyhook fetches the current
-review, normalizes it, deduplicates by review and update time, and then delivers
-the customer webhook. Delivery remains at-least-once: deduplicate non-message
-events by top-level `id`. A changed review or business reply can produce
-`review.updated` with the same `review.id` and a newer `updated_at`.
-
 ## Headers And Security
 
 Every delivery includes:
@@ -1413,56 +1370,6 @@ hex_hmac_sha256(secret, raw_request_body)
 ```
 
 The secret is returned only when the subscription is created.
-
-## Facebook And Instagram Comments
-
-Subscribe to `comment.*` or one of `comment.created`, `comment.updated`, and
-`comment.deleted`. Instagram currently emits `comment.created` for `comments`
-and `live_comments`; Facebook Page `feed` also identifies edits and removals.
-
-```json
-{
-  "id": "event-id",
-  "type": "comment.created",
-  "channel": "instagram_comments",
-  "account": {
-    "id": "17841400000000000",
-    "name": "Easyhook"
-  },
-  "comment": {
-    "id": "18000000000000001",
-    "text": "Me interesa",
-    "action": "created",
-    "parent_id": null,
-    "root_id": "18000000000000001",
-    "author": {
-      "id": "17841400000000002",
-      "username": "cliente"
-    },
-    "post": {
-      "id": "18000000000000000",
-      "type": "media"
-    }
-  }
-}
-```
-
-Use top-level `id` for delivery idempotency and `comment.id` as the stable
-provider comment ID. A comment is public content, not a DM: do not route it
-through message auto-reply logic. Reply with
-`POST /v1/comments/{comment.id}/reply`. `comment.post.type` is `post`, `media`,
-or `live`. Use `comment.root_id` as the stable thread key: the root comment and
-all of its nested replies share that value. `comment.parent_id` identifies the
-immediate parent when Meta supplies one; do not use the post ID as a thread key.
-The payload shape is identical for Facebook and Instagram comments. Only
-`channel` (`facebook_comments` or `instagram_comments`) and the provider-native
-post/media values differ, so one consumer can handle both without treating
-either as a private Messenger or Instagram conversation.
-
-These events are live change notifications, not a historical import. Meta does
-not replay comments that existed before the account installed the webhook
-subscription. Deduplicate repeated deliveries by top-level `id`; do not infer
-that a missing historical comment was deleted.
 
 ## Channel health
 
