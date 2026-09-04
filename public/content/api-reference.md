@@ -42,6 +42,12 @@ rolling 24 hours per tenant/number/contact. A successful AI call returns
 `202` without a WebRTC token; media flows directly between Telnyx and
 ElevenLabs.
 
+The managed ElevenLabs handler currently supports `channel: "phone"` only.
+Human WebRTC calls support both `phone` and `whatsapp`. A request combining
+`handler: "ai"` with `channel: "whatsapp"` fails explicitly with
+`voice_ai_phone_channel_required`; Easyhook does not switch a tenant's Meta
+number from Graph/WebRTC signaling to SIP behind their back.
+
 ## Base URL
 
 Production API URL:
@@ -107,8 +113,8 @@ Install it in Codex:
 ```bash
 codex mcp add easyhook \
   --env EASYHOOK_API_KEY=eh_live_xxx \
-  --env EASYHOOK_FROM=5218661479075 \
-  --env EASYHOOK_CONTACTS='[{"phone":"5215660069997","name":"Tram","description":"QA contact; use only for requested tests"}]' \
+  --env EASYHOOK_FROM=15550100002 \
+  --env EASYHOOK_CONTACTS='[{"phone":"15550100003","name":"QA Contact","description":"QA contact; use only for requested tests"}]' \
   -- npx -y easyhook-mcp-server
 ```
 
@@ -122,8 +128,8 @@ startup_timeout_sec = 90
 
 [mcp_servers.easyhook.env]
 EASYHOOK_API_KEY = "eh_live_xxx"
-EASYHOOK_FROM = "5218661479075"
-EASYHOOK_CONTACTS = "[{\"phone\":\"5215660069997\",\"name\":\"Tram\",\"description\":\"QA contact; use only for requested tests\"}]"
+EASYHOOK_FROM = "15550100002"
+EASYHOOK_CONTACTS = "[{\"phone\":\"15550100003\",\"name\":\"QA Contact\",\"description\":\"QA contact; use only for requested tests\"}]"
 ```
 
 Available MCP tools:
@@ -491,8 +497,8 @@ Recommended customer API endpoints:
 | `POST` | `/v1/messages/reaction` | `messages:write` | Add or remove a reaction on WhatsApp or Telegram. |
 | `POST` | `/v1/messages/media` | `messages:write` | Send compatible media through WhatsApp, Telefonía/MMS, Messenger, Instagram, Telegram, or TikTok Business Messaging. TikTok currently supports images; scheduled MMS is not yet supported. |
 | `GET` | `/v1/telecom/capabilities` | `telephony:read` | Discover normalized Telnyx and WhatsApp Calling capabilities. |
-| `GET` | `/v1/call-routing` | `telephony:read` | Read the organization call distribution policy. |
-| `PATCH` | `/v1/call-routing` | `telephony:write` | Configure the ordered organization-wide destinations used by direct inbound calls, AI fallback and AI human handoff. |
+| `GET` | `/v1/call-routing?phone_id={id}` | `telephony:read` | Read one tenant-owned Telnyx number's call distribution policy; add `channel=whatsapp` for a WhatsApp phone. |
+| `PATCH` | `/v1/call-routing?phone_id={id}` | `telephony:write` | Configure the ordered destinations for one number. WhatsApp accepts portal/app only; Telnyx also accepts one pooled external-phone stage. |
 | `POST` | `/v1/call-endpoints` | `telephony:write` | Register or heartbeat one web, mobile, API or SIP answering endpoint. |
 | `POST` | `/v1/call-endpoints/{id}/token` | `telephony:write` | Issue a short-lived WebRTC JWT for an existing endpoint. |
 | `POST` | `/v1/whatsapp/calling/permissions` | `telephony:write` | Send Meta's explicit business-initiated call permission request. |
@@ -566,8 +572,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/quick-replies \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "17841401731804358",
-    "to": "27481212444850810",
+    "from": "17841400000000001",
+    "to": "17841400000000002",
     "body": "¿Cómo podemos ayudarte?",
     "quick_replies": [
       { "title": "Ventas", "payload": "sales" },
@@ -617,8 +623,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/interactive \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "980912725115744",
-    "to": "5218661479075",
+    "from": "123456789012345",
+    "to": "15550100002",
     "body": "¿Qué quieres hacer?",
     "buttons": [
       { "type": "reply", "title": "Agendar", "payload": "schedule" },
@@ -869,6 +875,17 @@ Customer API sends through Gmail, Outlook, and IMAP/SMTP consume
 equivalent `inbox.*` operation and the same per-operation price. UI-only Inbox
 work does not consume wallet balance.
 
+Starting a call from the Inbox does not create a separate API-operation charge.
+For Telnyx calls, the reserved carrier amount is finalized from signed provider
+cost events and the unused hold is returned. WhatsApp Calling carrier charges
+are billed directly by Meta to the customer's WABA; Easyhook charges its
+`call.per.minute` platform fee only after the call connects. A rejected or
+unanswered call therefore has no Easyhook call charge.
+
+A WhatsApp call-permission request places a refundable wallet hold first. The
+operation is charged only after Meta accepts the request; a provider rejection
+releases the complete hold.
+
 The WhatsApp 24-hour customer-service window does not apply to email or
 Telegram. These channels can send at any time permitted by their provider.
 
@@ -952,7 +969,7 @@ New API keys include `messages:read`. Keys created before this scope was introdu
 ### List conversations
 
 ```bash
-curl "https://api.easyhook.dev/v1/conversations?from=5218661479075&limit=20" \
+curl "https://api.easyhook.dev/v1/conversations?from=15550100002&limit=20" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -968,11 +985,11 @@ Response:
 
 ```json
 {
-  "from": "5218661479075",
+  "from": "15550100002",
   "conversations": [
     {
       "contact": {
-        "phone": "5215660069997",
+        "phone": "15550100003",
         "name": "Ana"
       },
       "last_message": {
@@ -1005,7 +1022,7 @@ Response:
 ### Read one conversation
 
 ```bash
-curl "https://api.easyhook.dev/v1/conversations/5215660069997/messages?from=5218661479075&limit=50" \
+curl "https://api.easyhook.dev/v1/conversations/15550100003/messages?from=15550100002&limit=50" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -1013,8 +1030,8 @@ Messages are returned oldest to newest within each page, which lets an agent or 
 
 ```json
 {
-  "from": "5218661479075",
-  "contact": "5215660069997",
+  "from": "15550100002",
+  "contact": "15550100003",
   "messages": [
     {
       "id": "wamid...",
@@ -1064,7 +1081,7 @@ Use a provider message ID as a stable cursor. First read the conversation, keep
 the newest `messages[].id`, and send it as `after_id`:
 
 ```bash
-curl "https://api.easyhook.dev/v1/conversations/5215660069997/messages/wait?from=5218661479075&after_id=wamid.example&timeout_seconds=60&limit=1" \
+curl "https://api.easyhook.dev/v1/conversations/15550100003/messages/wait?from=15550100002&after_id=wamid.example&timeout_seconds=60&limit=1" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -1082,8 +1099,8 @@ The request returns immediately when a new inbound message arrives:
 
 ```json
 {
-  "from": "5218661479075",
-  "contact": "5215660069997",
+  "from": "15550100002",
+  "contact": "15550100003",
   "timed_out": false,
   "messages": [
     {
@@ -1326,7 +1343,7 @@ Example response:
 {
   "ok": true,
   "provider": "instagram",
-  "account_id": "17841401731804358",
+  "account_id": "17841400000000001",
   "disconnected": true,
   "secret_removed": true
 }
@@ -1344,33 +1361,33 @@ there to prevent an accidental destructive test.
 For WhatsApp, use the Meta Phone Number ID from `account.id`:
 
 ```json
-{ "from": "980912725115744" }
+{ "from": "123456789012345" }
 ```
 
 The connected business phone number remains accepted for convenience:
 
 ```json
-{ "from": "528661479075" }
+{ "from": "15550100001" }
 ```
 
 For Messenger, Instagram, and Telegram, use the provider-native `account.id`:
 
 ```json
-{ "from": "852736564589134" }
+{ "from": "123456789012346" }
 ```
 
 ```json
-{ "from": "17841401731804358" }
+{ "from": "17841400000000001" }
 ```
 
 ```json
-{ "from": "8447725885" }
+{ "from": "SELLER_ID" }
 ```
 
 Rules:
 
 - For WhatsApp phone numbers, always include the international country calling code. Easyhook accepts
-  E.164 (`+573001234567`) and digits-only (`573001234567`) values, plus common
+  E.164 (`+57 300 000 0000`) and digits-only (`573000000000`) values, plus common
   formatting with spaces, hyphens, dots, parentheses, or the `00`
   international prefix.
 - A WhatsApp recipient can also be the opaque BSUID received in `contact.user_id`,
@@ -1381,7 +1398,7 @@ Rules:
 - Do not send national-only numbers. Easyhook does not guess a country because
   the same leading digits can identify a different valid country calling code.
 - The `from` sender must belong to the tenant that owns the API key.
-- Instagram usernames are passed without a leading `@`. Use `benjamin_rdz`, not `@benjamin_rdz`.
+- Instagram usernames are passed without a leading `@`. Use `example_business`, not `@example_business`.
 - Legacy aliases such as `page_<PAGE_ID>`, `ig_<INSTAGRAM_ID>`, and
   `telegram_<BOT_ID>` remain accepted, but new integrations should map
   `account.id` directly.
@@ -1389,10 +1406,10 @@ Rules:
   `channel_or_phone_not_found` or `phone_not_found` without exposing another
   organization's data.
 - Legacy `phone_id`, `waba_id`, and `channel_id` style inputs are still accepted where documented for internal/backward compatibility, but external customer examples should use `from`.
-- Mexico: `+52 866 147 9075`, `528661479075`, `+52 1 866 147
-  9075`, and `5218661479075` resolve to the same WhatsApp identity.
+- Mexico: `+52 55 0000 0001`, `525500000001`, `+52 1 55 0000
+  0001`, and `5215500000001` resolve to the same WhatsApp identity.
 - Argentina: common mobile input such as `+54 11 15 2345 6789` is normalized
-  to its international mobile identity (`5491123456789`).
+  to its international mobile identity (`5491100000000`).
 - The same parser covers NANP countries and territories and the rest of Latin
   America; no country-specific default is applied.
 
@@ -1403,7 +1420,7 @@ Examples accepted for WhatsApp:
 ```
 
 ```json
-{ "from": "5511912345678", "to": "+56 9 8765 4321" }
+{ "from": "5511000000000", "to": "+56 9 0000 0000" }
 ```
 
 ## Customer Service Window
@@ -1608,10 +1625,10 @@ PUT /v1/contacts
 curl -X PUT https://api.easyhook.dev/v1/contacts \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: crm-contact-5214445087305-v3" \
+  -H "Idempotency-Key: crm-contact-15550100004-v3" \
   -d '{
-    "from": "980912725115744",
-    "contact": "5214445087305",
+    "from": "123456789012345",
+    "contact": "15550100004",
     "full_name": "Ana Garcia",
     "preferred_name": "Ana",
     "target": "easyhook"
@@ -1638,10 +1655,10 @@ between organizations or WABAs. At least one of `full_name` or
   "changed": true,
   "target": "easyhook",
   "provider_contact_book_updated": false,
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
   "contact": {
-    "id": "5214445087305",
-    "phone": "5214445087305",
+    "id": "15550100004",
+    "phone": "15550100004",
     "user_id": null,
     "full_name": "Ana Garcia",
     "preferred_name": "Ana",
@@ -1728,7 +1745,7 @@ curl -X POST https://api.easyhook.dev/v1/consent/enable \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
+    "from": "15550100001",
     "copy": {
       "language": "es",
       "business_name": "Clínica Acme",
@@ -1752,7 +1769,7 @@ curl -X POST https://api.easyhook.dev/v1/consent/enable \
 ### Get WABA Consent Config
 
 ```http
-GET /v1/consent/config?from=528661479075
+GET /v1/consent/config?from=15550100001
 ```
 
 Requires `flows:read`. Also accepts `waba_id` or `phone_id` for legacy/admin usage.
@@ -1785,7 +1802,7 @@ curl -X PATCH https://api.easyhook.dev/v1/consent/config \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
+    "from": "15550100001",
     "copy": {
       "language": "en",
       "business_name": "Acme Clinic",
@@ -1821,8 +1838,8 @@ curl -X POST https://api.easyhook.dev/v1/consent \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
-    "to": "5218661479075",
+    "from": "15550100001",
+    "to": "15550100002",
     "mode": "opt_in",
     "body": "Optional message override for this send",
     "cta": "Review"
@@ -1854,8 +1871,8 @@ curl -X POST https://api.easyhook.dev/v1/consent \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
-    "to": "5218661479075",
+    "from": "15550100001",
+    "to": "15550100002",
     "scope": "marketing",
     "status": "opt_in",
     "source": "customer_form",
@@ -1880,7 +1897,7 @@ remains responsible for obtaining valid consent and honoring opt-out requests.
 ### Get Contact Consent Status
 
 ```http
-GET /v1/consent/status?from=980912725115744&contact=5218661479075
+GET /v1/consent/status?from=123456789012345&contact=15550100002
 ```
 
 Requires `messages:read`. For backward compatibility, API keys created before
@@ -1890,15 +1907,15 @@ WABA behind that sender; contacts and consent are never shared between WABAs.
 `to` and `recipient` are accepted as aliases for `contact`.
 
 ```bash
-curl -X GET 'https://api.easyhook.dev/v1/consent/status?from=980912725115744&contact=5218661479075' \
+curl -X GET 'https://api.easyhook.dev/v1/consent/status?from=123456789012345&contact=15550100002' \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
 ```json
 {
   "consent": {
-    "contact": "5218661479075",
-    "account": { "id": "980912725115744" },
+    "contact": "15550100002",
+    "account": { "id": "123456789012345" },
     "service": {
       "status": "opt_in",
       "updated_at": "2026-07-30T18:00:00.000Z",
@@ -1987,7 +2004,7 @@ Example:
 curl -X POST https://api.easyhook.dev/v1/messages/send \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075","to":"5218661479075","type":"text","body":"Hola desde Easyhook"}'
+  -d '{"from":"15550100001","to":"15550100002","type":"text","body":"Hola desde Easyhook"}'
 ```
 
 Success response:
@@ -2002,8 +2019,8 @@ Set these variables once:
 
 ```bash
 export EASYHOOK_API_KEY="eh_live_xxx"
-export EASYHOOK_FROM="528661479075"
-export CUSTOMER_WA="5218661479075"
+export EASYHOOK_FROM="15550100001"
+export CUSTOMER_WA="15550100002"
 ```
 
 ### Send WhatsApp Text
@@ -2099,7 +2116,7 @@ curl -X POST https://api.easyhook.dev/v1/messages/template \
       \"language\": \"en_US\"
     },
     \"parameters\": {
-      \"body\": [\"Benjamin\"]
+      \"body\": [\"Example User\"]
     }
   }"
 ```
@@ -2211,8 +2228,8 @@ Body:
 
 ```json
 {
-  "from": "528661479075",
-  "to": "5218661479075",
+  "from": "15550100001",
+  "to": "15550100002",
   "template": {
     "name": "hello_world",
     "language": "en_US"
@@ -2255,7 +2272,7 @@ Example:
 curl -X POST https://api.easyhook.dev/v1/messages/text \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075","to":"5218661479075","body":"Hola desde Easyhook"}'
+  -d '{"from":"15550100001","to":"15550100002","body":"Hola desde Easyhook"}'
 ```
 
 WhatsApp success response:
@@ -2298,7 +2315,7 @@ curl -X POST https://api.easyhook.dev/v1/messages/read \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "5218661479075",
+    "from": "15550100002",
     "message_id": "wamid.HBg..."
   }'
 ```
@@ -2310,7 +2327,7 @@ curl -X POST https://api.easyhook.dev/v1/messages/typing \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "5218661479075",
+    "from": "15550100002",
     "message_id": "wamid.HBg..."
   }'
 ```
@@ -2403,8 +2420,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/reaction \
   -H "Authorization: Bearer $EASYHOOK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "5218661479075",
-    "to": "5215660069997",
+    "from": "15550100002",
+    "to": "15550100003",
     "message_id": "wamid...",
     "emoji": "👍"
   }'
@@ -2419,8 +2436,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/reply \
   -H "Authorization: Bearer $EASYHOOK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "5218661479075",
-    "to": "5215660069997",
+    "from": "15550100002",
+    "to": "15550100003",
     "message_id": "wamid.HBg...",
     "body": "Respuesta relacionada con este mensaje"
   }'
@@ -2448,8 +2465,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/humanized-text \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "5218661479075",
-    "to": "5215660069997",
+    "from": "15550100002",
+    "to": "15550100003",
     "body": "Thanks, I just checked it and we can help with that."
   }'
 ```
@@ -2458,8 +2475,8 @@ Optional explicit `message_id`:
 
 ```json
 {
-  "from": "5218661479075",
-  "to": "5215660069997",
+  "from": "15550100002",
+  "to": "15550100003",
   "body": "Thanks, I just checked it and we can help with that.",
   "message_id": "wamid.HBg..."
 }
@@ -2502,7 +2519,7 @@ Example Messenger send:
 curl -X POST https://api.easyhook.dev/v1/messages/channel/text \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"852736564589134","to":"PSID_VALUE","body":"Hello from Easyhook"}'
+  -d '{"from":"123456789012346","to":"PSID_VALUE","body":"Hello from Easyhook"}'
 ```
 
 Example Instagram send:
@@ -2511,7 +2528,7 @@ Example Instagram send:
 curl -X POST https://api.easyhook.dev/v1/messages/channel/text \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"17841401731804358","to":"IGSID_VALUE","body":"Hello from Easyhook"}'
+  -d '{"from":"17841400000000001","to":"IGSID_VALUE","body":"Hello from Easyhook"}'
 ```
 
 Success response:
@@ -2818,7 +2835,7 @@ Example using a link:
 curl -X POST https://api.easyhook.dev/v1/messages/media \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075","to":"5218661479075","type":"image","link":"https://example.com/image.png","caption":"Imagen de prueba"}'
+  -d '{"from":"15550100001","to":"15550100002","type":"image","link":"https://example.com/image.png","caption":"Imagen de prueba"}'
 ```
 
 Example using reusable media:
@@ -2827,7 +2844,7 @@ Example using reusable media:
 curl -X POST https://api.easyhook.dev/v1/messages/media \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075","to":"5218661479075","type":"image","media_name":"promo_image","caption":"Promo"}'
+  -d '{"from":"15550100001","to":"15550100002","type":"image","media_name":"promo_image","caption":"Promo"}'
 ```
 
 ## WhatsApp Flows
@@ -2870,7 +2887,7 @@ Requires `flows:write`.
 curl -X POST https://api.easyhook.dev/v1/flows/sync \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075"}'
+  -d '{"from":"15550100001"}'
 ```
 
 Success response:
@@ -2884,13 +2901,13 @@ Success response:
 Endpoint:
 
 ```http
-GET /v1/flows?from=528661479075
+GET /v1/flows?from=15550100001
 ```
 
 Requires `flows:read`.
 
 ```bash
-curl -X GET "https://api.easyhook.dev/v1/flows?from=528661479075" \
+curl -X GET "https://api.easyhook.dev/v1/flows?from=15550100001" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -2924,7 +2941,7 @@ curl -X POST https://api.easyhook.dev/v1/flows \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
+    "from": "15550100001",
     "name": "communication_preferences",
     "categories": ["SIGN_UP"],
     "flow_json": {
@@ -2948,7 +2965,7 @@ Requires `flows:write`.
 curl -X POST https://api.easyhook.dev/v1/flows/local_flow_uuid/publish \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075"}'
+  -d '{"from":"15550100001"}'
 ```
 
 ### Delete Flow
@@ -2962,7 +2979,7 @@ DELETE /v1/flows/{local_flow_id}
 Requires `flows:write`. Deletes the Flow in Meta and removes the local Easyhook Flow record. The WABA can be passed in the query string or JSON body.
 
 ```bash
-curl -X DELETE "https://api.easyhook.dev/v1/flows/local_flow_uuid?from=528661479075" \
+curl -X DELETE "https://api.easyhook.dev/v1/flows/local_flow_uuid?from=15550100001" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -3001,8 +3018,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/flow \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
-    "to": "5218661479075",
+    "from": "15550100001",
+    "to": "15550100002",
     "flow_name": "communication_preferences",
     "body": "Manage your communication preferences.",
     "cta": "Open preferences",
@@ -3015,13 +3032,13 @@ curl -X POST https://api.easyhook.dev/v1/messages/flow \
 Endpoint:
 
 ```http
-GET /v1/flows/{local_flow_id}/submissions?from=528661479075
+GET /v1/flows/{local_flow_id}/submissions?from=15550100001
 ```
 
 Requires `flows:read`.
 
 ```bash
-curl -X GET "https://api.easyhook.dev/v1/flows/local_flow_uuid/submissions?from=528661479075" \
+curl -X GET "https://api.easyhook.dev/v1/flows/local_flow_uuid/submissions?from=15550100001" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -3033,7 +3050,7 @@ Success response:
     {
       "id": "submission_uuid",
       "flow_token": "contact_123_preferences",
-      "contact_wa_id": "5218661479075",
+      "contact_wa_id": "15550100002",
       "action": "complete",
       "screen": "OPT_IN",
       "data": { "service_opt_in": true },
@@ -3055,7 +3072,7 @@ To receive Flow responses in real time, create a customer webhook subscribed to:
 }
 ```
 
-Use `scope: { "type": "phone", "from": "5218661479075" }` when only one WhatsApp number should receive the callback, or use `type: "waba"` with the same `from` number for every connected number in that WABA. Messenger and Instagram use `type: "channel"` with a channel alias. Meta Business Portfolio IDs are not public scopes.
+Use `scope: { "type": "phone", "from": "15550100002" }` when only one WhatsApp number should receive the callback, or use `type: "waba"` with the same `from` number for every connected number in that WABA. Messenger and Instagram use `type: "channel"` with a channel alias. Meta Business Portfolio IDs are not public scopes.
 
 Easyhook sends `flow.submitted` after the submission is stored. The payload includes the `flow.token` used when sending the Flow, the Flow identifiers, the WhatsApp contact, and the submitted `flow.data`.
 
@@ -3067,11 +3084,11 @@ If the submitted `data` contains `service_opt_in`, `marketing_opt_in`, `service_
   "type": "flow.submitted",
   "channel": "whatsapp",
   "account": {
-    "id": "980912725115744",
-    "phone": "5218661479075"
+    "id": "123456789012345",
+    "phone": "15550100002"
   },
   "contact": {
-    "id": "5218661479075"
+    "id": "15550100002"
   },
   "flow": {
     "submission_id": "submission_uuid",
@@ -3209,7 +3226,7 @@ These routes remain implemented for portal/backward compatibility but are not re
 Endpoint:
 
 ```http
-GET /v1/templates?from=528661479075
+GET /v1/templates?from=15550100001
 ```
 
 `from` is the tenant-owned WhatsApp business phone number. Easyhook resolves the WABA behind that number and returns only templates for that WABA. If the API key tenant does not own the number, the request returns `phone_not_found`.
@@ -3231,7 +3248,7 @@ for overriding the WABA associated with a phone.
 Example:
 
 ```bash
-curl -X GET "https://api.easyhook.dev/v1/templates?from=528661479075" \
+curl -X GET "https://api.easyhook.dev/v1/templates?from=15550100001" \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
@@ -3281,7 +3298,7 @@ Example:
 curl -X POST https://api.easyhook.dev/v1/templates/sync \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075"}'
+  -d '{"from":"15550100001"}'
 ```
 
 The response includes the templates returned by Meta after their local status has been refreshed:
@@ -3372,7 +3389,7 @@ curl -X POST https://api.easyhook.dev/v1/templates \
   -H "Idempotency-Key: template-order-ready-en-v1" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "528661479075",
+    "from": "15550100001",
     "name": "order_ready",
     "language": "en_US",
     "category": "UTILITY",
@@ -3385,7 +3402,7 @@ curl -X POST https://api.easyhook.dev/v1/templates \
           "body_text_named_params": [
             {
               "param_name": "customer_name",
-              "example": "Benjamin"
+              "example": "Example User"
             }
           ]
         }
@@ -3450,7 +3467,7 @@ The same operation using a URL:
 
 ```json
 {
-  "from": "5218661479075",
+  "from": "15550100002",
   "source_url": "https://cdn.example.com/monthly-offer.mp4",
   "template_name": "monthly_offer_video",
   "template_language": "es_MX",
@@ -3496,7 +3513,7 @@ Example:
 curl -X POST https://api.easyhook.dev/v1/templates/delete \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075","template_id":"template_uuid"}'
+  -d '{"from":"15550100001","template_id":"template_uuid"}'
 ```
 
 ## Send Template Message
@@ -3565,7 +3582,7 @@ Array form for positional variables:
 ```json
 {
   "parameters": {
-    "body": ["Benjamin", "12345"]
+    "body": ["Example User", "12345"]
   }
 }
 ```
@@ -3576,7 +3593,7 @@ Object form for named or numbered variables:
 {
   "parameters": {
     "body": {
-      "1": "Benjamin",
+      "1": "Example User",
       "order_id": "12345"
     }
   }
@@ -3590,7 +3607,7 @@ Manual Meta `components` can still be sent directly for advanced cases:
   "components": [
     {
       "type": "body",
-      "parameters": [{ "type": "text", "text": "Benjamin" }]
+      "parameters": [{ "type": "text", "text": "Example User" }]
     }
   ]
 }
@@ -3611,11 +3628,11 @@ Dynamic URL:
 
 ```json
 {
-  "from": "5218661479075",
-  "to": "5215551112222",
+  "from": "15550100002",
+  "to": "13125550199",
   "template": { "name": "monthly_offer", "language": "es_MX" },
   "media": { "link": "https://cdn.example.com/customer-specific-offer.jpg" },
-  "parameters": { "body": ["Benjamin"] }
+  "parameters": { "body": ["Example User"] }
 }
 ```
 
@@ -3668,7 +3685,7 @@ Example:
 curl -X POST https://api.easyhook.dev/v1/messages/template \
   -H "Authorization: Bearer eh_live_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"from":"528661479075","to":"5218661479075","template":{"name":"pedido_listo","language":"es_MX"},"parameters":{"body":["Benjamin"]}}'
+  -d '{"from":"15550100001","to":"15550100002","template":{"name":"pedido_listo","language":"es_MX"},"parameters":{"body":["Example User"]}}'
 ```
 
 Success response:

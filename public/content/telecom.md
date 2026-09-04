@@ -211,6 +211,26 @@ Use exactly one of `user_id` or `external_agent_id`. Web, Android and iOS endpoi
 
 External endpoints use `external_agent_id`. A `sip` endpoint must provide a validated `provider_address` such as `sip:agent@example.com`; a Telnyx call is offered to an `api` endpoint only when it also has a provider SIP address, because a webhook alone cannot carry audio. WhatsApp calls can be offered to an `api` endpoint without a SIP address: claim returns the short-lived SDP offer and the integration answers through `pre-accept` and `accept`. SIP endpoints are not selected for WhatsApp because Meta uses its WebRTC/SDP calling contract rather than a customer SIP leg.
 
+The same contract powers Easyhook's own clients and customer-built products:
+
+| Customer client | PSTN media | WhatsApp Calling media | Incoming notification |
+| --- | --- | --- | --- |
+| Browser portal | `kind: "web"` and the returned Telnyx WebRTC JWT | Browser WebRTC with Meta's SDP | Signed `call.offered` webhook |
+| Native mobile app | `kind: "android"` or `"ios"` and the returned Telnyx WebRTC JWT | Native WebRTC with Meta's SDP | Signed `call.offered` webhook; customer push delivery is their responsibility |
+| Backend/voice worker | `kind: "sip"`, or `kind: "api"` with a valid SIP `provider_address` | `kind: "api"` with WebRTC/SDP | Signed `call.offered` webhook |
+
+Registering, heartbeating or reading an endpoint does not itself start a billable
+call. `POST /v1/calls` and its hangup action do not add separate API-operation
+charges, whether they are called from a customer portal, mobile application or
+server. Connected calls are billed only through `call.per.minute`. PSTN reserves
+and settles carrier usage through Easyhook. Meta bills WhatsApp Calling directly
+to the customer's WABA; Easyhook charges only its per-minute platform fee.
+Rejected and unanswered calls settle at zero.
+
+A WhatsApp call-permission request places a refundable wallet hold and settles
+its operation fee only after Meta accepts the request. Provider rejection
+releases the complete hold.
+
 ### Answering contract
 
 - `POST /v1/calls/{call_id}/actions/claim` atomically wins a call for `endpoint_id`.
@@ -222,15 +242,49 @@ External endpoints use `external_agent_id`. A `sip` endpoint must provide a vali
 
 Default team routing is deliberately quiet: assigned available agent first, then least-recently-offered agent; owners/admins are fallback. Exactly one endpoint rings for 20 seconds. Cloud Tasks expires the lease and offers the next compatible endpoint. API/SIP endpoints participate in the same order, so customer applications can answer without using the Easyhook inbox, but Easyhook never offers a provider leg to an endpoint that cannot carry its media.
 
-Read or update the organization policy with `GET /v1/call-routing` and
-`PATCH /v1/call-routing`. The policy is universal: it controls ordinary inbound
-calls, AI fallback and an AI-requested human handoff. `destinations` is an
-ordered list containing Portal, mobile and multiple tenant-owned E.164 external
-phones. Only one destination is offered at a time; same-priority external
-phones can use round-robin or random selection. Bounds are 8–30 seconds per
-attempt and 1–20 attempts. `api_only` disables managed human destinations.
+Read or update one number's policy with `GET /v1/call-routing` and
+`PATCH /v1/call-routing`. Use `?phone_id={id}` for a purchased Telnyx number,
+or `?phone_id={id}&channel=whatsapp` for a WhatsApp phone. The legacy request
+without `phone_id` remains only as a compatibility fallback for numbers that do
+not yet have an override; the portal always configures a concrete number. The
+per-number policy controls ordinary inbound calls, fallback when an AI agent
+does not answer, and an AI-requested human handoff. `destinations` is an ordered
+list containing at most one `web` destination, at most one `mobile` destination,
+and any tenant-owned list of `external_phone` destinations in E.164 format.
+WhatsApp overrides reject `external_phone` destinations. Only one destination
+endpoint is offered at a time; the external-phone pool selects at most one
+number before falling back to web/mobile on the next attempt. External phones
+at the same priority use `external_phone_strategy: "round_robin"` or `"random"`.
 
-Portal and mobile use the same runtime through server-authorized `/admin/calls/*` routes. The Vercel portal exposes only an allowlist under `/api/calls/*`, preserves the authenticated tenant/actor signature and never sends a customer API key to the browser or phone. Calls initiated from an inbox use the same provider-usage wallet reservation.
+Strategies are `assigned_then_round_robin` (default), `round_robin`, and
+`api_only`; configurable bounds are 8–30 seconds per attempt and 1–20 attempts.
+`api_only` deliberately disables portal, mobile and external-phone fallback.
+Multiple devices belonging to one agent remain separate endpoints, but only the
+selected endpoint receives the private offer. A declined or expired offer
+advances to the next eligible endpoint instead of ringing every device.
+
+```json
+{
+  "strategy": "assigned_then_round_robin",
+  "ring_timeout_seconds": 20,
+  "max_attempts": 6,
+  "owner_admin_fallback": true,
+  "external_phone_strategy": "round_robin",
+  "destinations": [
+    { "kind": "web", "label": "Portal", "priority": 10 },
+    { "kind": "mobile", "label": "App móvil", "priority": 20 },
+    { "kind": "external_phone", "label": "Guardia", "phone_number": "+528441234567", "priority": 30 }
+  ]
+}
+```
+
+An external PSTN leg is created only when its turn arrives. Easyhook first
+reserves the tenant wallet for its maximum duration, signs the exact destination
+into the carrier leg, settles actual provider usage from verified call-cost
+events, and returns the unused reservation. A pricing or wallet failure never
+falls back to a number or balance from another organization.
+
+Portal and mobile use the same runtime through server-authorized `/admin/calls/*` routes. The Vercel portal exposes only an allowlist under `/api/calls/*`, preserves the authenticated tenant/actor signature and never sends a customer API key to the browser or phone. Calls initiated from an inbox use the same provider-billing policy: carrier costs billed to Easyhook use a wallet reservation, while WhatsApp Calling is billed by Meta directly to the customer's WABA and therefore creates no Easyhook provider-cost reservation.
 
 ### ElevenLabs voice agents (portal integration)
 
@@ -255,10 +309,12 @@ its own binding:
 `human_transfer_enabled` is independent from those initial-answer modes. When
 enabled, Easyhook installs a managed `transfer_to_number` system tool on the
 selected ElevenLabs agent. A transfer requested during an active AI
-conversation uses SIP REFER to an opaque HMAC-signed Easyhook target, then uses
-the same organization-wide destination policy. ElevenLabs never receives the
-real external phone list. External PSTN legs are wallet-reserved and settled
-from verified provider cost events.
+conversation uses SIP REFER to an opaque HMAC-signed Easyhook target. Easyhook
+verifies the binding, organization, number and active call session, then uses
+the same per-number destination policy described above. ElevenLabs never
+receives the real external phone list. Other agent tools and customer transfer
+rules are preserved. `api_only` routing deliberately disables the managed human
+handoff.
 
 Portal-admin routes are:
 
@@ -275,6 +331,18 @@ Portal-admin routes are:
 The agent's system prompt, voice, knowledge base and tools remain managed in
 ElevenLabs. Webhook or n8n tools can provide customer business logic without
 placing n8n in the real-time audio loop.
+
+This binding currently applies only to Easyhook Telnyx numbers. ElevenLabs
+also supports WhatsApp voice agents, and documents a voice-only SIP pattern
+that can keep messaging with another provider. That pattern is not equivalent
+to the current Easyhook binding: when SIP signaling is enabled on a WhatsApp
+number, Meta stops sending Calling Graph API commands and call webhooks for
+that number. Enabling it directly would bypass Easyhook's normalized
+`call.offered` lifecycle, API endpoints, Inbox/mobile routing, wallet operation
+and managed human fallback. Until Easyhook operates a tenant-aware SIP edge
+that preserves those controls, `handler: "ai"` with `channel: "whatsapp"`
+returns `voice_ai_phone_channel_required`; do not silently reconfigure a
+customer number to SIP.
 
 ### Read or hang up a call
 
