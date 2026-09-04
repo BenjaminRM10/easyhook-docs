@@ -1,9 +1,8 @@
 # Conectar canales
 
 Easyhook ofrece onboarding alojado para WhatsApp, Messenger, Instagram Direct,
-comentarios de Facebook, comentarios de Instagram,
-Telegram, Gmail, Outlook, correo IMAP/SMTP, Mercado Libre y TikTok Business. Las siguientes
-secciones explican las dos modalidades específicas de WhatsApp.
+Telegram, Gmail, Outlook, correo IMAP/SMTP, Mercado Libre y TikTok Business. Las
+siguientes secciones explican las dos modalidades específicas de WhatsApp.
 
 Easyhook usa el registro insertado oficial de Meta. Elige el modo según lo que debe ocurrir con el número después de conectarlo.
 
@@ -60,9 +59,8 @@ Las pantallas de Meta cambian con frecuencia. Easyhook mantiene diagramas de ori
 
 Una API key puede crear una sesión alojada en `easyhook.dev`. El canal
 completado se registra automáticamente en la organización dueña de esa key.
-El mismo contrato conecta WhatsApp, Messenger, Instagram Direct, comentarios de
-Facebook, comentarios de Instagram, Telegram, Gmail,
-Outlook, correo IMAP/SMTP, Mercado Libre y TikTok Business.
+El mismo contrato conecta WhatsApp, Messenger, Instagram Direct, Telegram,
+Gmail, Outlook, correo IMAP/SMTP, Mercado Libre y TikTok Business.
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/onboarding/sessions \
