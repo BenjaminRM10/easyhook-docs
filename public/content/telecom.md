@@ -149,7 +149,8 @@ set to `ai`; WhatsApp Calling does not use the ElevenLabs SIP bridge. The
 response for an AI call is `202` with the normal call resource and no WebRTC
 token. The same call can still be read and hung up through the standard call
 endpoints. Wallet billing starts only when the call connects and settles the
-rounded Telnyx voice usage; the customer separately consumes the minutes
+final Telnyx voice cost plus Easyhook's margin prorated by connected seconds;
+the customer separately consumes the minutes
 included in their ElevenLabs plan.
 
 Use `channel: "phone"` for PSTN and `channel: "whatsapp"` for WhatsApp
@@ -222,7 +223,8 @@ The same contract powers Easyhook's own clients and customer-built products:
 Registering, heartbeating or reading an endpoint does not itself start a billable
 call. `POST /v1/calls` and its hangup action do not add separate API-operation
 charges, whether they are called from a customer portal, mobile application or
-server. Connected calls are billed only through `call.per.minute`. PSTN reserves
+server. Connected calls are billed only through `call.per.minute`; usage reports
+retain the exact connected seconds. PSTN reserves
 and settles carrier usage through Easyhook. Meta bills WhatsApp Calling directly
 to the customer's WABA; Easyhook charges only its per-minute platform fee.
 Rejected and unanswered calls settle at zero.
@@ -376,7 +378,7 @@ Provider webhooks are verified with Ed25519 over the exact raw body, reject time
 Telecom billing has three separately visible components:
 
 1. recurring number rental, charged in advance;
-2. provider usage (segments, media or rounded call minutes);
+2. final provider usage (segments, media or voice cost);
 3. Easyhook service margin.
 
 Customer-facing rules are:
@@ -385,7 +387,8 @@ Customer-facing rules are:
 - the initial number period is prorated by inclusive UTC calendar days remaining in the purchase month and added to `due_today`;
 - later rent renews in advance at `00:00 UTC` on the first day of each month;
 - inbound and outbound SMS/MMS are billable by segment or message as shown in the quote;
-- voice is billable by rounded minute and varies by direction and destination;
+- voice cost varies by direction and destination; Easyhook's voice margin is
+  prorated by connected second;
 - MXN quotes include exchange-rate protection, so the displayed and confirmed amount is the customer amount;
 - inventory is unavailable unless Easyhook can verify and honor a competitive price.
 
@@ -450,8 +453,9 @@ funds. Fractional-cent refunds accumulate instead of being rounded away. Calls
 use provider cost/duration webhooks and a server-enforced maximum. A pending
 outbound call that never reaches the provider releases its reservation after
 two minutes; a late provider start is terminated and cannot revive the canceled
-call. WhatsApp Calling reserves the requested maximum and settles rounded actual
-minutes on termination. The ordinary Easyhook API-operation fee remains a
+call. WhatsApp Calling reserves the requested maximum and prorates Easyhook's
+USD 0.004/minute platform fee by connected second on termination. The ordinary
+Easyhook API-operation fee remains a
 separate wallet entry for non-call operations; starting and hanging up a call
 do not create additional operation fees.
 

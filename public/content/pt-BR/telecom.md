@@ -228,10 +228,10 @@ O mesmo contrato de poderes clientes próprios da Easyhook e produtos construíd
 Registro, batimento cardíaco ou leitura de um endpoint não começa em si um faturado
 Cubro. `POST /v1/calls` e sua ação de hangup não adiciona operação de API separada
 cobranças, quer sejam chamadas de um portal de clientes, aplicativo móvel ou
-servidor. Chamadas conectadas são cobradas apenas através `call.per.minute`. Reservas PSTN
-e resolve o uso da transportadora através do Easyhook. Meta contas WhatsApp Chamando diretamente
-para WABA do cliente; Easyhook cobra apenas sua taxa de plataforma por minuto.
-Chamadas rejeitadas e não respondidas a zero.
+servidor. Chamadas conectadas são cobradas apenas por `call.per.minute`; o relatório
+preserva os segundos conectados exatos. A Easyhook reserva e liquida o custo PSTN.
+A Meta cobra o WhatsApp Calling diretamente no WABA do cliente, e a Easyhook cobra
+somente sua tarifa de plataforma. Chamadas rejeitadas ou não atendidas são liquidadas em zero.
 
 Um pedido de permissão de chamada WhatsApp coloca uma carteira reembolsável e fixa
 a sua taxa de operação apenas após o Meta aceitar o pedido.
@@ -391,7 +391,7 @@ As regras para o cliente são:
 - o período inicial do número é calculado proporcionalmente aos dias restantes do mês da compra, incluindo o dia da compra e usando o calendário UTC, e somado a `due_today`;
 - o aluguel dos meses seguintes é renovado e cobrado antecipadamente às `00:00 UTC` do primeiro dia de cada mês;
 - SMS/MMS recebidos e enviados são cobrados por segmento ou mensagem, conforme indicado na cotação;
-- as chamadas são cobradas por minuto arredondado, com preços que variam conforme a direção e o destino;
+- o custo de voz varia conforme a direção e o destino; a margem da Easyhook é proporcional aos segundos conectados;
 - as cotações em MXN incluem proteção cambial: o valor exibido e confirmado é o valor cobrado do cliente;
 - os números só ficam disponíveis para compra quando a Easyhook consegue verificar e garantir um preço competitivo.
 

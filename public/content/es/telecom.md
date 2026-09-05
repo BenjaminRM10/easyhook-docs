@@ -146,11 +146,11 @@ de vuelta al agente entrante.
 
 `handler` predeterminados a `human`. Es válido sólo para `channel: "phone"` cuando
 establecido `ai`; WhatsApp Calling no utiliza el puente SIP de ElevenLabs.
-respuesta para una llamada de inteligencia artificial `202` con el recurso de llamada normal y sin WebRTC
-la misma llamada se puede leer y colgar a través de la llamada estándar
-endpoints. Wallet billing comienza sólo cuando la llamada conecta y resuelve los
-redondeado el uso de la voz de Telnyx; el cliente consume por separado los minutos
-incluido en su plan ElevenLabs.
+La respuesta de una llamada con IA es `202`, con el recurso normal de llamada y
+sin token WebRTC. La llamada se puede consultar y finalizar mediante los endpoints
+estándar. El wallet sólo empieza a cobrar cuando la llamada conecta y liquida el
+costo final de voz de Telnyx más el margen de Easyhook prorrateado por los segundos
+conectados. El cliente consume por separado los minutos incluidos en ElevenLabs.
 
 Uso `channel: "phone"` para PSTN y `channel: "whatsapp"` para WhatsApp
 Llamando cuando el mismo `from` puede resolver a ambos, es opcional de otra manera.
@@ -219,13 +219,13 @@ El mismo contrato potencia a los propios clientes de Easyhook y a los productos 
 | Aplicación móvil nativa | `kind: "android"` o `"ios"` y el devuelto Telnyx WebRTC JWT | WebRTC nativo con SDP de Meta | Signed `call.offered` webhook; la entrega del cliente es su responsabilidad |
 | Backend/voice worker | `kind: "sip"`, `kind: "api"` con un SIP válido `provider_address` | `kind: "api"` con WebRTC/SDP | Signed `call.offered` webhook |
 
-Registro, latido o la lectura de un punto final no comienza en sí mismo una facturable
-Llámame. `POST /v1/calls` y su acción de ahorcamiento no añaden una API-operación separada
-cargas, ya sean llamadas desde un portal de cliente, aplicación móvil o
-servidor. Las llamadas conectadas se facturan sólo a través de `call.per.minute`. Reservas PSTN
-y establece el uso del transportista a través de Easyhook. Meta facturas WhatsApp Llamando directamente
-a la WABA del cliente; Easyhook sólo cobra su cuota de plataforma por minuto.
-Las llamadas rechazadas y sin respuesta se resuelven a cero.
+Registrar, mantener activo o consultar un endpoint no inicia un cobro. `POST /v1/calls`
+y la acción para finalizar una llamada tampoco añaden cargos separados
+por operación, ya se invoquen desde un portal, aplicación móvil o servidor. Las
+llamadas conectadas se facturan mediante `call.per.minute`; el reporte conserva
+los segundos conectados exactos. Easyhook reserva y liquida el costo PSTN. Meta
+factura WhatsApp Calling directamente al WABA del cliente y Easyhook sólo cobra
+su tarifa de plataforma. Las llamadas rechazadas o sin respuesta se liquidan en cero.
 
 Una solicitud de autorización de llamada de WhatsApp coloca una cartera reembolsable y se asienta
 su cuota de operación sólo después de que Meta acepte la solicitud.
@@ -376,7 +376,7 @@ Los webhooks del proveedor se verifican con Ed25519 sobre el cuerpo crudo exacto
 La facturación de Telecom tiene tres componentes visibles por separado:
 
 1. alquiler de números recurrentes, cobrado por adelantado;
-2. uso del proveedor (segmentos, medios de comunicación o minutos de llamada redondeados);
+2. uso final del proveedor (segmentos, medios o costo de voz);
 3. Nivel de servicio Easyhook.
 
 Las reglas de cara al cliente son:
@@ -385,7 +385,7 @@ Las reglas de cara al cliente son:
 - el período de número inicial se prorratea por días calendario de UTC inclusivos que quedan en el mes de compra y se añade a `due_today`;
 - alquiler más tarde se renueva por adelantado `00:00 UTC` el primer día de cada mes;
 - inbound and outbound SMS/MMS are billable by segment or message as shown in the quote;
-- la voz es facturable por minuto redondeado y varía por dirección y destino;
+- el costo de voz varía por dirección y destino; el margen de Easyhook se prorratea por segundo conectado;
 - Las citas MXN incluyen protección de tipo de cambio, por lo que la cantidad mostrada y confirmada es la cantidad del cliente;
 - inventario no está disponible a menos que Easyhook pueda verificar y honrar un precio competitivo.
 
@@ -450,8 +450,9 @@ fondos. Los reembolsos del centro fraccional se acumulan en lugar de ser redonde
 use proveedor costo/duration webhooks y un máximo reforzado por servidor. A pending
 llamada de salida que nunca llega al proveedor libera su reserva después
 dos minutos; el inicio de un proveedor tardío se termina y no puede revivir el cancelado
-llamada. WhatsApp Calling se reserva el máximo solicitado y se liquida efectivo redondeado
-minutos de terminación. La cuota ordinaria de operación de Easyhook API sigue siendo una
+llamada. WhatsApp Calling reserva el máximo solicitado y, al terminar, prorratea
+la tarifa de plataforma de Easyhook de USD 0.004 por minuto según los segundos
+conectados. La cuota ordinaria de operación de Easyhook API sigue siendo una
 entrada independiente de la cartera para operaciones sin costo; comenzar y colgar una llamada
 no crear cargos adicionales de operación.
 
