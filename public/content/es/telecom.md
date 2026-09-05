@@ -55,7 +55,7 @@ Resultados expuestos `activation_price`, `initial_period_price`, `monthly_price`
 
 `Idempotency-Key` es obligatorio. Easyhook vuelve a consultar el número exacto, rechaza cotizaciones desactualizadas —incluidas las que cruzaron el cambio de mes UTC—, verifica los requisitos regulatorios y reserva el importe completo de `due_today` en la wallet antes de solicitar la compra al proveedor. Si cambia la cotización, devuelve `409 telecom_price_changed` con los importes actuales de activación, período inicial, mensualidad y total a pagar, junto con las fechas del período y la renovación. Los números que requieren un trámite regulatorio no están disponibles hasta que ese flujo esté implementado.
 
-Los perfiles de mensajería son recursos de Easyhook abarcados a una organización y un programa de consentimiento. Los números de SMS/MMS-capable requieren un perfil activo que apoye al país de destino; cuando `messaging_profile_id` Se omite, Easyhook utiliza el perfil por defecto único de esa organización y las disposiciones que automáticamente se encuentra en la primera compra de números compatibles cuando no existe ninguno. Los IDs de perfil de operador, la configuración de estado de exclusión y palabras clave nunca son globales o aceptados por las solicitudes de los clientes.
+Los perfiles de mensajería pertenecen a una organización y un programa de consentimiento. Los números compatibles con SMS/MMS requieren un perfil activo que admita el país de destino. Si se omite `messaging_profile_id`, Easyhook utiliza el perfil predeterminado de esa organización; si no existe, lo crea automáticamente al comprar el primer número compatible. Los identificadores de perfil del operador, las bajas de consentimiento y las palabras clave no son globales ni se aceptan desde solicitudes del cliente. Los números sólo de voz no requieren perfil de mensajería.
 
 Un número compatible con SMS/MMS también crea un Easyhook activo `sms` canal y número de teléfono alias en la misma organización. Los mensajes entrantes se persisten en la bandeja de entrada compartida bajo ese canal; las llamadas de voz usan el mismo número de telecomunicaciones y la identidad de contacto mientras conservan su ciclo de vida de llamada separado. Un perfil de mensaje es reutilizable por los números de la organización que comparten el mismo programa de consentimiento - no se crea una vez por número.
 
@@ -72,13 +72,13 @@ Punto final canónico: `POST /v1/messages/text`.
 }
 ```
 
-`channel` se puede omitir cuando el número identifica solamente Telefonía. Incluirlo
-cuando ese mismo número también está conectado a WhatsApp. El legado
-`POST /v1/messages/sms` la ruta permanece temporalmente disponible y devuelve una
-deprecation header. MMS utiliza el canonical `/v1/messages/media` contrato una vez
-la tarifa de destino y la capacidad de número están habilitados.
+Puedes omitir `channel` cuando el número identifica únicamente Telefonía. Inclúyelo
+si ese mismo número también está conectado a WhatsApp. La ruta anterior
+`POST /v1/messages/sms` permanece disponible temporalmente y devuelve una cabecera
+que indica su retirada futura. MMS utiliza el contrato canónico `/v1/messages/media`
+cuando están habilitadas la tarifa del destino y la capacidad del número.
 
-Ambos números deben ser E.164. `from` debe ser un número activo propiedad de la organización autenticada con la capacidad necesaria. Uso `Idempotency-Key` por cada comando.
+Ambos números deben tener formato E.164. `from` debe ser un número activo de la organización autenticada con la capacidad necesaria. Usa `Idempotency-Key` en cada comando.
 
 Para SMS o MMS, Easyhook reserva un importe conservador y reembolsable en la wallet
 antes de contactar al operador. La respuesta `202` presenta esa reserva como
@@ -151,14 +151,14 @@ estándar. El wallet sólo empieza a cobrar cuando la llamada conecta y liquida 
 costo final de voz de Telnyx más el margen de Easyhook prorrateado por los segundos
 conectados. El cliente consume por separado los minutos incluidos en ElevenLabs.
 
-Uso `channel: "phone"` para PSTN y `channel: "whatsapp"` para WhatsApp
-Llamando cuando el mismo `from` puede resolver a ambos, es opcional de otra manera.
+Usa `channel: "phone"` para PSTN y `channel: "whatsapp"` para WhatsApp Calling
+cuando el mismo `from` identifica ambos canales. En los demás casos es opcional.
 
-`max_duration_seconds` (se requiere)`30`–`14400`). Determina la reserva máxima de billetera. Easyhook inicia un plazo de servidor autenticado cuando el proveedor informa de la llamada contestada; el plazo termina la pierna del proveedor y resuelve la reserva incluso si el navegador, el teléfono o el proceso del cliente permanece conectado o está manipulado. Si un cliente obtiene credenciales WebRTC pero ninguna llamada del proveedor comienza dentro de dos minutos, Easyhook cancela la llamada pendiente y devuelve la reserva completa.
+`max_duration_seconds` es obligatorio (`30`–`14400`) y determina la reserva máxima de la wallet. Cuando el proveedor informa que la llamada fue contestada, Easyhook programa su finalización en el servidor. Al llegar al límite, termina el tramo del proveedor y liquida la reserva aunque el navegador, teléfono o proceso del cliente siga conectado o haya sido manipulado. Si el cliente obtiene credenciales WebRTC pero no inicia una llamada con el proveedor en dos minutos, Easyhook cancela la llamada pendiente y devuelve la reserva completa.
 
-Telnyx `webrtc.dial.client_state` es una autorización firmada, de dos minutos, de una sola llamada vinculada a la organización exacta, llamada, endpoint, caller, destino y duración máxima. La conexión Credencial estaciona la pierna WebRTC; Easyhook valida la autorización y crea una pierna PSTN idempotente a través de la aplicación Control de Llamadas usando Telnyx `link_to` y `bridge_on_answer`, por lo que ambas piernas están conectadas atópicamente cuando el destino responde. La pierna PSTN conserva la misma autorización firmada y se almacena como par de la pierna canónica WebRTC. Easyhook rechaza e inmediatamente termina una pierna de proveedor outbound cuando esa autorización está faltando, expirado, alterado, reinterpretado después de que otra pierna gana, o no coincide con el Webhook de Telnyx.
+En Telnyx, `webrtc.dial.client_state` es una autorización firmada para una sola llamada, válida durante dos minutos y vinculada a la organización, llamada, endpoint, origen, destino y duración máxima exactos. Credential Connection mantiene el tramo WebRTC en espera. Easyhook valida la autorización y crea un tramo PSTN idempotente mediante Call Control, usando `link_to` y `bridge_on_answer` de Telnyx para conectar ambos tramos atómicamente cuando contesta el destino. El tramo PSTN conserva la misma autorización y se vincula al tramo WebRTC canónico. Easyhook rechaza y termina inmediatamente un tramo saliente si la autorización falta, venció, fue alterada, se reutilizó después de que otro tramo ganó o no coincide con el webhook de Telnyx. Un JWT de Telnyx por sí solo nunca autoriza una llamada cobrada por Easyhook.
 
-Para WhatsApp Calling, utilice un arrendatario `phone_id` (o su remitente configurado en `from`) y enviar la oferta WebRTC:
+Para WhatsApp Calling, usa un `phone_id` de la organización (o su remitente configurado en `from`) y envía la oferta WebRTC:
 
 ```json
 {
@@ -208,11 +208,11 @@ Meta controla la elegibilidad, el vencimiento y los límites de tarifas. Easyhoo
 
 Usa exactamente uno de estos campos: `user_id` o `external_agent_id`. Los endpoints web, Android e iOS reciben un JWT temporal de Telnyx WebRTC y un identificador estable. Renueva el token mediante `POST /v1/call-endpoints/{endpoint_id}/token`; Easyhook nunca devuelve una contraseña SIP del cliente. Mantén activo el endpoint actualizando el mismo `endpoint_key`: sólo puede recibir llamadas mientras esté `available` y haya registrado actividad en los últimos 90 segundos.
 
-Uso de puntos finales externos `external_agent_id`A `sip` endpoint debe proporcionar un validado `provider_address` tales como `sip:agent@example.com`; una llamada de Telnyx se ofrece a `api` endpoint sólo cuando también tiene una dirección SIP proveedor, porque un Webhook solo no puede llevar audio. `api` endpoint without a SIP address: claim returns the short-lived SDP offer and the integration answers through `pre-accept` y `accept`. Los endpoints SIP no son seleccionados para WhatsApp porque Meta utiliza su contrato de llamada WebRTC/SDP en lugar de una pierna SIP cliente.
+Los endpoints externos usan `external_agent_id`. Un endpoint `sip` debe proporcionar una dirección `provider_address` validada, como `sip:agent@example.com`. Una llamada Telnyx sólo se ofrece a un endpoint `api` si también tiene una dirección SIP del proveedor: un webhook no puede transportar audio por sí solo. Las llamadas WhatsApp pueden ofrecerse a un endpoint `api` sin dirección SIP; al reclamar la llamada se devuelve una oferta SDP temporal y la integración responde mediante `pre-accept` y `accept`. Los endpoints SIP no se seleccionan para WhatsApp porque Meta utiliza el contrato WebRTC/SDP, no un tramo SIP del cliente.
 
 El mismo contrato potencia a los propios clientes de Easyhook y a los productos del cliente:
 
-| Cliente cliente | PSTN media | WhatsApp Calling media | Incoming notification |
+| Aplicación del cliente | Audio PSTN | Audio WhatsApp Calling | Notificación entrante |
 | --- | --- | --- | --- |
 | Portal de navegador | `kind: "web"` y el devuelto Telnyx WebRTC JWT | Navegador WebRTC con Meta SDP | Signed `call.offered` webhook |
 | Aplicación móvil nativa | `kind: "android"` o `"ios"` y el devuelto Telnyx WebRTC JWT | WebRTC nativo con SDP de Meta | Signed `call.offered` webhook; la entrega del cliente es su responsabilidad |
@@ -283,7 +283,7 @@ incluye el destino exacto en la autorización firmada del tramo, liquida el cons
 real según los eventos de costo verificados y devuelve la reserva no utilizada.
 Un error de tarifa o saldo nunca provoca el uso de un número o saldo de otra organización.
 
-Portal y móvil utilizan el mismo tiempo de ejecución a través de servidores autorizados `/admin/calls/*` rutas. El portal Vercel expone sólo un permitido bajo `/api/calls/*`, preserva la firma de organización/actor autenticado y nunca envía una clave de API de cliente al navegador o teléfono. Las llamadas iniciadas desde una bandeja de entrada utilizan la misma política de préstamo del proveedor: los costos de transportista facturados a Easyhook utilizan una reserva de billetera, mientras que WhatsApp Calling es facturado por Meta directamente a la WABA del cliente y por lo tanto no crea ninguna reserva de costo del proveedor Easyhook.
+El portal y la app móvil utilizan el mismo backend mediante rutas `/admin/calls/*` autorizadas por el servidor. El portal Vercel sólo expone una lista permitida bajo `/api/calls/*`, conserva la firma autenticada de la organización y el actor, y nunca envía una clave API del cliente al navegador o teléfono. Las llamadas del inbox siguen la misma política de facturación: los costos del operador cobrados a Easyhook requieren una reserva en la wallet. Meta cobra WhatsApp Calling directamente al WABA del cliente, por lo que no se reserva en Easyhook el costo del proveedor para esas llamadas.
 
 ### Agentes de voz ElevenLabs (integración del portal)
 
@@ -325,21 +325,22 @@ Las rutas Portal-admin son:
   `human_transfer_enabled`
 - `DELETE /admin/telecom/numbers/{number_id}/voice-ai`
 
-El impulso del sistema del agente, la voz, la base de conocimientos y las herramientas siguen siendo gestionadas
-ElevenLabs. Las herramientas Webhook o n8n pueden proporcionar lógica de negocio al cliente sin
-colocar n8n en el bucle de audio en tiempo real.
+Las instrucciones del sistema, la voz, la base de conocimientos y las herramientas
+del agente se administran en ElevenLabs. Las herramientas mediante webhooks o n8n
+pueden aportar la lógica de negocio del cliente sin colocar n8n en el procesamiento
+de audio en tiempo real.
 
-Esta unión actualmente se aplica sólo a los números de Easyhook Telnyx.
-también soporta los agentes de voz de WhatsApp, y documenta un patrón SIP solo de voz
-que puede mantener el mensaje con otro proveedor. Ese patrón no es equivalente
-a la unión actual Easyhook: cuando la señalización SIP está habilitada en un WhatsApp
-número, Meta detiene el envío de comandos Calling Graph API y llamada webhooks para
-que número. Habilitarlo directamente evitaría la normalización de Easyhook
-`call.offered` Lifecycle, API endpoints, Inbox/mobile routing, billetera
-hasta que Easyhook opere un filo de SIP organización
-que preserva esos controles, `handler: "ai"` con `channel: "whatsapp"`
-Devoluciones `voice_ai_phone_channel_required`; no reconfigurar silenciosamente un
-número de cliente a SIP.
+Esta vinculación sólo se aplica actualmente a los números Telnyx de Easyhook.
+ElevenLabs también admite agentes de voz para WhatsApp y documenta un esquema SIP
+sólo para voz que permite mantener la mensajería con otro proveedor. No equivale
+a la integración actual de Easyhook: al habilitar señalización SIP en un número
+WhatsApp, se deja de usar Calling Graph API y Meta deja de enviar los webhooks
+de llamadas de ese número. Activarlo directamente omitiría el ciclo normalizado
+`call.offered`, los endpoints de la API, el enrutamiento al inbox y la app móvil,
+la operación de la wallet y el respaldo humano administrado por Easyhook.
+Hasta contar con una infraestructura SIP que preserve esos controles por organización,
+`handler: "ai"` con `channel: "whatsapp"` devuelve
+`voice_ai_phone_channel_required`. No cambies silenciosamente un número del cliente a SIP.
 
 ### Lea o cuelgue una llamada
 
@@ -374,30 +375,30 @@ La facturación de Telecom tiene tres componentes visibles por separado:
 
 1. alquiler de números recurrentes, cobrado por adelantado;
 2. uso final del proveedor (segmentos, medios o costo de voz);
-3. Nivel de servicio Easyhook.
+3. margen de servicio de Easyhook.
 
 Las reglas de cara al cliente son:
 
 - la activación se carga una vez;
 - el período de número inicial se prorratea por días calendario de UTC inclusivos que quedan en el mes de compra y se añade a `due_today`;
-- alquiler más tarde se renueva por adelantado `00:00 UTC` el primer día de cada mes;
-- inbound and outbound SMS/MMS are billable by segment or message as shown in the quote;
+- las renovaciones posteriores se cobran por adelantado a las `00:00 UTC` del primer día de cada mes;
+- los SMS/MMS entrantes y salientes se cobran por segmento o mensaje según la cotización;
 - el costo de voz varía por dirección y destino; el margen de Easyhook se prorratea por segundo conectado;
-- Las citas MXN incluyen protección de tipo de cambio, por lo que la cantidad mostrada y confirmada es la cantidad del cliente;
+- las cotizaciones en MXN incluyen protección cambiaria: el importe mostrado y confirmado es el que se cobra al cliente;
 - inventario no está disponible a menos que Easyhook pueda verificar y honrar un precio competitivo.
 
-Los costos de transporte, las fuentes de comparación y la fórmula comercial interna de Easyhook no forman parte del contrato público. La confirmación de compra y la respuesta de la API sólo exponen las cantidades que el cliente puede cobrar.
+Los costos internos del operador, las fuentes de comparación y la fórmula comercial interna de Easyhook no forman parte del contrato público. La confirmación de compra y la respuesta de la API sólo exponen los importes que se pueden cobrar al cliente.
 
-Los aranceles son versionados, tienen timetamps de verificación y validez, y son sólo de servicio-role-only. Ninguna tasa de muestra codificada duramente permite a un país. La compra de números sólo se habilita cuando el despliegue tiene las credenciales de Telnyx, un precio de inventario exacto, datos FX frescos y un punto de referencia verificado.
+Las tarifas tienen versiones, fechas de verificación y vigencia, y acceso exclusivo del rol de servicio. Una tarifa de ejemplo en el código nunca habilita un país. La compra de números requiere credenciales Telnyx, un precio actual y exacto de inventario, datos cambiarios vigentes y una referencia verificada compatible. La portabilidad permanece deshabilitada hasta completar su flujo regulatorio.
 
-Los parámetros de referencia de los competidores se almacenan por separado de los aranceles de los proveedores comercializables.
-Twilio Precios API suministros públicos `base_price` valores; Easyhook deliberadamente
-no es un punto de referencia respecto de la cuenta específica `current_price` descuentos para SMS,
-el precio base más bajo de portadores/delincuentes en un país es el referente conservador.
-Para voz, los puntos de referencia conservan el mayor detalle de destino-prefijo devuelto por
-Twilio. Una sincronización de referencia exitosa nunca activa un país por
-en sí mismo: una tasa actual del proveedor de Telnyx o precio exacto del inventario es
-todavía es necesario.
+Las referencias de competidores se almacenan por separado de las tarifas del proveedor
+utilizadas para vender el servicio. La API de precios de Twilio proporciona valores
+públicos `base_price`; Easyhook no utiliza como referencia los descuentos
+`current_price` particulares de una cuenta. Para SMS se toma, de forma conservadora,
+el precio base más bajo entre operadores y remitentes del país. Para voz se conserva
+el detalle de los prefijos de destino más específicos que devuelve Twilio.
+Una sincronización exitosa de referencias no habilita por sí sola un país:
+también se necesita una tarifa Telnyx vigente compatible o el precio exacto del inventario.
 
 La búsqueda de puntos de referencia de voz sigue el prefijo E.164 más largo a nivel mundial, no
 la etiqueta de país del punto final de fijación de precios. Esto se requiere para NANP: Twilio
@@ -405,22 +406,24 @@ publica general `+1` precios bajo EE.UU. y puede publicar más
 excepciones por separado. Los conflictos de referencia de igualdad de duración utilizan el precio más bajo por lo que
 la comparación sigue siendo conservadora.
 
-Las importaciones Telnyx Global Conversational CSV se permiten listar a países configurados,
-hashed, audited and replaced atomically per country. Non-numeric destination
-patrones son rechazados. Cuando la cubierta de tasa contiene los precios dependientes del origen,
-importador almacena el coste máximo aplicable para cada prefijo de destino por lo que
-call is never reserved using an optimistic transport rate.
+Las importaciones CSV de Telnyx Global Conversational se limitan a los países
+autorizados en la configuración. Se registra su hash, se auditan y se reemplazan
+atómicamente por país. Se rechazan patrones de destino no numéricos.
+Cuando el tarifario contiene precios dependientes del origen, el importador guarda
+el costo máximo aplicable por prefijo de destino para no reservar saldo con una
+estimación demasiado baja del costo del operador.
 
-Grandes cubiertas de tarifa se suben en pedazos atados y publicados sólo después de la
-El recuento de filas declarado está completo. Un aviso de transportista con un tiempo efectivo futuro
-debe ser importado con ese exacto `valid_from`; la versión anterior termina en la
-el mismo instante y permanece autorizado hasta entonces. Las filas futuras nunca afectan a un
-cotizar temprano, y una importación incompleta en estadio nunca se convierte en facturable.
+Los tarifarios grandes se cargan en bloques de tamaño limitado y se publican sólo
+cuando está completo el número de filas declarado. Un aviso del operador con vigencia
+futura debe importarse con ese `valid_from` exacto. La versión anterior sigue
+vigente hasta ese instante. Las tarifas futuras no afectan las cotizaciones antes
+de tiempo y una importación incompleta nunca se utiliza para facturar.
 
-USD/MXN utiliza la serie Banco de México SIE `SF43718` (FIX). Cada observación tiene una
-vencimiento atado y el margen de protección de intercambio del 5% se aplica sólo al convertir el
-USD importe en un cargo de billetera MXN. Si Banxico o Twilio no pueden ser
-verificado antes de la expiración, Easyhook falla cerrado en lugar de reutilizar datos de establo.
+USD/MXN utiliza la serie SIE `SF43718` (FIX) del Banco de México. Cada observación
+tiene una vigencia limitada. La protección cambiaria del 5% se aplica sólo al convertir
+el importe del cliente de USD a un cargo en una wallet MXN. Si los datos de Banxico
+o Twilio no pueden verificarse antes de vencer, Easyhook bloquea la operación
+correspondiente en lugar de reutilizar datos caducados.
 
 Las rutas de sincronización interna no son los puntos finales de la API del cliente:
 
@@ -428,48 +431,51 @@ Las rutas de sincronización interna no son los puntos finales de la API del cli
 - `POST /internal/telecom/pricing/benchmarks/sync`
 - `POST /internal/telecom/messages/reconcile`
 
-Aceptan únicamente la identidad OIDC configurada de Cloud Scheduler o la existente
-token administrativa. Las carreras se auditan sin almacenar las credenciales de origen o
-cargas de pago crudas de cliente/providente. El monitoreo de página o távily puede alertar a los usuarios
-acerca de los cambios de precios públicos, pero no puede escribir tarifas facturables.
+Aceptan únicamente la identidad OIDC configurada de Cloud Scheduler o el token
+administrativo existente. Las ejecuciones se auditan sin guardar credenciales de
+origen ni payloads completos del cliente o proveedor. Tavily o el monitoreo de páginas
+pueden alertar al equipo sobre cambios de precios públicos, pero no pueden escribir
+tarifas utilizadas para facturar.
 
-Refrigerios de producción Twilio diario a las 05:30 y Banxico diariamente a las 18:30 en
-`America/Monterrey`. La voz Telnyx CSV sigue siendo una importación verificada manualmente
-porque Telnyx no documenta una API de descarga de velocidad de grado contable;
-su validez limitada hace que los precios no se cierren si no se importa una nueva cubierta.
+En producción se actualizan los datos de Twilio a diario a las 05:30 y los de Banxico
+a las 18:30 en `America/Monterrey`. El CSV de voz de Telnyx se importa con verificación
+manual porque Telnyx no documenta una API de descarga de tarifarios con garantías
+contables. Si vence su vigencia sin importar uno nuevo, se bloquean las cotizaciones
+que dependen de esos datos.
 
-Antes de una operación de transporte, Easyhook se reserva su coste estimado máximo.
-inbound SMS/MMS la firma `message.received` callback crea el determinista
-reserva y su costo de transporte incluido lo liquida inmediatamente, porque
-Telnyx emite `message.finalized` sólo para mensajes de salida. Easyhook aplica
-la regla comercial, liquida la cantidad exacta y devuelve reserva no utilizada
-fondos. Los reembolsos del centro fraccional se acumulan en lugar de ser redondeados.
-use proveedor costo/duration webhooks y un máximo reforzado por servidor. A pending
-llamada de salida que nunca llega al proveedor libera su reserva después
-dos minutos; el inicio de un proveedor tardío se termina y no puede revivir el cancelado
-llamada. WhatsApp Calling reserva el máximo solicitado y, al terminar, prorratea
-la tarifa de plataforma de Easyhook de USD 0.004 por minuto según los segundos
-conectados. La cuota ordinaria de operación de Easyhook API sigue siendo una
-entrada independiente de la cartera para operaciones sin costo; comenzar y colgar una llamada
-no crear cargos adicionales de operación.
+Antes de una operación con el operador, Easyhook reserva su costo máximo estimado.
+Para SMS/MMS entrantes, el callback firmado `message.received` crea la reserva
+determinista y la liquida inmediatamente con el costo incluido, porque Telnyx emite
+`message.finalized` sólo para mensajes salientes. Easyhook aplica la regla comercial,
+liquida el importe exacto y devuelve el saldo reservado no utilizado. Las fracciones
+de centavo de los reembolsos se acumulan: no se pierden por redondeo.
+Las llamadas usan webhooks de costo y duración del proveedor y un límite máximo
+impuesto por el servidor. Una llamada saliente pendiente que no llega al proveedor
+libera su reserva después de dos minutos. Si el proveedor la inicia tarde, se termina
+y no puede reactivar la llamada cancelada. WhatsApp Calling reserva el máximo
+solicitado y, al terminar, prorratea la tarifa de plataforma de Easyhook de
+USD 0.004 por minuto según los segundos conectados. Los cargos ordinarios por
+operación API se registran por separado en la wallet para operaciones distintas
+de llamadas. Iniciar y colgar una llamada no generan cargos adicionales por operación.
 
-SMS/MMS de salida normalmente se asienta de la firma `message.finalized` Webhook.
-Como defensa contra las retries de portadores agotados, el reconciliador interno
-checks aged, provider-linked holds against Telnyx's Message Detail Record and
-se resuelve sólo cuando el transportista ha publicado un costo de USD autorizado.
-Los registros no disponibles o sin costo permanecen reservados para una carrera posterior; Easyhook nunca
-devuelve una operación de portaaviones simplemente porque una búsqueda falló.
-reconciliador cada cinco minutos con el mismo límite Cloud Scheduler OIDC.
+Los SMS/MMS salientes normalmente se liquidan mediante el webhook firmado
+`message.finalized`. Si el operador agota sus reintentos de entrega del webhook,
+el proceso interno de conciliación consulta las reservas antiguas vinculadas al
+proveedor contra el Message Detail Record de Telnyx. Sólo liquida cuando existe
+un costo definitivo en USD. Los registros ausentes, no disponibles o sin costo
+permanecen reservados para otra ejecución: un fallo de consulta no provoca un reembolso.
+En producción, la conciliación se ejecuta cada cinco minutos con la misma
+autenticación OIDC de Cloud Scheduler.
 
-El alquiler se cobra por adelantado en los meses calendario. Una activación de los cargos de compra más el resto prorrateado de su mes calendario UTC; las renovaciones posteriores se deben el primer día de cada mes. Los avisos de renovación se emiten 7, 3 y 1 día antes de la renovación. Si la renovación no puede ser pagada, el uso se pausa y el número entra en un período de gracia de siete días. `easyhook-telecom-renewals` diariamente a las 06:15 `America/Monterrey`; Cloud Scheduler firma una solicitud de OIDC `POST /internal/telecom/renewals/process` y el backend acepta sólo el correo electrónico y el público configurado de cuenta de servicio (o el token administrativo existente para operaciones controladas).
+La renta se cobra por adelantado por mes calendario. La compra incluye activación y la parte proporcional restante del mes UTC; las renovaciones posteriores vencen el primer día de cada mes. Se envían avisos 7, 3 y 1 día antes. Si no se puede pagar, se pausa el uso y comienza un período de gracia de siete días. Sólo al vencer ese plazo se solicita la liberación al proveedor. Si falla, se reintenta: nunca se marca completada localmente antes de tiempo. En producción, `easyhook-telecom-renewals` se ejecuta diariamente a las 06:15 de `America/Monterrey`. Cloud Scheduler firma una solicitud OIDC a `POST /internal/telecom/renewals/process`; el backend sólo acepta el correo y la audiencia configurados de la cuenta de servicio, o el token administrativo existente para operaciones controladas.
 
-Inbound Telnyx llama a reservar un máximo conservador de 60 minutos antes de un
-Los anillos de punto final firmados `call.cost` suministros para eventos `total_cost` y
-`billed_duration_secs`; Easyhook aplica la regla comercial de voz a eso
-cantidad autorizada y devuelve la retención no usada. La llamada no es enrutada cuando
-la billetera no puede cubrir el máximo temporal.
-Esto evita que Easyhook extienda silenciosamente el crédito del transportista a
-una billetera vacía sin pretender que la bodega es el precio final.
+Las llamadas entrantes de Telnyx reservan un máximo conservador de 60 minutos
+antes de hacer sonar un endpoint. El evento firmado `call.cost` proporciona
+`total_cost` y `billed_duration_secs`. Easyhook aplica la regla comercial de voz
+a ese costo definitivo y devuelve la reserva no utilizada. Si la wallet no puede
+cubrir el máximo temporal, no se enruta la llamada. Los demás proveedores siguen
+sujetos a la disponibilidad de tarifas. Así se evita dar crédito implícito a una
+wallet sin saldo; la reserva temporal no se presenta como precio final.
 
 ## Adaptadores futuros
 
@@ -479,14 +485,14 @@ Infobip y DIDLogic pueden implementar la misma interfaz de adaptador. `easyhook`
 
 - `TELNYX_API_KEY`
 - `TELNYX_PUBLIC_KEY`
-- `TELNYX_CLIENT_STATE_SECRET` (al menos 32 caracteres aleatorios; signos de autorización de línea saliente y debe ser almacenado en Secret Manager)
+- `TELNYX_CLIENT_STATE_SECRET` (al menos 32 caracteres aleatorios; firma la autorización de llamadas salientes y debe guardarse en Secret Manager)
 - `TELNYX_CALL_CONTROL_CONNECTION_ID`
 - `TELNYX_CREDENTIAL_CONNECTION_ID` (una conexión credencial, no control de llamadas)
 - `TELNYX_HUMAN_TRANSFER_SIP_DOMAIN` (el subdominio SIP de Telnyx utilizado sólo para las entregas firmadas de ElevenLabs)
 - `BANXICO_SIE_TOKEN` para series oficiales USD/MXN FIX `SF43718`
 - `TWILIO_PRICING_API_KEY` y `TWILIO_PRICING_API_SECRET`, restringido a la API oficial de precios
 - `TELECOM_PRICING_COUNTRIES` como un solicitante explícito de la ISO (inicialmente) `US,CA,MX`)
-- Un solo servicio. `telecom_messaging_profiles` fila para cada programa de consentimiento organización; el ID de perfil de Telnyx se almacena allí, nunca como una variable global Cloud Run
-- Cloud Tasks cola y URL de envío autenticado para alquileres de enrutamiento duraderos, limpieza de arranque abandonado y terminación de máxima resistencia
+- Una fila de `telecom_messaging_profiles` accesible sólo por el rol de servicio para cada programa de consentimiento de la organización; el identificador de perfil Telnyx se guarda ahí, nunca como variable global de Cloud Run
+- Cola de Cloud Tasks y URL de ejecución autenticada para vencimientos de intentos de enrutamiento, limpieza de llamadas abandonadas y finalización por duración máxima
 - `CLOUD_SCHEDULER_SERVICE_ACCOUNT_EMAIL` y `CLOUD_SCHEDULER_OIDC_AUDIENCE` para las renovaciones número
 - Meta app suscrita a `calls`, `whatsapp_business_messaging`, llamando habilitado en cada número de API Cloud elegible y un método de pago válido para llamadas iniciadas por negocios
