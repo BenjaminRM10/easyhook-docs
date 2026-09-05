@@ -21,13 +21,10 @@ As assinaturas de telecomunicações usam o provedor `sms` ou `voice`. Os seleto
 - `channel` Identifica o prestador: `whatsapp`, `messenger`, `instagram`,
   `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`,
   ou `voice`.
-- Identificadores de conta, contato e mensagem vêm do Meta, não do banco de dados do Easyhook.
-- Para Telefonia, `account.id` é sempre o número de negócio comprado para ambos
-  eventos de entrada e saída. SMS/MMS use `channel: "sms"`; chamar ciclo de vida
-  uso de eventos `channel: "voice"`. A modalidade nunca muda a conexão
-  identidade.
-- Blocos que não se aplicam são omitidos. Easyhook não envia placeholder `null` Campos.
-- Os detalhes específicos do provedor usados para depuração permanecem no `X-Easyhook-Provider-Event` Cabeçalho.
+- Os identificadores de conta, contato e mensagem vêm do provedor, e não de IDs internos do banco de dados da Easyhook.
+- Em telefonia, `account.id` é sempre o número empresarial adquirido, tanto nos eventos recebidos quanto enviados. SMS/MMS usa `channel: "sms"`, e o ciclo de vida das chamadas usa `channel: "voice"`. A modalidade não altera a identidade da conexão.
+- Blocos que não se aplicam são omitidos. A Easyhook não envia campos de preenchimento com `null`.
+- Os detalhes específicos do provedor usados no diagnóstico permanecem no cabeçalho `X-Easyhook-Provider-Event`.
 - As cargas brutas Meta permanecem internas e não são encaminhadas.
 
 ### Telefonia
@@ -173,17 +170,20 @@ Os escopos do WhatsApp seguem a mesma hierarquia de três níveis mostrada no po
 2. **WABA**: cada número dentro de uma conta de negócios do WhatsApp.
 3. **Telefone**: um número de remetente específico do WhatsApp.
 
-Meta Business Portfólios são retidos internamente como metadados embarcados. Eles não são um escopo público Easyhook e nunca são necessários em chamadas de API do cliente. `waba_id`, não o seu nome de exibição.
+Os portfólios empresariais da Meta são mantidos internamente como metadados do
+onboarding. Eles não são um escopo público da Easyhook e nunca são necessários
+nas chamadas da API do cliente. A identidade da WABA usa o `waba_id` da Meta,
+e não o nome de exibição.
 
 | Método | Ponto final | Objetivo |
 | --- | --- | --- |
 | `GET` | `/v1/webhooks` | Lista de assinaturas. |
-| `GET` | `/v1/webhooks/options` | Listar eventos compatíveis, escopos e contas conectadas para o organização chave de API. |
+| `GET` | `/v1/webhooks/options` | Lista eventos, escopos e contas conectadas compatíveis com a organização da chave de API. |
 | `POST` | `/v1/webhooks` | Crie uma assinatura e devolva seu segredo uma vez. |
 | `GET` | `/v1/webhooks/{id}` | Leia uma assinatura. |
 | `PATCH` | `/v1/webhooks/{id}` | Substitua os eventos subscritos sem alterar o URL, segredo, autenticação, provedor ou escopo. |
 | `DELETE` | `/v1/webhooks/{id}` | Excluir uma assinatura. |
-| `POST` | `/v1/webhooks/{id}/replay` | Requisito de entregas falhadas/mortas para esta assinatura. |
+| `POST` | `/v1/webhooks/{id}/replay` | Recoloca na fila as entregas com falha ou esgotadas desta assinatura. |
 | `POST` | `/v1/webhooks/{id}/history-replays` | Reenviar mensagens de histórico armazenadas ou contatos do estado da aplicativo. |
 | `GET` | `/v1/webhooks/{id}/history-replays/{replay_id}` | Leia o progresso de repetição persistente. |
 
@@ -207,9 +207,9 @@ Campos de criação:
 
 | Campo | Requerido | Significado |
 | --- | --- | --- |
-| `name` | sim | Nome de assinatura legível pelo pessoa. |
+| `name` | sim | Nome da assinatura legível por pessoas. |
 | `url` | sim | Destino público do HTTPS. URLs HTTP e inválidos são rejeitados. |
-| `providers` | sim | Um ou mais fornecedores: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`, `voice`, ou `*`. Selecionar `*` sozinho. Chamadas usar `voice` aqui mesmo quando `data.provider` é `whatsapp`. |
+| `providers` | sim | Um ou mais provedores: `whatsapp`, `messenger`, `instagram`, `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`, `voice` ou `*`. Use `*` sozinho. Chamadas usam `voice` mesmo quando `data.provider` é `whatsapp`. |
 | `events` | sim | Um ou mais filtros compatíveis de `/v1/webhooks/options`. Vazio é rejeitado. Selecione `*` sozinho para cada evento. |
 | `scope` | não | Objeto de escopo aninhado público. Predefinições para toda a organização. |
 | `auth_type` | não | `hmac` (por omissão), `bearer`, `custom_header`, ou `none`. |
@@ -226,12 +226,12 @@ curl -X PATCH https://api.easyhook.dev/v1/webhooks/WEBHOOK_ID \
   }'
 ```
 
-`events` substitui a seleção do evento anterior e deve conter pelo menos um
-evento compatível com os provedores existentes do webhook. Esta operação faz
-não rodar ou devolver o segredo e não recriar a assinatura.
+`events` substitui a seleção anterior e deve conter pelo menos um evento
+compatível com os provedores atuais do webhook. Esta operação não gira nem
+devolve o segredo e também não recria a assinatura.
 
-Criação bem- sucedida retorna HTTP `201`. Salvar `secret` imediatamente; list/get
-As chamadas nunca o devolvem:
+A criação bem-sucedida retorna HTTP `201`. Salve `secret` imediatamente; as
+operações de listagem e consulta nunca voltam a exibi-lo:
 
 ```json
 {
@@ -267,17 +267,17 @@ As chamadas nunca o devolvem:
 { "type": "channel", "from": "instagram_alias" }
 ```
 
-Para `phone` e `waba`, Easyhook resolve o escopo interno do WhatsApp
-número. Uma assinatura WABA recebe eventos correspondentes de todos os números atualmente
-ligado a esse WABA. `channel`, utilizar o pseudónimo público devolvido para
-Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP ou Mercado Libre
-canal. Interno
-IDs de escopo e Meta Business Portfolio IDs nunca são necessários.
+Para `phone` e `waba`, a Easyhook resolve o escopo interno a partir do número
+do WhatsApp. Uma assinatura da WABA recebe eventos correspondentes de todos os
+números conectados atualmente àquela WABA. Para `channel`, use o alias público
+devolvido para o canal do Messenger, Instagram, Telegram, Gmail, Outlook,
+IMAP/SMTP ou Mercado Libre. IDs internos de escopo e de portfólio empresarial
+da Meta nunca são necessários.
 
-Os números de escopo WhatsApp seguem a mesma normalização internacional que o
-API da mensagem: E.164 ou somente dígitos com um código de chamada de país, visual comum
-separadores, México `52`/`521`, e Argentina móvel `54`/`549` são aceites.
-Números apenas nacionais não são inferidos.
+Os números de escopo do WhatsApp usam a mesma normalização internacional da API
+de mensagens: E.164 ou apenas dígitos com código do país, separadores visuais
+comuns, México `52`/`521` e celulares da Argentina `54`/`549`. A Easyhook não
+infere o país de números escritos apenas no formato nacional.
 
 Descubra as opções válidas sem identificadores de código rígido:
 
@@ -803,41 +803,42 @@ sem assumir um esquema de erro de provedor fixo.
 | `expires_at` | Texto ISO 8601 | Termo da sessão. |
 | `organization` | objeto | Possuindo dados de exibição de organização Easyhook: `name`, `slug`, e facultativo público `logo_url`. |
 | `signup_mode` | string | `cloud_api` ou `coexistence`. |
-| `customer_name`, `customer_email` | string | Referências de chamada opcionais. |
-| `return_url` | string | URL de retorno de chamadas. |
-| `metadata` | objeto | Metadados de correlação fornecidos por chamadas. |
+| `customer_name`, `customer_email` | string | Referências opcionais fornecidas pelo cliente. |
+| `return_url` | string | URL para a qual o navegador retorna ao concluir. |
+| `metadata` | objeto | Metadados de correlação fornecidos pelo cliente. |
 | `waba`, `phone` | objeto | Detalhes do ativo Meta conectado após a conclusão. |
 
 ### `call`
 
-Provedor de uso de eventos de voz `voice` para eventos de roteamento normalizados e reter o
-Prestador subjacente (`telnyx` ou `whatsapp`) em `data.provider`.
+Os eventos de voz usam o provedor público `voice` para o roteamento normalizado
+e mantêm o provedor subjacente (`telnyx` ou `whatsapp`) em `data.provider`.
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `call_id` | string UUID | Estável Easyhook chamar identidade. |
+| `call_id` | string UUID | Identidade estável da chamada na Easyhook. |
 | `provider` | string | `telnyx` ou `whatsapp`. |
 | `direction` | string | `inbound` ou `outbound`. |
-| `from`, `to` | string | Festas de chamadas normalizadas. |
-| `endpoint_id` | string UUID | O endpoint atualmente oferecido ou segurando a chamada. |
+| `from`, `to` | string | Participantes normalizados da chamada. |
+| `endpoint_id` | string UUID | Endpoint que recebeu a oferta ou mantém a chamada atualmente. |
 | `external_agent_id` | string | Identidade do agente API/SIP definida pelo cliente, quando aplicável. |
 | `sequence` | inteiro | Número de tentativa de roteamento. |
 | `lease_until` | Texto ISO 8601 | Tempo em que o Easyhook avança para outro ponto final. |
-| `conversation_type`, `conversation_id` | string | Conversa de Inbox ligada, quando alguém poderia ser resolvido. |
+| `conversation_type`, `conversation_id` | string | Conversa vinculada da Inbox, quando disponível. |
 | `transfer_destination` | E.164 string | Destino externo configurado quando `call.transfer_started` é emitido. |
 
-Subscrever `call.offered` para tocar uma aplicativo do cliente e atomicamente chamar
-`POST /v1/calls/{id}/actions/claim`. `call.claimed` Confirmar o vencedor;
-eventos do ciclo de vida do prestador, tais como `call.ringing`, `call.answered`,
-`call.connect`, `call.hangup`, e `call.terminate` reconciliar estado final. Fazer
-não tocar um endpoint que não foi nomeado na corrente `call.offered` evento.
-`call.transfer_started` confirma que Easyhook reservou a carteira do organização e
-aceitou uma transferência gerenciada para o número externo configurado; transportadora final
-o uso ainda é reconciliado pelo ciclo de vida normal assinado com Telnyx.
+Assine `call.offered` para fazer um aplicativo do cliente tocar e reivindique a
+chamada de forma atômica com `POST /v1/calls/{id}/actions/claim`.
+`call.claimed` confirma o endpoint vencedor. Eventos do provedor como
+`call.ringing`, `call.answered`, `call.connect`, `call.hangup` e
+`call.terminate` reconciliam o estado final. Não faça tocar um endpoint ausente
+do evento `call.offered` atual. `call.transfer_started` confirma que a Easyhook
+reservou saldo da organização e aceitou uma transferência gerenciada para o
+número externo configurado; o uso final é reconciliado pelo ciclo de vida
+assinado da Telnyx.
 
-As respostas de chamada-permissão WhatsApp chegam como uma mensagem interativa com
-`message.interactive.call_permission_reply` contendo a resposta de Meta,
-permanência, tempo de expiração e fonte de resposta.
+As respostas à permissão de chamada do WhatsApp chegam como uma mensagem
+interativa `message.interactive.call_permission_reply`, com a resposta da Meta,
+validade, horário de expiração e origem da resposta.
 
 ### `sync`
 
@@ -858,25 +859,47 @@ canal, tipo de mensagem, permissões de conta e caminho de geração de eventos.
 
 ## Histórico de coexistência
 
-O histórico de coexistência do WhatsApp Business App é normalizado nos mesmos eventos de mensagem pública usados para o tráfego ao vivo:
+O histórico do WhatsApp Business App em Coexistence é normalizado com os mesmos
+eventos públicos de mensagem usados no tráfego ao vivo:
 
-- Mensagens recebidas de um uso de contato `type: message.received` e `message.direction: in`.
-- Mensagens enviadas anteriormente pelo uso do negócio `type: message.echo` e `message.direction: out`.
-- Ambos incluem `message.source: history` para que os consumidores possam distinguir a história sincronizada dos eventos ao vivo.
-- Ambos incluem `message.from` e `message.to` para que os consumidores possam encaminhar a história de entrada e saída sem inferir os participantes da direção.
+- Mensagens recebidas de um contato usam `type: message.received` e `message.direction: in`.
+- Mensagens enviadas anteriormente pela empresa usam `type: message.echo` e `message.direction: out`.
+- Ambas incluem `message.source: history` para distinguir o histórico sincronizado dos eventos ao vivo.
+- Ambas incluem `message.from` e `message.to`, sem exigir que o consumidor deduza os participantes pela direção.
 - `message.history` pode incluir `thread_id`, `status`, `phase`, `chunk_order`, e `progress` quando o Meta os fornece.
 
-As cargas úteis do histórico são reconhecidas e persistiram antes do processamento assíncrono. O Easyhook processa e entrega no máximo 100 eventos por lote. Os IDs de mensagens Meta duplicados não criam mensagens armazenadas duplicadas.
+As cargas do histórico são confirmadas e persistidas antes do processamento
+assíncrono. A Easyhook processa e entrega no máximo 100 eventos por lote. IDs
+de mensagem duplicados da Meta não criam mensagens armazenadas duplicadas.
 
-O histórico inicial e a sincronização do estado do aplicativo estão incluídos sem custo adicional. Apenas uma sincronização pode ser executada por número do WhatsApp de cada vez. Uma organização pode processar até dois de seus números simultaneamente; este é um limite de justiça, não um limite de números conectados ou importações totais. `history.*` e `smb_app_state_sync.*` antes de conectar ou solicitar sincronização, mantenha o endpoint disponível, e espere que grandes contas continuem a importar em segundo plano após Meta terminar a integração.
+O histórico inicial e a sincronização do App State estão incluídos sem custo
+adicional. Apenas uma sincronização pode ser executada por número do WhatsApp
+por vez. Uma organização pode processar até dois números simultaneamente; esse
+é um limite de equidade, não de números conectados nem de importações totais.
+Assine `history.*` e `smb_app_state_sync.*` antes de conectar ou solicitar a
+sincronização, mantenha o endpoint disponível e considere que contas grandes
+podem continuar importando em segundo plano após o onboarding.
 
-Meta documents Histórico como uma importação de até aproximadamente 180 dias e exclui conversas em grupo. Não é o backup completo do iCloud/Google Drive do telefone. Veja a referência oficial do Meta [História Webhook](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/history) e [SMB App State Sync referência](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/smb_app_state_sync).
+A Meta documenta o histórico como uma importação de até aproximadamente 180
+dias, sem conversas em grupo. Ele não é um backup completo do iCloud ou Google
+Drive do telefone. Consulte as referências oficiais da Meta para
+[History](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/history)
+e [SMB App State Sync](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/smb_app_state_sync).
 
-Importações históricas nunca desencadeiam live consent keyword management or replay Flow submission effects. `history.*` eventos webhook do cliente.
+Importações históricas nunca acionam palavras-chave de consentimento em tempo
+real nem repetem os efeitos de uma submissão de Flow. Elas apenas reconstroem o
+histórico e emitem os eventos `history.*` assinados.
 
-Subscrever `history.*` antes de conectar ou solicitar sincronização de coexistência quando o destino deve receber a importação histórica completa. `message.*`; ao vivo WhatsApp Business App ecos usam `smb_message_echo.*`.
+Assine `history.*` antes de conectar ou solicitar uma sincronização de
+Coexistence quando o destino precisar da importação completa. Mensagens
+recebidas em tempo real usam `message.*`; ecos em tempo real do WhatsApp
+Business App usam `smb_message_echo.*`.
 
-O selector de assinatura utiliza o evento do prestador (`history.*`). Easyhook envia `{ "type": "sync.batch", "sync": {...}, "events": [...] }`, com no máximo 100 eventos normalizados em `events`Cada evento mantém o público padrão `type` (`message.received` ou `message.echo`). Nenhum dos dois `message.*` nem `smb_message_echo.*` recebe a importação histórica.
+O seletor de assinatura usa o evento do provedor (`history.*`). A Easyhook envia
+`{ "type": "sync.batch", "sync": {...}, "events": [...] }`, com no máximo
+100 eventos normalizados em `events`. Cada evento mantém o `type` público padrão
+(`message.received` ou `message.echo`). Nem `message.*` nem
+`smb_message_echo.*` recebem a importação histórica.
 
 Envelope completo em lote:
 
@@ -1419,9 +1442,12 @@ Instalar:
 n8n-nodes-easyhook
 ```
 
-Adicionar **Easyhook Trigger**, selecione a credencial e provedor Easyhook, em seguida, escolha entre os eventos compatíveis e contas de escopo conectadas carregadas por Easyhook. Ative o fluxo de trabalho para registrar sua URL de produção e HMAC secreto automaticamente. Desativação apaga a assinatura.
+Adicione **Easyhook Trigger**, selecione a credencial e o provedor e escolha um
+dos eventos compatíveis e escopos conectados carregados pela Easyhook. Ative o
+workflow para registrar automaticamente a Production URL e o segredo HMAC. Ao
+desativá-lo, o n8n remove a assinatura gerenciada.
 
-Para a história da coexistência:
+Para o histórico de Coexistence:
 
 1. Escolher `Provider: WhatsApp`.
 2. Escolher `Event: Coexistence history (history.*)`.
@@ -1429,7 +1455,12 @@ Para a história da coexistência:
 4. Ative o fluxo de trabalho antes de conectar o telefone ou pressionar a sincronização de coexistência em Easyhook.
 5. No aplicativo WhatsApp Business, permita o compartilhamento de histórico e mantenha o aplicativo aberto enquanto a sincronização começa.
 
-Cada lote Easyhook inicia uma execução n8n e se expande para no máximo 100 itens de saída. Inspecione `message.direction` para distinguir a entrada (`in`) de saída (`out`), utilizar `message.source === "history"` para distinguir mensagens importadas do tráfego ao vivo, e inspecionar o `sync` metadados copiados para cada item de gatilho para sessão, cursor, repetição e progresso. O Easyhook cria e assina a assinatura n8n automaticamente; nenhum segundo webhook no portal é necessário.
+Cada lote da Easyhook inicia uma execução do n8n e se expande em até 100 itens
+de saída. Use `message.direction` para distinguir entrada (`in`) e saída (`out`),
+`message.source === "history"` para identificar mensagens importadas e os
+metadados `sync` copiados em cada item para consultar sessão, cursor, reenvio e
+progresso. A Easyhook cria e assina a assinatura gerenciada pelo n8n; não é
+necessário criar um segundo webhook no portal.
 
 Se um fluxo de trabalho estiver inativo ou seu mapeamento antigo rejeitar parte de uma importação, ative o fluxo de trabalho corrigido e use **Reenviar histórico** no correspondente Easyhook no portal. Isto reutiliza a importação armazenada; ele não reconecta o telefone ou solicita outra exportação Meta.
 
