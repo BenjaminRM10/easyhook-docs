@@ -530,13 +530,13 @@ Treat webhook delivery as at-least-once. Deduplicar eventos de ciclo de vida por
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `id` | cuerda | ID de proveedor remoto de rutina. Para WhatsApp esto puede ser un teléfono o un ID de usuario con un sistema operativo (BSUID); no está garantizado que contenga sólo dígitos. |
-| `phone` | cuerda o nula | WhatsApp teléfono en dígitos internacionales mientras Meta lo suministra. Puede estar ausente para conversaciones de nombre de usuario primero. |
-| `user_id` | cuerda o nula | WhatsApp BSUID, tales como `MX.EXAMPLE_CONTACT_ID`. Preferirlo como la clave de contacto estable cuando está presente. |
-| `parent_user_id` | cuerda o nula | Opcional padre BSUID, como `MX.ENT.EXAMPLE_PARENT_ID`, cuando Meta ha habilitado la identidad enlazado-portfolio para el negocio. |
-| `username` | cuerda o nula | Opcional WhatsApp nombre de usuario sin `@`. |
-| `country_code` | cuerda o nula | Código de país opcional suministrado por WhatsApp. |
-| `name` | cuerda | Nombre de contacto / archivo suministrado por el proveedor, cuando esté disponible. |
+| `id` | string | Identificador remoto del proveedor que se puede usar para dirigir mensajes. En WhatsApp puede ser un teléfono o un identificador de usuario limitado al negocio (BSUID); no contiene necesariamente sólo dígitos. |
+| `phone` | string o null | Teléfono WhatsApp en dígitos internacionales, cuando Meta lo proporciona. Puede faltar en conversaciones identificadas por nombre de usuario. |
+| `user_id` | string o null | BSUID de WhatsApp, como `MX.EXAMPLE_CONTACT_ID`. Úsalo preferentemente como clave estable del contacto cuando esté presente. |
+| `parent_user_id` | string o null | BSUID padre opcional, como `MX.ENT.EXAMPLE_PARENT_ID`, cuando Meta habilita la identidad entre portafolios vinculados para el negocio. |
+| `username` | string o null | Nombre de usuario opcional de WhatsApp, sin `@`. |
+| `country_code` | string o null | Código de país opcional proporcionado por WhatsApp. |
+| `name` | string | Nombre del contacto o perfil proporcionado por el proveedor, cuando está disponible. |
 
 ### `message`
 
@@ -981,9 +981,9 @@ Tratar cada elemento de `events` como un mensaje normalizado. El objeto externo 
 - Ordenar mensajes importados por `message.timestamp`, no por el tiempo de llegada webhook. Las conversaciones separadas pueden ser procesadas simultáneamente, por lo que el orden de entrega global no es significativo.
 - Para `message.direction: in`, `contact` es el remitente y `account` es el número de Easyhook receptor.
 - Para `message.direction: out`, `account` es el remitente y `contact` es el receptor.
-- Los nombres de usuario de WhatsApp pueden ocultar el número de teléfono de la persona. Meta luego identifica el contacto con un ID de usuario (BSUID), como por ejemplo `MX.EXAMPLE_CONTACT_ID`. Easyhook almacena alias teléfono/BSUID cuando Meta suministra y preserva el BSUID en `contact.user_id`; las carteras vinculadas elegibles también reciben `contact.parent_user_id`. `contact.phone` y situación `recipient_id` puede estar ausente, mientras normalizado `message.from`/`message.to` permanecer routable con el teléfono o BSUID. Nunca requiera dígitos, invente un teléfono, o tira cartas y puntuación de estos identificadores.
+- Los nombres de usuario de WhatsApp pueden ocultar el teléfono de la persona. Meta identifica entonces al contacto con un identificador limitado al negocio (BSUID), como `MX.EXAMPLE_CONTACT_ID`. Easyhook guarda los alias de teléfono y BSUID cuando Meta proporciona ambos y conserva el BSUID en `contact.user_id`. Los portafolios vinculados elegibles también reciben `contact.parent_user_id`. Pueden faltar `contact.phone` y el campo de estado `recipient_id`; los campos normalizados `message.from`/`message.to` siguen siendo utilizables con el teléfono o BSUID. No exijas que sean numéricos, no inventes un teléfono ni elimines letras o signos de estos identificadores.
 - Durante la ventana de transición de Meta un Webhook puede contener ambos `contact.phone` y `contact.user_id`; guardar ambos. Un Webhook posterior puede contener sólo el BSUID y todavía pertenece al mismo contacto.
-- En registros históricos raros, Meta puede omitir cada campo de contacto remoto. Easyhook emite `type: sync.failed` con `error.code: missing_remote_contact` y `error.provider_message_id` en lugar de publicar un inutilizable `message.received` o `message.echo`Mantenga el resto de la importación y registre este artículo como terminal a menos que Meta posteriormente provea la identidad perdida.
+- En casos poco frecuentes, un registro histórico de Meta puede omitir todos los campos del contacto remoto. Easyhook emite `type: sync.failed` con `error.code: missing_remote_contact` y `error.provider_message_id`, en lugar de publicar un `message.received` o `message.echo` inutilizable. Conserva el resto de la importación y registra ese elemento como un error terminal, salvo que Meta proporcione posteriormente la identidad faltante.
 - No active auto-replies en vivo, detección de palabras clave de consentimiento, u otras automatizaciones de entrada en tiempo real cuando `message.source === "history"` a menos que el comportamiento de repetición sea explícitamente destinado.
 - Una suscripción a la historia puede recibir `sync.failed`; manéjelo separado de los eventos de mensajes y mantenga el flujo de trabajo seguro de reingreso.
 - La entrega es al menos una vez. Easyhook retries falló los lotes hasta cinco veces con backoff; siempre deduplicado por `message.id`.
@@ -1026,7 +1026,7 @@ curl https://api.easyhook.dev/v1/webhooks/WEBHOOK_ID/history-replays/REPLAY_ID \
   -H "Authorization: Bearer eh_live_xxx"
 ```
 
-Los murciélagos de repetición usan el mismo `sync.batch` contrato y añadir `sync.replay: true`. Juego de reproducciones de mensajes `sync.source: history`; juego de replays de contacto `sync.source: smb_app_state_sync`. Guarda de mensajes `message.id`, mientras que los contactos conservan su identidad de evento normalizada. Sólo se permite una repetición activa de cada tipo para el mismo webhook y número.
+Los lotes de reenvío utilizan el mismo contrato `sync.batch` y añaden `sync.replay: true`. Los reenvíos de mensajes usan `sync.source: history`; los de contactos usan `sync.source: smb_app_state_sync`. Los mensajes conservan `message.id` y los contactos conservan su identidad de evento normalizada. Sólo se permite un reenvío activo de cada tipo para el mismo webhook y número.
 
 ### Política histórica de medios de comunicación
 
