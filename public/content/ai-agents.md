@@ -49,8 +49,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/text \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: customer-123-message-456" \
   -d '{
-    "from": "5218661479075",
-    "to": "5215660069997",
+    "from": "15550100002",
+    "to": "15550100003",
     "body": "Hola"
   }'
 ```
@@ -62,8 +62,8 @@ For a scheduled message, also send an application-owned `client_reference`:
 
 ```json
 {
-  "from": "5218661479075",
-  "to": "5215660069997",
+  "from": "15550100002",
+  "to": "15550100003",
   "body": "Recordatorio",
   "at": "2026-07-25T10:00:00-06:00",
   "client_reference": "appointment-reminder-456"
@@ -107,7 +107,7 @@ curl -X POST https://api.easyhook.dev/v1/webhooks \
     "auth_type": "hmac",
     "scope": {
       "type": "phone",
-      "from": "5218661479075"
+      "from": "15550100002"
     }
   }'
 ```
@@ -236,7 +236,7 @@ invalidate successfully imported events.
 | Manage Flows | `/v1/flows` |
 | Manage consent | `/v1/consent` and `/v1/consent/*` |
 
-Consent configuration is per WABA. Copy supports `language: "es" | "en"`, editable opt-in/opt-out headings and bodies, and a footer. Because Meta Flows are immutable after publication, save copy with `PATCH /v1/consent/config` and apply it with `POST /v1/consent/enable`; Easyhook creates a deterministic version and routes future sends to it. `auto_opt_in_enabled: true` optionally schedules Easyhook's opt-in Flow 23 hours after the first live inbound interaction. Do not recreate that timer in an agent or workflow. Easyhook revalidates the service window and current opt-in/opt-out state before dispatch. External consent recorded through `POST /v1/consent` must include auditable evidence supplied by the customer.
+Consent configuration is per WABA. Copy supports `language: "es" | "en" | "pt-BR"`, editable opt-in/opt-out headings and bodies, and a footer. Because Meta Flows are immutable after publication, save copy with `PATCH /v1/consent/config` and apply it with `POST /v1/consent/enable`; Easyhook creates a deterministic version and routes future sends to it. `auto_opt_in_enabled: true` optionally schedules Easyhook's opt-in Flow 23 hours after the first live inbound interaction. Do not recreate that timer in an agent or workflow. Easyhook revalidates the service window and current opt-in/opt-out state before dispatch. External consent recorded through `POST /v1/consent` must include auditable evidence supplied by the customer.
 | Hosted customer onboarding | `POST /v1/onboarding/sessions` |
 | Manage webhook subscriptions | `/v1/webhooks`; update only events with `PATCH /v1/webhooks/{id}` |
 | Create a signed Live Chat identity | `POST /v1/live-chat/identity-tokens` |

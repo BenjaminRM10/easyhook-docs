@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run check:links && vite build",
+    "build": "npm run check:links && npm run check:i18n && vite build",
     "check:links": "node scripts/check-links.mjs",
+    "check:i18n": "node scripts/check-localization.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

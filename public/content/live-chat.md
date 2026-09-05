@@ -34,3 +34,23 @@ Los mensajes y acciones durables consumen wallet con idempotencia. Las lecturas,
 estado y polling no se cobran, por lo que un reconnect o refresh no duplica
 cargos. Consulta los payloads y errores exactos en la
 [referencia completa de la API](/api-reference#easyhook-live-chat).
+
+## Idioma del widget
+
+El widget detecta automáticamente el idioma del navegador y admite español,
+inglés y portugués de Brasil. El fragmento generado por el portal usa
+`data-easyhook-language="auto"`. Para fijar un idioma, cambia ese valor por
+`es`, `en` o `pt-BR`:
+
+```html
+<script
+  src="https://www.easyhook.dev/live-chat/easyhook-chat.js"
+  data-easyhook-key="eh_chat_pk_..."
+  data-easyhook-sitekey="..."
+  data-easyhook-language="auto"
+  async
+></script>
+```
+
+El idioma controla botones, avisos, accesibilidad, fechas y la verificación de
+seguridad. No modifica el contenido escrito por visitantes o agentes.

@@ -34,8 +34,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/text \
   -H "Authorization: Bearer $EASYHOOK_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "from": "5218661479075",
-    "to": "5215660069997",
+    "from": "15550100002",
+    "to": "15550100003",
     "body": "Hola desde Easyhook"
   }'
 ```

@@ -73,7 +73,7 @@ question or sale pack context and does not permit arbitrary conversations.
 - Resource: `Message Action`
 - Operation: `Send Text`
 - Channel: select a connected channel
-- To: `5215660069997`
+- To: `15550100003`
 - Body: `Hello from n8n`
 
 The channel selector stores the same provider-native identifier delivered as
@@ -229,7 +229,7 @@ Text header, body variables, and dynamic URL button:
   {
     "type": "body",
     "parameters": [
-      { "type": "text", "text": "Benjamin" },
+      { "type": "text", "text": "Example User" },
       { "type": "text", "text": "15 July" }
     ]
   },
@@ -265,7 +265,7 @@ Media header and named body variable:
         {
           "type": "text",
           "parameter_name": "customer_name",
-          "text": "Benjamin"
+          "text": "Example User"
         }
       ]
     }
@@ -380,8 +380,8 @@ Easyhook delivers synchronization data in batches of at most 100 events. One bat
   "id": "event_uuid",
   "type": "message.echo",
   "channel": "whatsapp",
-  "account": { "id": "980912725115744", "phone": "5218661479075" },
-  "contact": { "id": "5214445087305" },
+  "account": { "id": "123456789012345", "phone": "15550100002" },
+  "contact": { "id": "15550100004" },
   "message": {
     "id": "wamid...",
     "direction": "out",
@@ -389,7 +389,7 @@ Easyhook delivers synchronization data in batches of at most 100 events. One bat
     "type": "text",
     "text": "Previous reply",
     "history": {
-      "thread_id": "5214445087305",
+      "thread_id": "15550100004",
       "status": "READ",
       "phase": 1,
       "chunk_order": 2,
