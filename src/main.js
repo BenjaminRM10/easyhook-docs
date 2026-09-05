@@ -157,8 +157,11 @@ function updateNavigation() {
 async function loadPage() {
   const article = document.querySelector("#doc");
   try {
-    let response = await fetch(`/content/${state.language}/${state.page}.md`);
-    if (!response.ok) response = await fetch(`/content/${state.page}.md`);
+    const localizedPath = state.language === "en"
+      ? `/content/${state.page}.md`
+      : `/content/${state.language}/${state.page}.md`;
+    let response = await fetch(localizedPath);
+    if (!response.ok && state.language !== "en") response = await fetch(`/content/${state.page}.md`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const markdown = await response.text();
     article.innerHTML = `<div class="page-actions"><button data-copy-page>${iconSvg(Clipboard)}<span>${text(copy.copyPage)}</span></button></div>${DOMPurify.sanitize(marked.parse(markdown), { ADD_ATTR: ["target"] })}`;
@@ -215,7 +218,17 @@ async function openSearch() {
 async function runSearch(query) {
   const target = document.querySelector(".search-results");
   const normalized = query.trim().toLowerCase();
-  const documents = await Promise.all(pages.map(async (page) => ({ ...page, text: await fetch(`/content/${state.language}/${page.slug}.md`).then((response) => response.ok ? response.text() : fetch(`/content/${page.slug}.md`).then((fallback) => fallback.text())) })));
+  const documents = await Promise.all(pages.map(async (page) => {
+    const localizedPath = state.language === "en"
+      ? `/content/${page.slug}.md`
+      : `/content/${state.language}/${page.slug}.md`;
+    return {
+      ...page,
+      text: await fetch(localizedPath).then((response) => response.ok
+        ? response.text()
+        : fetch(`/content/${page.slug}.md`).then((fallback) => fallback.text())),
+    };
+  }));
   const matches = documents.filter((document) => !normalized || `${pageLabel(document)} ${document.text}`.toLowerCase().includes(normalized)).slice(0, 12);
   target.innerHTML = matches.map((match) => `<button data-result="${match.slug}"><strong>${pageLabel(match)}</strong><span>${text(copy.groups[match.group])}</span>${iconSvg(ChevronRight, 16)}</button>`).join("") || `<p class="empty-search">${text(copy.noResults)}</p>`;
   target.querySelectorAll("[data-result]").forEach((button) => button.addEventListener("click", () => { document.querySelector("#search-dialog").close(); navigate(button.dataset.result); }));
