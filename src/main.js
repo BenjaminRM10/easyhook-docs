@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import { contentPath } from "./content-path.js";
 import { marked } from "marked";
 import { Check, ChevronDown, ChevronRight, Clipboard, ExternalLink, Menu, Moon, Search, Sun, X } from "lucide";
 import "./styles.css";
@@ -157,11 +158,7 @@ function updateNavigation() {
 async function loadPage() {
   const article = document.querySelector("#doc");
   try {
-    const localizedPath = state.language === "en"
-      ? `/content/${state.page}.md`
-      : `/content/${state.language}/${state.page}.md`;
-    let response = await fetch(localizedPath);
-    if (!response.ok && state.language !== "en") response = await fetch(`/content/${state.page}.md`);
+    const response = await fetch(contentPath(state.language, state.page));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const markdown = await response.text();
     article.innerHTML = `<div class="page-actions"><button data-copy-page>${iconSvg(Clipboard)}<span>${text(copy.copyPage)}</span></button></div>${DOMPurify.sanitize(marked.parse(markdown), { ADD_ATTR: ["target"] })}`;
@@ -219,14 +216,12 @@ async function runSearch(query) {
   const target = document.querySelector(".search-results");
   const normalized = query.trim().toLowerCase();
   const documents = await Promise.all(pages.map(async (page) => {
-    const localizedPath = state.language === "en"
-      ? `/content/${page.slug}.md`
-      : `/content/${state.language}/${page.slug}.md`;
     return {
       ...page,
-      text: await fetch(localizedPath).then((response) => response.ok
-        ? response.text()
-        : fetch(`/content/${page.slug}.md`).then((fallback) => fallback.text())),
+      text: await fetch(contentPath(state.language, page.slug)).then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      }),
     };
   }));
   const matches = documents.filter((document) => !normalized || `${pageLabel(document)} ${document.text}`.toLowerCase().includes(normalized)).slice(0, 12);

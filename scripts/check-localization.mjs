@@ -1,19 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { contentPath } from "../src/content-path.js";
 
 const contentRoot = path.resolve("public/content");
 const pages = fs.readdirSync(contentRoot).filter((name) => name.endsWith(".md")).sort();
-const spanishSources = new Set([
-  "agent-skill.md", "channels.md", "chatwoot.md", "getting-started.md",
-  "inbox-mobile.md", "live-chat.md", "onboarding.md", "supabase-auth.md",
-]);
 const failures = [];
 
 function localizedPath(language, page) {
-  const sourceLanguage = spanishSources.has(page) ? "es" : "en";
-  return language === sourceLanguage
-    ? path.join(contentRoot, page)
-    : path.join(contentRoot, language, page);
+  return path.resolve("public", `.${contentPath(language, page.replace(/\.md$/, ""))}`);
 }
 
 function inlineCode(markdown) {
