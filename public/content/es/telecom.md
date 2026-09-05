@@ -6,13 +6,13 @@ Easyhook ofrece un contrato estable para números, SMS, MMS y llamadas sin expon
 
 Easyhook expone recursos estables (`numbers`, `messages`, `calls`) en lugar de objetos nativos de proveedor. Un número registra un vector de capacidad, por lo que los clientes pueden preguntar lo que soporta en lugar de ramificar en Telnyx, Infobip, DIDLogic, WhatsApp Calling o un futuro proveedor.
 
-Las credenciales del proveedor son secretos de plataforma. La autorización del arrendatario siempre viene de la clave de Easyhook API y cada número de búsqueda/llamada está en alcance de su organización.
+Las credenciales del proveedor son secretos de la plataforma. La autorización de la organización siempre procede de su clave API de Easyhook. Cada consulta de números o llamadas queda limitada a esa organización.
 
 ## Scopes
 
 - `telephony:read`: disponibilidad de números, números conectados y estado de llamada.
 - `telephony:write`: SMS/MMS y comandos de llamada.
-- Existencia `messages:read` / `messages:write` las claves siguen siendo aceptadas durante el período de migración.
+- Las claves existentes con `messages:read` / `messages:write` siguen siendo válidas durante el período de migración.
 
 Las nuevas claves de API predeterminadas incluyen ambos alcances de telefonía.
 
@@ -22,7 +22,7 @@ Las nuevas claves de API predeterminadas incluyen ambos alcances de telefonía.
 
 `GET /v1/telecom/capabilities`
 
-Los proveedores de devoluciones configurados en el despliegue y las versiones de contrato estables.
+Devuelve los proveedores configurados en el despliegue y las versiones estables del contrato.
 
 ### Números conectados
 
@@ -53,7 +53,7 @@ Resultados expuestos `activation_price`, `initial_period_price`, `monthly_price`
 }
 ```
 
-`Idempotency-Key` Easyhook vuelve a buscar el número exacto, rechaza los precios fijos, incluyendo una cita que cruzó un límite del mes UTC, verifica la disponibilidad regulatoria, se reserva el total `due_today` cantidad en la billetera y sólo entonces pedidos del proveedor. Una cotización cambia devuelve `409 telecom_price_changed` con los valores de activación actual, de período inicial, mensual, de día a día, de duración limitada y de renovación. Los números que requieren un flujo de trabajo regulatorio permanecen indisponibles hasta que se implemente ese flujo de trabajo.
+`Idempotency-Key` es obligatorio. Easyhook vuelve a consultar el número exacto, rechaza cotizaciones desactualizadas —incluidas las que cruzaron el cambio de mes UTC—, verifica los requisitos regulatorios y reserva el importe completo de `due_today` en la wallet antes de solicitar la compra al proveedor. Si cambia la cotización, devuelve `409 telecom_price_changed` con los importes actuales de activación, período inicial, mensualidad y total a pagar, junto con las fechas del período y la renovación. Los números que requieren un trámite regulatorio no están disponibles hasta que ese flujo esté implementado.
 
 Los perfiles de mensajería son recursos de Easyhook abarcados a una organización y un programa de consentimiento. Los números de SMS/MMS-capable requieren un perfil activo que apoye al país de destino; cuando `messaging_profile_id` Se omite, Easyhook utiliza el perfil por defecto único de esa organización y las disposiciones que automáticamente se encuentra en la primera compra de números compatibles cuando no existe ninguno. Los IDs de perfil de operador, la configuración de estado de exclusión y palabras clave nunca son globales o aceptados por las solicitudes de los clientes.
 
@@ -80,16 +80,16 @@ la tarifa de destino y la capacidad de número están habilitados.
 
 Ambos números deben ser E.164. `from` debe ser un número activo propiedad de la organización autenticada con la capacidad necesaria. Uso `Idempotency-Key` por cada comando.
 
-Para SMS o MMS, Easyhook coloca una cartera conservadora y reembolsable antes
-contactar con el portaaviones. `202` la respuesta expone que se mantiene como
-`maximum_reserved_cost`; no es la carga final. Cuando la firma
-`message.finalized` evento llega, Easyhook resuelve la tarifa actual del cliente
-contra la cantidad facturable confirmada y devuelve la retención no utilizada. Esto permite
-destino y precios dependientes del transportista sin adivinar una tasa de transporte
-antes de la entrega. Los mensajes entrantes no reciben más tarde `message.finalized`
-evento. Easyhook crea una sujeción determinista de la firma
-`message.received` callback y lo liquida inmediatamente desde el coste del transportista en
-ese mismo callback, devolviendo cualquier saldo no utilizado.
+Para SMS o MMS, Easyhook reserva un importe conservador y reembolsable en la wallet
+antes de contactar al operador. La respuesta `202` presenta esa reserva como
+`maximum_reserved_cost`; no es el cobro final. Cuando llega el evento firmado
+`message.finalized`, Easyhook aplica la tarifa del cliente al consumo confirmado
+y devuelve el saldo reservado que no se utilizó. Así admite precios que dependen
+del destino y del operador sin adivinar el costo antes de la entrega.
+Los mensajes entrantes no reciben un evento posterior `message.finalized`.
+Easyhook crea una reserva determinista a partir del callback firmado
+`message.received` y la liquida inmediatamente con el costo del operador incluido
+en ese mismo callback, devolviendo el saldo no utilizado.
 
 ### Inicie una llamada
 
@@ -105,16 +105,15 @@ ese mismo callback, devolviendo cualquier saldo no utilizado.
 }
 ```
 
-Para las campañas de IA de salida, seleccione un agente de ElevenLabs para el papel de salida.
-Puede ser el mismo agente utilizado para llamadas entrantes o una diferente.
-agente es útil cuando el mensaje de apertura, el impulso o las herramientas difieren, pero Easyhook
-no requiere esa separación.
-Easyhook origina la pierna PSTN, espera hasta que la persona responda, y luego
-puentes sobre SIP al agente de salida configurado; el audio no es proxiado
-a través de Easyhook. El agente recibe el per-call opcional `context` como tal
-sanitized `X-Easyhook-*` Cabeceras SIP ( cuerdas escalar, números y booleanos
-sólo; no credenciales o contenido de mensajes). Prompts, voces y herramientas permanecen
-manejado en ElevenLabs.
+Para llamadas salientes con IA, selecciona un agente de ElevenLabs para ese rol.
+Puede ser el mismo agente de las llamadas entrantes u otro. Separarlos resulta
+útil si cambian el saludo, las instrucciones o las herramientas, pero no es obligatorio.
+Easyhook inicia el tramo PSTN, espera a que la persona conteste y lo conecta
+mediante SIP con el agente saliente configurado. El audio no pasa por Easyhook.
+El agente recibe el `context` opcional de cada llamada en cabeceras SIP
+`X-Easyhook-*` saneadas: sólo cadenas, números y booleanos, sin credenciales
+ni contenido de mensajes. Las instrucciones, voces y herramientas se administran
+en ElevenLabs.
 
 ```json
 {
@@ -127,16 +126,16 @@ manejado en ElevenLabs.
 }
 ```
 
-Las llamadas iniciadas por IA requieren una voz explícita previa opt-in para el exacto
-organización, número de Easyhook y destino. Grabar con
-`POST /v1/consent` utilizando `channel: "voice"`, `status: "opt_in"`, a non-empty
-`evidence` objeto y `captured_at`; registro `opt_out` inmediatamente cuando el
-El contacto retira el permiso. Easyhook impone un intento de IA por hora y
-tres por rodaje 24 horas por número/contacto, además de idempotencia.
+Las llamadas iniciadas por IA requieren consentimiento explícito previo para voz,
+asociado a la organización, el número de Easyhook y el destino exactos. Regístralo con
+`POST /v1/consent`, usando `channel: "voice"`, `status: "opt_in"`, un objeto
+`evidence` no vacío y `captured_at`. Registra `opt_out` inmediatamente cuando el
+contacto retire el permiso. Además de la idempotencia, Easyhook permite un intento
+con IA por hora y tres en cualquier período de 24 horas por número y contacto.
 La API devuelve `voice_ai_consent_required`, `voice_ai_contact_opted_out`,
-`voice_ai_outreach_too_soon` o `voice_ai_outreach_daily_limit` cuando una llamada es
-bloqueado. Estas reglas de voz complementan (y no reemplazan) mensajería Telnyx
-Manejo de STOP/START.
+`voice_ai_outreach_too_soon` o `voice_ai_outreach_daily_limit` cuando bloquea
+una llamada. Estas reglas de voz complementan, sin sustituir, el manejo de
+STOP/START de Telnyx para mensajería.
 
 `POST /v1/calls` nunca acepta un ID arbitrario de un agente de ElevenLabs.
 `handler: "ai"`, Easyhook utiliza sólo el agente saliente que una organización
@@ -171,7 +170,7 @@ Para WhatsApp Calling, utilice un arrendatario `phone_id` (o su remitente config
 }
 ```
 
-Las llamadas WhatsApp iniciadas por negocios requieren permiso del usuario. Meta devuelve su error de llamada documentado cuando el permiso está ausente. Los medios nunca atraviesan Easyhook: el cliente negocia WebRTC con Meta o Telnyx mientras Easyhook maneja autorización, enrutamiento, estado, billetera y webhooks normalizados. Para Telnyx, la respuesta contiene `webrtc.token` y `webrtc.dial`; llamada `TelnyxRTC.newCall` para salida WhatsApp, encuesta `GET /v1/calls/{call_id}/signaling` hasta `session.ready` e instalar la respuesta SDP devuelta como la descripción remota de la conexión entre pares.
+Las llamadas de WhatsApp iniciadas por la empresa requieren permiso del usuario. Meta devuelve su error documentado cuando falta ese permiso. El audio no atraviesa Easyhook: el cliente negocia WebRTC con Meta o Telnyx, mientras Easyhook gestiona autorización, enrutamiento, estado, wallet y webhooks normalizados. Para Telnyx, la respuesta contiene `webrtc.token` y `webrtc.dial`; utiliza esos valores normalizados en `TelnyxRTC.newCall`. Para llamadas salientes de WhatsApp, consulta `GET /v1/calls/{call_id}/signaling` hasta que `session.ready` sea verdadero y establece la respuesta SDP recibida como descripción remota de la conexión WebRTC.
 
 Solicitar permiso para llamar a WhatsApp iniciado por el negocio antes de marcar:
 
@@ -179,7 +178,7 @@ Compruebe el permiso actual y las acciones actualmente permitidas de Meta primer
 
 `GET /v1/whatsapp/calling/permissions?from=15551234567&to=528441234567`
 
-La respuesta preserva la de Meta `permission_status` y límites de acción. `start_call` se permite; enviar una solicitud de permiso sólo cuando `send_call_permission_request` está permitido.
+La respuesta conserva `permission_status` y los límites de acciones de Meta. Llama sólo cuando esté permitido `start_call`; solicita permiso sólo cuando esté permitido `send_call_permission_request`.
 
 `POST /v1/whatsapp/calling/permissions`
 
@@ -207,7 +206,7 @@ Meta controla la elegibilidad, el vencimiento y los límites de tarifas. Easyhoo
 }
 ```
 
-Use exactamente uno de los `user_id` o `external_agent_id`. Web, Android y iOS endpoints reciben un Telnyx WebRTC de corta duración JWT y un ID de punto final estable. `POST /v1/call-endpoints/{endpoint_id}/token`; Easyhook nunca devuelve una contraseña de SIP del cliente. `endpoint_key`; un punto final es itinerable sólo mientras `available` y visto en los últimos 90 segundos.
+Usa exactamente uno de estos campos: `user_id` o `external_agent_id`. Los endpoints web, Android e iOS reciben un JWT temporal de Telnyx WebRTC y un identificador estable. Renueva el token mediante `POST /v1/call-endpoints/{endpoint_id}/token`; Easyhook nunca devuelve una contraseña SIP del cliente. Mantén activo el endpoint actualizando el mismo `endpoint_key`: sólo puede recibir llamadas mientras esté `available` y haya registrado actividad en los últimos 90 segundos.
 
 Uso de puntos finales externos `external_agent_id`A `sip` endpoint debe proporcionar un validado `provider_address` tales como `sip:agent@example.com`; una llamada de Telnyx se ofrece a `api` endpoint sólo cuando también tiene una dirección SIP proveedor, porque un Webhook solo no puede llevar audio. `api` endpoint without a SIP address: claim returns the short-lived SDP offer and the integration answers through `pre-accept` y `accept`. Los endpoints SIP no son seleccionados para WhatsApp porque Meta utiliza su contrato de llamada WebRTC/SDP en lugar de una pierna SIP cliente.
 
@@ -227,41 +226,41 @@ los segundos conectados exactos. Easyhook reserva y liquida el costo PSTN. Meta
 factura WhatsApp Calling directamente al WABA del cliente y Easyhook sólo cobra
 su tarifa de plataforma. Las llamadas rechazadas o sin respuesta se liquidan en cero.
 
-Una solicitud de autorización de llamada de WhatsApp coloca una cartera reembolsable y se asienta
-su cuota de operación sólo después de que Meta acepte la solicitud.
-libera la suspensión completa.
+Una solicitud de permiso para llamadas de WhatsApp reserva saldo reembolsable
+en la wallet y liquida su cargo por operación sólo cuando Meta la acepta.
+Si el proveedor rechaza la solicitud, se libera la reserva completa.
 
 ### Contrato de respuesta
 
-- `POST /v1/calls/{call_id}/actions/claim` atomically wins a call for `endpoint_id`.
+- `POST /v1/calls/{call_id}/actions/claim` asigna atómicamente la llamada a `endpoint_id`.
 - Para inbound WhatsApp, reclamar devuelve la oferta SDP de Meta. Generar una respuesta, llamar `pre-accept`, establecer WebRTC, luego llamar `accept` con la misma respuesta SDP; esto evita el audio recortado al principio y sigue el contrato de sesión de Meta.
 - `POST /v1/calls/{call_id}/actions/pre-accept` con `endpoint_id` y `sdp`.
 - `POST /v1/calls/{call_id}/actions/accept` con `endpoint_id` y `sdp`.
 - `POST /v1/calls/{call_id}/actions/decline` ofrece la llamada al siguiente punto final elegible.
 - `POST /v1/calls/{call_id}/actions/hangup` termina Telnyx o WhatsApp a través del proveedor correcto.
 
-El enrutamiento del equipo predeterminado es deliberadamente silencioso: el agente disponible asignado primero, luego el agente menos respaldado; los propietarios/admins son retrocesos. Exactamente un punto final anillos durante 20 segundos. Cloud Tasks expira el contrato de arrendamiento y ofrece el siguiente punto final compatible. API/SIP endpoints participan en el mismo orden, por lo que las aplicaciones del cliente pueden responder sin utilizar el Easyhook inbox, pero Easyhook nunca ofrece un proveedor para llevar el endpoint
+El enrutamiento predeterminado evita hacer sonar a todo el equipo: primero selecciona al agente asignado si está disponible y después al que lleva más tiempo sin recibir una oferta. Los propietarios y administradores actúan como respaldo. Sólo suena un endpoint durante 20 segundos. Cloud Tasks hace vencer ese intento y ofrece la llamada al siguiente endpoint compatible. Los endpoints API/SIP participan en el mismo orden, por lo que las aplicaciones del cliente pueden responder sin usar el inbox de Easyhook. Nunca se ofrece una llamada a un endpoint incapaz de transportar su audio.
 
 Lea o actualice la política de un número con `GET /v1/call-routing` y
-`PATCH /v1/call-routing`. Uso `?phone_id={id}` para un número Telnyx comprado,
+`PATCH /v1/call-routing`. Usa `?phone_id={id}` para un número Telnyx comprado,
 o `?phone_id={id}&channel=whatsapp` para un teléfono WhatsApp.
-sin embargo `phone_id` sigue siendo sólo como un retroceso de compatibilidad para los números que sí
-el portal siempre configura un número de hormigón.
-controla las llamadas corrientes de entrada, retroceso cuando un agente de IA
-no responde, y una entrega humana solicitada por AI. `destinations` es una orden
-lista conteniendo en la mayoría de una `web` destino, en la mayoría de un `mobile` destino,
-y cualquier lista de propiedad de los arrendatarios `external_phone` destinos en formato E.164.
-WhatsApp invalida `external_phone` destinos. Sólo un destino
-endpoint se ofrece a la vez; la piscina de teléfono externo selecciona a la mayoría de una
-número antes de volver a la web/móvil en el próximo intento.
-en el mismo uso prioritario `external_phone_strategy: "round_robin"` o `"random"`.
+La solicitud antigua sin `phone_id` se conserva sólo por compatibilidad para los
+números que todavía no tienen una configuración propia. El portal siempre configura
+un número concreto. Su política controla las llamadas entrantes normales, el respaldo
+cuando la IA no contesta y las transferencias a una persona solicitadas por la IA.
+`destinations` es una lista ordenada con un máximo de un destino `web`, uno `mobile`
+y una lista de destinos `external_phone` de la organización en formato E.164.
+La configuración de WhatsApp rechaza destinos `external_phone`. Sólo se ofrece
+la llamada a un endpoint a la vez. El grupo de teléfonos externos selecciona un único
+número; si no contesta, el siguiente intento pasa al portal o a la app móvil.
+Los teléfonos con la misma prioridad usan `external_phone_strategy: "round_robin"` o `"random"`.
 
-Estrategias `assigned_then_round_robin` (default), `round_robin`, y
-`api_only`; los límites configurables son de 8 a 30 segundos por intento y 1–20 intentos.
-`api_only` portal deshabilitado deliberadamente, retroceso de teléfono móvil y externo.
-Múltiples dispositivos pertenecientes a un agente siguen siendo puntos finales separados, pero sólo los
-select endpoint recibe la oferta privada. Una oferta rechazada o caducada
-Avances al siguiente punto final elegible en lugar de sonar cada dispositivo.
+Las estrategias son `assigned_then_round_robin` (predeterminada), `round_robin` y
+`api_only`. Se pueden configurar entre 8 y 30 segundos por intento y entre 1 y 20 intentos.
+`api_only` desactiva expresamente el respaldo al portal, la app móvil y los teléfonos externos.
+Los dispositivos de un mismo agente siguen siendo endpoints separados, pero sólo
+el seleccionado recibe la oferta privada. Si se rechaza o vence, la llamada pasa
+al siguiente endpoint elegible, en lugar de hacer sonar todos los dispositivos.
 
 ```json
 {
@@ -278,43 +277,41 @@ Avances al siguiente punto final elegible en lugar de sonar cada dispositivo.
 }
 ```
 
-Una pierna PSTN externa se crea sólo cuando su vuelta llega. Easyhook primero
-reserva la billetera organización por su duración máxima, firma el destino exacto
-en la pierna del transportista, establece el uso real del proveedor desde el costo de llamada verificado
-eventos, y devuelve la reserva no usada. Un precio o falla de la cartera nunca
-cae de nuevo a un número o balance de otra organización.
+El tramo PSTN hacia un teléfono externo sólo se crea cuando le corresponde el turno.
+Easyhook reserva primero saldo en la wallet de la organización para la duración máxima,
+incluye el destino exacto en la autorización firmada del tramo, liquida el consumo
+real según los eventos de costo verificados y devuelve la reserva no utilizada.
+Un error de tarifa o saldo nunca provoca el uso de un número o saldo de otra organización.
 
 Portal y móvil utilizan el mismo tiempo de ejecución a través de servidores autorizados `/admin/calls/*` rutas. El portal Vercel expone sólo un permitido bajo `/api/calls/*`, preserva la firma de organización/actor autenticado y nunca envía una clave de API de cliente al navegador o teléfono. Las llamadas iniciadas desde una bandeja de entrada utilizan la misma política de préstamo del proveedor: los costos de transportista facturados a Easyhook utilizan una reserva de billetera, mientras que WhatsApp Calling es facturado por Meta directamente a la WABA del cliente y por lo tanto no crea ninguna reserva de costo del proveedor Easyhook.
 
-### ElevenLabs agentes de voz (intección portuaria)
+### Agentes de voz ElevenLabs (integración del portal)
 
-Las organizaciones pueden conectar su propia clave de API de ElevenLabs desde el portal bajo
-Integración. Easyhook valida la llave, la almacena encriptada en el arrendatario
-bóveda secreta y expone sólo el estado de conexión y el agente de la organización
-nombres. La clave nunca se devuelve a un navegador, aplicación móvil o webhook cliente.
+Las organizaciones pueden conectar su propia clave API de ElevenLabs desde
+Integraciones en el portal. Easyhook la valida y la guarda cifrada en el almacén
+de secretos de la organización. Sólo expone el estado de conexión y los nombres
+de sus agentes. La clave nunca se devuelve al navegador, la app móvil ni los webhooks del cliente.
 
-El portal asigna un agente de inteligencia artificial de once laboratorios y,
-opcionalmente, un agente saliente a un número activo de Easyhook Telnyx. Ambos roles
-puede utilizar el mismo agente; Easyhook no selecciona uno implícitamente para el outbound
-llamadas.
-Easyhook importa el número público para el enrutamiento inbound y utiliza un privado,
-identificador SIP no-dialable para routing outbound. Telnyx envía audio directamente
-a ElevenLabs; Easyhook no proxy o transcribe el audio. Cada número tiene
-su propia unión:
+El portal permite asignar un agente de ElevenLabs para llamadas entrantes y,
+opcionalmente, otro para salientes a un número Telnyx activo de Easyhook. Ambos roles
+pueden usar el mismo agente; Easyhook no selecciona implícitamente uno para las salientes.
+Easyhook importa el número público para las entrantes y utiliza un identificador SIP
+privado, no marcable, para las salientes. Telnyx envía el audio directamente a ElevenLabs;
+Easyhook no lo retransmite ni transcribe. Cada número tiene su propia vinculación:
 
-- `ai_only`: OnceLabs respuestas; no se ofrece un punto final humano.
-- `ai_then_agents`: OnceLabs recibe el primer intento, luego humano normal
-  el enrutamiento se utiliza si el intento de la IA no está disponible o expira.
+- `ai_only`: responde ElevenLabs; no se ofrece la llamada a un endpoint humano.
+- `ai_then_agents`: ElevenLabs recibe el primer intento. Si no está disponible
+  o el intento vence, se aplica el enrutamiento normal del equipo.
 
-`human_transfer_enabled` es independiente de esos modos de respuesta inicial.
-habilitado, Easyhook instala un gestionado `transfer_to_number` herramienta del sistema en
-El agente elegido de ElevenLabs. Una transferencia solicitada durante una AI activa
-la conversación utiliza SIP REFER a un objetivo Easyhook opaque HMAC. Easyhook
-verifica la sesión vinculante, organización, número y llamada activa, luego utiliza
-la misma política de destino por número descrita anteriormente.
-recibe la lista de teléfonos externos reales. Otras herramientas de agente y transferencia de clientes
-las reglas se conservan. `api_only` routing deliberadamente deshabilita el humano manejado
-desvío.
+`human_transfer_enabled` es independiente del modo de respuesta inicial. Al activarlo,
+Easyhook instala la herramienta de sistema administrada `transfer_to_number` en
+el agente de ElevenLabs seleccionado. Una transferencia durante una conversación
+activa con IA utiliza SIP REFER hacia un destino opaco de Easyhook firmado con HMAC.
+Easyhook verifica la vinculación, la organización, el número y la sesión activa;
+después aplica la misma política de destinos por número descrita arriba.
+ElevenLabs nunca recibe la lista real de teléfonos externos. Se conservan las demás
+herramientas del agente y las reglas de transferencia del cliente. El enrutamiento
+`api_only` desactiva expresamente esta transferencia humana administrada.
 
 Las rutas Portal-admin son:
 
