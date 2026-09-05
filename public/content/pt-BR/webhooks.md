@@ -6,8 +6,8 @@ O Easyhook envia um Objetivo JSON compacto por evento. O formato é partilhado p
 WhatsApp, Messenger, Instagram, Telegram, Gmail, Outlook, IMAP/SMTP e-mail,
 Mercado Libre, TikTok Mensagens de Negócios, SMS/MMS e chamadas de voz.
 
-Utilização de eventos do ciclo de vida do número de telecomunicações `number.*`, incluindo `number.renewal_due`,
-`number.renewed`, `number.grace` e `number.released`. Inscrever-se com o fornecedor
+Os eventos do ciclo de vida de números de telecomunicações usam `number.*`, incluindo `number.renewal_due`,
+`number.renewed`, `number.grace` e `number.released`. Assine pelo provedor
 `sms`, `voice` ou `*` Se for caso disso.
 
 As assinaturas de telecomunicações usam o provedor `sms` ou `voice`. Os seletores compatíveis incluem
@@ -18,7 +18,7 @@ As assinaturas de telecomunicações usam o provedor `sms` ou `voice`. Os seleto
 ## Princípios
 
 - `id` é o único UUID Easyhook exposto. Use- o para desduplicar eventos.
-- `channel` Identifica o prestador: `whatsapp`, `messenger`, `instagram`,
+- `channel` identifica o provedor: `whatsapp`, `messenger`, `instagram`,
   `telegram`, `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, `tiktok`, `sms`,
   ou `voice`.
 - Os identificadores de conta, contato e mensagem vêm do provedor, e não de IDs internos do banco de dados da Easyhook.
@@ -47,8 +47,8 @@ As assinaturas de telecomunicações usam o provedor `sms` ou `voice`. Os seleto
 }
 ```
 
-Tipos de chamadas são `call.initiated`, `call.answered`, `call.ended`, e
-`call.cost_updated`. SMS/MMS reutiliza o normal `message.*` bloco e o mesmo
+Os tipos de chamada incluem `call.initiated`, `call.answered`, `call.ended` e
+`call.cost_updated`. SMS/MMS reutiliza o bloco normalizado `message.*` e o mesmo
 Número de negócios em `account.id`.
 
 ## Mensagens de texto
@@ -75,7 +75,7 @@ Número de negócios em `account.id`.
 }
 ```
 
-O mesmo evento do Messenger ou Instagram só muda `channel` e as identidades do prestador:
+O mesmo evento do Messenger ou Instagram altera apenas `channel` e os identificadores do provedor:
 
 ```json
 {
@@ -97,11 +97,11 @@ TikTok usa o mesmo envelope normalizado. `account.id` é o conectado
 ID aberto da conta comercial, `contact.id` é o identificador de usuário TikTok estável,
 e `message.thread_id` é o identificador de conversa exigido pelo TikTok.
 Todos os três valores e IDs de mensagens são opacos e não devem ser reformatados.
-Easyhook aceita qualquer um dos dois `contact.id` ou `message.thread_id` como `to` para uma
-conversação TikTok existente. Um botão de resposta TikTok
-a seleção usa o mesmo `message.quick_reply` bloco como outro suportado
-canais. As restrições de privacidade do provedor são emitidas como um evento não-mensagem
-Em vez de fabricar dados de mensagem não disponíveis.
+A Easyhook aceita `contact.id` ou `message.thread_id` como `to` para uma
+conversa existente do TikTok. A seleção de um botão de resposta do TikTok usa o
+mesmo bloco `message.quick_reply` que os demais canais compatíveis. As restrições
+de privacidade do provedor são emitidas como um evento que não é de mensagem, em
+vez de fabricar dados indisponíveis.
 
 Os provedores de e-mail usam o mesmo evento com campos específicos de e-mail:
 
@@ -133,8 +133,8 @@ Os provedores de e-mail usam o mesmo evento com campos específicos de e-mail:
 }
 ```
 
-`channel` pode em vez disso ser `gmail` ou `imap_smtp`. Tratar `message.html` como
-entrada não confiável e renderizá-lo apenas após a higienização ou dentro de uma caixa de areia.
+`channel` também pode ser `gmail` ou `imap_smtp`. Trate `message.html` como
+entrada não confiável e renderize-o somente após sanitização ou em um ambiente isolado.
 
 Mercado Libre perguntas e mensagens pós-venda usam o mesmo envelope:
 
@@ -157,8 +157,8 @@ Mercado Libre perguntas e mensagens pós-venda usam o mesmo envelope:
 }
 ```
 
-Utilização `contact.id` ou `message.from` como `to` ao responder. Perguntas sobre o produto
-chegar como `question:<id>` e conversas pós-venda como `pack:<id>`.
+Use `contact.id` ou `message.from` como `to` ao responder. Perguntas sobre produtos
+chegam como `question:<id>` e conversas pós-venda como `pack:<id>`.
 
 ## API de Assinatura Pública
 
@@ -349,7 +349,7 @@ Filtros comuns de eventos:
 
 Os provedores de E-mail usam o mesmo `message.*` assinatura como os outros canais.
 O seu normalizado `message` bloco adiciona `subject`, opcional `html`, `thread_id`,
-`message_id_header`, `in_reply_to`, e `references`. Utilização `message.id` como
+`message_id_header`, `in_reply_to` e `references`. Use `message.id` como
 `reply_to_message_id` ao responder através de `POST /v1/messages/email`. Render
 `html` como conteúdo não confiável e usar os valores de thread/header quando necessário.
 
@@ -388,7 +388,7 @@ separadamente para conversas importadas. Estas famílias nunca se sobrepõem.
 | `consent.updated` | `consent` |
 | `onboarding.created` | `onboarding` |
 | `onboarding.completed` | `onboarding` |
-| `sync.failed` | `sync` para avarias do ciclo de vida, ou `error` para um erro de item/fornecedor terminal |
+| `sync.failed` | `sync` para falhas do ciclo de vida ou `error` para uma falha terminal de item ou provedor |
 | `sync.started` | `sync` |
 | `sync.progress` | `sync` |
 | `sync.completed` | `sync` |
@@ -499,9 +499,9 @@ Eventos de estado com falha preservam o array `errors` da Meta e adicionam um er
 }
 ```
 
-Utilização `status.error.code` para lógica de aplicativo e manter o raw `errors`
-array para diagnósticos. A `message.failed` evento é terminal, a menos que o
-relatórios de erros normalizados explicitamente `retryable: true`.
+Use `status.error.code` na lógica do aplicativo e preserve o array original `errors`
+para diagnóstico. Um evento `message.failed` é terminal, a menos que o erro
+normalizado informe explicitamente `retryable: true`.
 
 Para falhas comuns de entrega do WhatsApp, `status.error.details` também inclui
 uma `category` e uma `action` práticas. Quando a Meta publica um período seguro
@@ -516,7 +516,9 @@ para nova tentativa, a Easyhook inclui `retry_after_seconds` no mesmo objeto:
 Esses campos orientam somente sobre a entrega que falhou; eles não autorizam
 usar outra categoria de mensagem, destinatário, remetente ou organização como fallback.
 
-Trate a entrega webhook como pelo menos uma vez. Desduplicar eventos de ciclo de vida por nível superior `id`, status da mensagem por `status.message_id` mais público `type`, e conciliar com `GET /v1/scheduled-messages/{id}` Depois do tempo de inatividade do webhook.
+Trate a entrega de webhooks como pelo menos uma vez. Remova duplicidades dos eventos
+de ciclo de vida pelo `id` superior e dos estados por `status.message_id` junto com
+o `type` público. Após uma interrupção, reconcilie com `GET /v1/scheduled-messages/{id}`.
 
 ### `account`
 
@@ -530,11 +532,11 @@ Trate a entrega webhook como pelo menos uma vez. Desduplicar eventos de ciclo de
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `id` | string | ID de provedor remoto roubable. Para WhatsApp isso pode ser um telefone ou um ID de usuário de negócios (BSUID); não é garantido conter apenas dígitos. |
-| `phone` | string ou null | WhatsApp telefone em dígitos internacionais enquanto Meta fornece-lo. Ele pode estar ausente para primeiro nome de usuário conversas. |
-| `user_id` | string ou null | WhatsApp BSUID, tais como `MX.EXAMPLE_CONTACT_ID`. Preferir como a chave de contato estável quando presente. |
-| `parent_user_id` | string ou null | BSUID pai opcional, como `MX.ENT.EXAMPLE_PARENT_ID`, quando a Meta habilitou a identidade linked-portfolio para o negócio. |
-| `username` | string ou null | usuário WhatsApp opcional sem `@`. |
+| `id` | string | ID remoto do provedor usado para endereçar mensagens. No WhatsApp pode ser um telefone ou um ID de usuário limitado à empresa (BSUID); não contém necessariamente apenas dígitos. |
+| `phone` | string ou null | Telefone do WhatsApp em formato internacional, quando fornecido pela Meta. Pode estar ausente em conversas identificadas por nome de usuário. |
+| `user_id` | string ou null | BSUID do WhatsApp, como `MX.EXAMPLE_CONTACT_ID`. Prefira-o como chave estável do contato quando estiver presente. |
+| `parent_user_id` | string ou null | BSUID pai opcional, como `MX.ENT.EXAMPLE_PARENT_ID`, quando a Meta habilita identidade entre portfólios vinculados. |
+| `username` | string ou null | Nome de usuário opcional do WhatsApp, sem `@`. |
 | `country_code` | string ou null | Código opcional do país fornecido pelo WhatsApp. |
 | `name` | string | Nome de contato/perfil fornecido pelo fornecedor, quando disponível. |
 
@@ -542,7 +544,7 @@ Trate a entrega webhook como pelo menos uma vez. Desduplicar eventos de ciclo de
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `id` | string | ID da mensagem do fornecedor (`wamid`/`mid`). Chave de imunidade primária para uma mensagem. |
+| `id` | string | ID da mensagem do provedor (`wamid`/`mid`). É a chave principal de idempotência da mensagem. |
 | `direction` | `in` ou `out` | Direção da mensagem quando Easyhook pode determinar. |
 | `source` | string | `history`, `whatsapp_business_app`, ou outra fonte de provedor quando relevante. |
 | `from` | string | Identificador do fornecedor do remetente. |
@@ -559,25 +561,25 @@ Trate a entrega webhook como pelo menos uma vez. Desduplicar eventos de ciclo de
 | `media` | objeto | Metadados de mídia normalizados descritos abaixo. |
 | `reaction` | objeto | Mensagem do alvo e emoji. |
 | `button` | objeto | Resposta do botão do modelo WhatsApp com `text` e provedor `payload`. |
-| `interactive` | objeto | WhatsApp resposta interativa com `type` e a `button_reply` ou `list_reply` Bloquear. |
+| `interactive` | objeto | Resposta interativa do WhatsApp com `type` e um bloco `button_reply` ou `list_reply`. |
 | `edit` | objeto | ID da mensagem original, tipo de substituição e texto de substituição. |
 | `referral` | objeto | Click-to-WhatsApp/provider contexto de referência. |
 | `unsupported` | objeto | Tipo e erros de provedor não suportados. |
-| `timestamp` | Texto ISO 8601 | Timetamp do provedor original após a normalização. |
-| `history` | objeto | Histórico thread/status/chunk metadados. |
+| `timestamp` | string ISO 8601 | Data e hora original do provedor após a normalização. |
+| `history` | objeto | Metadados de thread, status e lote do History. |
 
 `message.media` pode conter:
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `id` | string | ID de meta- mídia quando disponível. |
+| `id` | string | ID da mídia na Meta, quando disponível. |
 | `mime_type` | string | Tipo MIME. |
 | `url` | string | URL de download autenticado por Easyhook ou URL de provedor utilizável. |
 | `caption` | string | Legenda dos media. |
 | `filename` | string | Documento/nome do arquivo original. |
-| `sha256` | string | O fornecedor/arquivo digere quando disponível. |
+| `sha256` | string | Hash do provedor ou do arquivo, quando disponível. |
 | `size` | número | Tamanho em bytes. |
-| `expires_at` | Texto ISO 8601 | URL/expiração do ativo quando aplicável. |
+| `expires_at` | string ISO 8601 | Expiração da URL ou do recurso, quando aplicável. |
 
 `message.reply_to.message_id` identifica a mensagem original para uma mensagem em linha
 responder. `message.reaction` contém `message_id`, `action`, e opcional `emoji`
@@ -588,8 +590,8 @@ ou nome da reação do fornecedor. `action: "unreact"` remove a reação anterio
 `errors[]`. `message.history` pode conter `thread_id`, `status`, `phase`,
 `chunk_order`, e `progress`.
 
-Para as respostas do botão WhatsApp, nunca infer a ação selecionada da
-definição do modelo. Easyhook preserva os valores fornecidos pelo Meta:
+Para respostas a botões do WhatsApp, nunca deduza a ação selecionada a partir da
+definição do template. A Easyhook preserva os valores fornecidos pela Meta:
 
 ```json
 {
@@ -604,8 +606,8 @@ definição do modelo. Easyhook preserva os valores fornecidos pelo Meta:
 }
 ```
 
-As respostas rápidas interativas e as seleções da lista usam o mesmo visível
-`message.text` campo de conveniência e manter o seu identificador estruturado:
+Respostas rápidas interativas e seleções de lista usam o campo visível
+`message.text` por conveniência e preservam o identificador estruturado:
 
 ```json
 {
@@ -626,7 +628,7 @@ As respostas rápidas interativas e as seleções da lista usam o mesmo visível
 Para uma nova automação multicanal, prefira `message.quick_reply.payload`.
 Easyhook também preserva os campos WhatsApp específicos do provedor
 `message.button.payload`, `message.interactive.button_reply.id`, e
-`message.interactive.list_reply.id` para compatibilidade. Use `message.text` Apenas
+`message.interactive.list_reply.id` por compatibilidade. Use `message.text` apenas
 como o rótulo humano. Se um provedor omite um identificador, Easyhook o deixa
 ausente em vez de adivinhar.
 
@@ -655,8 +657,8 @@ filtro de eventos `message.quick_reply`. O evento público é normalizado como:
 }
 ```
 
-Utilização `message.quick_reply.payload` como valor de roteamento estável. A subscription
-para `message.*` também recebe este evento; não subscreva ambos os filtros
+Use `message.quick_reply.payload` como valor estável de roteamento. Uma assinatura
+de `message.*` também recebe esse evento; não assine os dois filtros em
 automações separadas, a menos que o processamento duplicado seja intencional.
 
 ### Respostas, reações e edições de canais cruzados
@@ -668,18 +670,17 @@ fornece o evento subjacente:
 - Reação: `message.reaction.message_id`, `action`, e opcional `emoji`.
 - Editar: `message.edit.original_message_id`, `text`, e opcional `num_edit`.
 
-Os recursos do provedor não são idênticos. Meta atualmente expõe Messenger e
-Reações e edições do Instagram, e referências de resposta em linha do Instagram. Meta faz
-não expor a exclusão de mensagens do Messenger ou do Instagram/desenviar como equivalente
-webhook, assim Easyhook não infer ou fabricar esses eventos. Sempre ignorar
-campos opcionais desconhecidos e apenas eventos de processo que foram realmente entregues.
+Os recursos dos provedores não são idênticos. A Meta atualmente expõe reações e
+edições do Messenger e do Instagram, além de referências de resposta no Instagram.
+A Meta não expõe exclusão ou cancelamento de envio do Messenger ou Instagram como
+webhook equivalente; por isso, a Easyhook não deduz nem fabrica esses eventos.
+Ignore campos opcionais desconhecidos e processe somente eventos realmente entregues.
 
 ### Exclusões WhatsApp e avisos de sistema
 
-Subscrever os nomes dos eventos do fornecedor `message.revoke` e `message.system`.
-Estes são eventos de mensagem normalizados, de modo que o entregue
-nível superior `type` é `message.received`; encaminhar a operação com
-`message.type`:
+Assine os eventos do provedor `message.revoke` e `message.system`. Eles são eventos
+de mensagem normalizados, portanto o `type` superior entregue é `message.received`;
+encaminhe a operação por `message.type`:
 
 ```json
 {
@@ -742,14 +743,14 @@ Regras relativas aos consumidores:
 - Para `revoke`, encontrar a linha existente por
   `message.revoke.original_message_id`, marcá-lo como revogado, e esconder ou limpar
   seu conteúdo. Não insira uma mensagem de chat autônoma.
-- Para `system`, exibir `message.system.body` como um aviso informativo.
-  `user_changed_number`, utilizar `message.system.wa_id` como o novo WhatsApp
-  identidade de acordo com a política de fusão de contatos do pedido.
-- Desduplicar cada webhook com nível superior `id`. Use o WAMID original para o
-  atualização da mensagem; o evento `message.id` identifica a edição, revogação ou
-  o próprio evento do sistema.
-- Nunca renderize estes eventos como uma mensagem genérica vazia quando sua mensagem especializada
-  O bloco está presente.
+- Para `system`, exiba `message.system.body` como aviso informativo. Em
+  `user_changed_number`, use `message.system.wa_id` como a nova identidade do
+  WhatsApp conforme a política de contatos do aplicativo.
+- Remova duplicidades de cada webhook pelo `id` superior. Use o WAMID original
+  para atualizar a mensagem; `message.id` identifica o evento de edição,
+  revogação ou sistema.
+- Nunca renderize esses eventos como mensagem vazia genérica quando o bloco
+  especializado estiver presente.
 
 ### `status`
 
@@ -757,28 +758,28 @@ Regras relativas aos consumidores:
 | --- | --- | --- |
 | `message_id` | string | ID da mensagem do fornecedor cujo status foi alterado. |
 | `recipient_id` | string | Número de telefone do destinatário, quando o Meta o fornecer. |
-| `recipient_user_id` | string | Beneficiário BSUID. Meta inclui-o para eventos de status do WhatsApp. |
-| `parent_recipient_user_id` | string | BSUID-mãe opcional para carteiras ligadas elegíveis. |
-| `timestamp` | Texto ISO 8601 | Hora do estado do fornecedor. |
-| `conversation` | objeto | Meta- conversação/metadados da janela de perfuração. |
-| `pricing` | objeto | Meta campos de preços, passados através como um objeto compacto. |
-| `errors` | array | Meta objetos de falha quando fornecidos. |
+| `recipient_user_id` | string | BSUID do destinatário. A Meta o inclui em eventos de status do WhatsApp. |
+| `parent_recipient_user_id` | string | BSUID pai opcional para portfólios vinculados compatíveis. |
+| `timestamp` | string ISO 8601 | Data e hora do status do provedor. |
+| `conversation` | objeto | Metadados de conversa e janela de preços da Meta. |
+| `pricing` | objeto | Campos de preços da Meta preservados como objeto compacto. |
+| `errors` | array | Objetos de erro da Meta, quando fornecidos. |
 
 `status.conversation` pode conter `id`, `expires_at`, `origin`, e
-`free_entry_point`. Uma entrega falha deve ser tratada de `status.errors`
+`free_entry_point`. Uma entrega com falha deve ser tratada por `status.errors`
 sem assumir um esquema de erro de provedor fixo.
 
 ### `template`
 
 | Campo | Tipo | Significado |
 | --- | --- | --- |
-| `id` | string | ID do meta- modelo. |
+| `id` | string | ID do template na Meta. |
 | `name` | string | Nome do modelo. |
 | `language` | string | Código de linguagem do modelo. |
-| `status` | string | Meta atualizar evento/status. |
+| `status` | string | Status informado pelo evento de atualização da Meta. |
 | `quality` | string | Novo valor de qualidade. |
 | `category` | string | Novo valor de categoria. |
-| `reason` | string | Meta- razão código/texto. |
+| `reason` | string | Código ou texto do motivo informado pela Meta. |
 | `description` | string | Descrição do fornecedor. |
 
 ### `flow`
@@ -800,7 +801,7 @@ sem assumir um esquema de erro de provedor fixo.
 | `id` | string | Identificador da sessão de bordo hospedado. |
 | `status` | string | Situação da sessão. |
 | `url` | string | Alojado em URL de bordo, quando aplicável. |
-| `expires_at` | Texto ISO 8601 | Termo da sessão. |
+| `expires_at` | string ISO 8601 | Expiração da sessão. |
 | `organization` | objeto | Possuindo dados de exibição de organização Easyhook: `name`, `slug`, e facultativo público `logo_url`. |
 | `signup_mode` | string | `cloud_api` ou `coexistence`. |
 | `customer_name`, `customer_email` | string | Referências opcionais fornecidas pelo cliente. |
@@ -822,7 +823,7 @@ e mantêm o provedor subjacente (`telnyx` ou `whatsapp`) em `data.provider`.
 | `endpoint_id` | string UUID | Endpoint que recebeu a oferta ou mantém a chamada atualmente. |
 | `external_agent_id` | string | Identidade do agente API/SIP definida pelo cliente, quando aplicável. |
 | `sequence` | inteiro | Número de tentativa de roteamento. |
-| `lease_until` | Texto ISO 8601 | Tempo em que o Easyhook avança para outro ponto final. |
+| `lease_until` | string ISO 8601 | Momento em que a Easyhook avança para outro endpoint. |
 | `conversation_type`, `conversation_id` | string | Conversa vinculada da Inbox, quando disponível. |
 | `transfer_destination` | E.164 string | Destino externo configurado quando `call.transfer_started` é emitido. |
 
@@ -999,8 +1000,8 @@ O negócio deve permitir o compartilhamento do histórico no aplicativo WhatsApp
 
 Tratar cada elemento de `events` como uma mensagem normalizada. O objeto externo é um lote de entrega do Easyhook, não o do Meta em bruto `messages[]`, `contacts[]`, ou `history[]` Carga útil.
 
-- Utilização `account.id + ":" + (contact.user_id ?? contact.id)` como a chave de conversação. O ID da conta é necessário porque um BSUID é escopo para o negócio e a mesma pessoa pode falar com mais de um número conectado.
-- Utilização `message.id` (o Meta `wamid`) como a chave de deduplicação de mensagem. Webhook e processamento de fluxo de trabalho deve ser idempotent.
+- Use `account.id + ":" + (contact.user_id ?? contact.id)` como chave da conversa. O ID da conta é necessário porque um BSUID tem escopo empresarial e a mesma pessoa pode falar com mais de um número conectado.
+- Use `message.id` (o `wamid` da Meta) como chave de deduplicação. O processamento do webhook e do fluxo de trabalho deve ser idempotente.
 - Ordenar as mensagens importadas por `message.timestamp`, não por hora de chegada webhook. Conversas separadas podem ser processadas simultaneamente, então a ordem de entrega global não é significativa.
 - Para `message.direction: in`, `contact` é o remetente e `account` é o número Easyhook que recebe.
 - Para `message.direction: out`, `account` é o remetente e `contact` é o destinatário.
