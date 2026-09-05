@@ -152,11 +152,11 @@ De volta ao agente de entrada.
 
 `handler` por omissão a `human`. É válido apenas para `channel: "phone"` quando
 definir como `ai`; o WhatsApp Calling não usa a ponte SIP do ElevenLabs.
-resposta para uma chamada de IA é `202` com o recurso de chamada normal e sem WebRTC
-token. A mesma chamada ainda pode ser lida e desligada através da chamada padrão
-endpoints. A cobrança da carteira começa somente quando a chamada conecta e fixa o
-uso arredondado de voz Telnyx; o cliente consome separadamente os minutos
-incluído no seu plano do ElevenLabs.
+A resposta para uma chamada com IA é `202`, com o recurso normal de chamada e
+sem token WebRTC. A chamada pode ser consultada e encerrada pelos endpoints
+padrão. A cobrança começa quando a chamada conecta e liquida o custo final da
+Telnyx mais a margem da Easyhook proporcional aos segundos conectados. O cliente
+consome separadamente os minutos incluídos no plano do ElevenLabs.
 
 Utilização `channel: "phone"` para PSTN e `channel: "whatsapp"` para WhatsApp
 Chamando quando o mesmo `from` pode resolver para ambos. É opcional caso contrário.
@@ -382,7 +382,7 @@ Os webhooks do provedor são verificados com Ed25519 sobre o corpo bruto exato, 
 O faturamento de Telecom tem três componentes visíveis separadamente:
 
 1. Aluguel recorrente do número, cobrado antecipadamente;
-2. Uso da operadora (segmentos, mídia ou minutos de chamada arredondados);
+2. Uso final da operadora (segmentos, mídia ou custo de voz);
 3. Margem de serviço Easyhook.
 
 As regras para o cliente são:
@@ -456,8 +456,9 @@ fundos. Fractional-cent reembolsos acumular em vez de ser arredondado. Chamadas
 usar webhooks de custo/duração do provedor e um máximo reforçado pelo servidor. A pendente
 chamada de saída que nunca atinge o provedor libera sua reserva após
 dois minutos; um início tardio do provedor é encerrado e não pode reviver o cancelado
-call. WhatsApp Calling reserva o máximo solicitado e fixa arredondada real
-A taxa normal de operação da API do Easyhook continua a ser
+chamada. O WhatsApp Calling reserva o máximo solicitado e, ao encerrar, calcula
+a tarifa de plataforma da Easyhook de USD 0.004 por minuto proporcionalmente aos
+segundos conectados. A taxa normal de operação da API do Easyhook continua a ser
 item separado da carteira para operações de não chamada; iniciando e desligando uma chamada
 não crie taxas de operação adicionais.
 
