@@ -20,33 +20,32 @@ O número, SMS/MMS e contrato de chamada é neutro. Veja [Telefonia](/telecom) p
 
 O callback da transportadora é uma infraestrutura privada e não é um ponto final autenticado pelo cliente.
 
-Retorno SMS e MMS `maximum_reserved_cost` em vez de um preço final citado.
-O reserva é reduzido para a tarifa final Easyhook após a transportadora confirmar
-o valor billable, e a porção não utilizada é devolvida. SMS/MMS inbound são
-Reservados e liquidados a partir da assinatura `message.received` Transportador de chamada de retorno
-custo porque não há nenhum pedido de cliente anterior e não mais tarde inbound
-`message.finalized` evento.
+SMS e MMS retornam `maximum_reserved_cost` em vez de cotar um preço final. A
+reserva é reduzida ao custo definitivo da Easyhook depois que a operadora confirma
+o valor faturável, e a parte não utilizada volta ao wallet. SMS/MMS recebidos são
+reservados e liquidados a partir do custo assinado presente em `message.received`,
+pois não existe uma solicitação anterior do cliente nem um evento posterior
+`message.finalized`.
 
-A voz da operadora de entrada também reserva um máximo reembolsável de 60 minutos antes
-tocando um endpoint do Easyhook. A carga final usa a assinatura `call.cost`
-`total_cost` e duração faturada, aplica a atual tarifa de voz Easyhook,
-e devolve o reserva não utilizado.
+Chamadas recebidas também reservam um máximo reembolsável de 60 minutos antes de
+fazer um endpoint da Easyhook tocar. A cobrança final usa o evento assinado
+`call.cost`, seu `total_cost` e a duração faturada, aplica a tarifa vigente da Easyhook e devolve
+a reserva não utilizada.
 
-`POST /v1/calls` também aceita `handler: "ai"` para chamadas de saída.
-usa o agente de saída do ElevenLabs explicitamente vinculado ao número Easyhook
-(que também pode ser o seu agente de entrada), pontes-lo apenas após
-o destino responde, e aceita um escalar limitado `context` objeto para
-Variáveis por chamada. A extensão da IA requer consentimento explícito da voz gravado via
-`POST /v1/consent` e é estrangulado para uma tentativa por hora e três por
-rolando 24 horas por organização/número/contato. Uma chamada de IA bem sucedida retorna
-`202` sem um token WebRTC; a mídia flui diretamente entre Telnyx e
-Onze Labs.
+`POST /v1/calls` também aceita `handler: "ai"` para chamadas de saída. Ele usa o
+agente do ElevenLabs atribuído explicitamente ao número para chamadas de saída
+(pode ser o mesmo agente de entrada), conecta a IA somente depois que o destino
+atende e aceita um objeto escalar e limitado `context` para variáveis por chamada.
+Exige consentimento de voz explícito registrado por `POST /v1/consent` e limita as
+tentativas a uma por hora e três em 24 horas por organização, número e contato.
+Uma chamada aceita retorna `202` sem token WebRTC; o áudio flui diretamente entre
+Telnyx e ElevenLabs.
 
-O manipulador gerenciado do ElevenLabs aceita atualmente apenas `channel: "phone"`.
-WebRTC humano chama suporte ambos `phone` e `whatsapp`. Um pedido que combina
+O handler gerenciado do ElevenLabs admite atualmente apenas `channel: "phone"`.
+Chamadas WebRTC atendidas por pessoas admitem `phone` e `whatsapp`. Uma solicitação que combina
 `handler: "ai"` com `channel: "whatsapp"` falha explicitamente com
-`voice_ai_phone_channel_required`; Easyhook não troca Meta de um organização
-número de sinalização Graph/WebRTC para SIP pelas costas.
+`voice_ai_phone_channel_required`; a Easyhook não converte implicitamente um
+número da Meta de sinalização Graph/WebRTC para SIP.
 
 ## URL base
 
@@ -850,7 +849,7 @@ Respostas com rosca. As respostas têm uma forma normalizada:
 Mensagens recebidas de todos os provedores de E-mail `message.received` com
 `message.subject`, `message.text`, opcional `message.html`, cabeçalhos de tópicos,
 filtrar metadados e anexos armazenados em privado. O HTML não é confiável
-input e deve ser higienizado ou renderizado dentro de uma caixa de areia.
+input e deve ser higienizado ou renderizado em um ambiente isolado.
 
 As assinaturas do Outlook são protegidas com um gráfico aleatório da Microsoft
 `clientState`, processado assíncrono, e renovado antes de expirar.

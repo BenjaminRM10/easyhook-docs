@@ -2,7 +2,7 @@
 
 Última actualización: 2026-08-27
 
-Este documento es la fuente de la verdad para el comportamiento de API orientado al cliente. Cada cambio de API debe actualizar este archivo en el mismo conjunto de cambios.
+Este documento es la fuente de verdad del comportamiento de la API pública. Cada cambio en el contrato debe actualizarlo dentro del mismo conjunto de cambios.
 
 ## Telecom
 
@@ -18,35 +18,34 @@ El contrato para números, SMS/MMS y llamadas es independiente del proveedor. Co
 - `GET /v1/calls/{callId}`
 - `POST /v1/calls/{callId}/actions/hangup`
 
-El callback transportista es una infraestructura privada y no es un punto final optimizado para el cliente.
+El callback del operador es infraestructura privada y no es un endpoint autenticado para clientes.
 
-Regreso de SMS y MMS `maximum_reserved_cost` en lugar de un precio final citado.
-La retención se reduce a la tarifa final Easyhook después de que el transportista confirme
-la cantidad facturable, y la porción no utilizada es devuelta.
-reservado y asentado de la firma `message.received` El portaaviones de callback
-costo porque no hay solicitud previa del cliente y no más tarde entrada
-`message.finalized` evento.
+SMS y MMS devuelven `maximum_reserved_cost` en lugar de cotizar un precio final.
+La reserva se reduce al costo definitivo de Easyhook después de que el operador
+confirma el importe facturable, y la parte no utilizada se devuelve al wallet.
+Los SMS/MMS entrantes se reservan y liquidan a partir del costo firmado incluido
+en `message.received`, porque no existe una solicitud previa del cliente ni un
+evento posterior `message.finalized`.
 
-La voz del transportista de entrada se reserva un máximo reembolsable de 60 minutos antes
-Anillo de un punto final de Easyhook. La carga final utiliza la firma `call.cost`
-`total_cost` y duración facturada, aplica la tarifa actual de voz Easyhook,
-y devuelve la retención sin usar.
+Las llamadas entrantes también reservan un máximo reembolsable de 60 minutos antes
+de hacer sonar un endpoint de Easyhook. El cargo final usa el evento firmado
+`call.cost`, su `total_cost` y la duración facturada, aplica la tarifa vigente de Easyhook y
+devuelve la reserva no utilizada.
 
-`POST /v1/calls` también acepta `handler: "ai"` para llamadas telefónicas salientes.
-utiliza el agente de ElevenLabs fuera de línea explícitamente ligado al número de Easyhook
-(que también puede ser su agente entrante), puentes sólo después
-el destino responde, y acepta un escalar atado `context` objeto para
-variables per-call. La extensión AI requiere un consentimiento explícito de voz grabado a través de
-`POST /v1/consent` y se ha acelerado a un intento por hora y tres por
-24 horas por organización/número/contacto.
-`202` sin un token WebRTC; los medios fluyen directamente entre Telnyx y
-Once laboratorios.
+`POST /v1/calls` también acepta `handler: "ai"` para llamadas salientes. Usa el
+agente de ElevenLabs asignado explícitamente al número para salientes (puede ser
+el mismo de llamadas entrantes), conecta a la IA sólo después de que el destino
+contesta y acepta un objeto escalar y limitado `context` para variables por llamada.
+Requiere consentimiento de voz explícito registrado con `POST /v1/consent` y limita
+los intentos a uno por hora y tres en 24 horas por organización, número y contacto.
+Una llamada aceptada devuelve `202` sin token WebRTC; el audio fluye directamente
+entre Telnyx y ElevenLabs.
 
-El manejador de ElevenLabs gestionado actualmente soporta `channel: "phone"` Sólo.
-Human WebRTC llama soporte ambos `phone` y `whatsapp`. Una solicitud que combina
+El handler administrado de ElevenLabs admite actualmente sólo `channel: "phone"`.
+Las llamadas WebRTC atendidas por personas admiten `phone` y `whatsapp`. Una solicitud que combina
 `handler: "ai"` con `channel: "whatsapp"` falla explícitamente con
-`voice_ai_phone_channel_required`; Easyhook no cambia el Meta de un organización
-número de la señalización Graph/WebRTC a SIP detrás de su espalda.
+`voice_ai_phone_channel_required`; Easyhook no cambia un número de Meta de
+señalización Graph/WebRTC a SIP de forma implícita.
 
 ## Base URL
 
@@ -58,7 +57,7 @@ https://api.easyhook.dev
 
 ## Autenticación
 
-Las llamadas de API de cliente usan una clave de API de organización/tenant en la `Authorization` Cabeza.
+Las llamadas a la API usan una clave de la organización en el encabezado `Authorization`.
 
 ```http
 Authorization: Bearer eh_live_xxx
@@ -847,9 +846,9 @@ respuesta roscada. Las respuestas tienen una forma normalizada:
 ```
 
 Los mensajes entrantes de todos los proveedores de correo electrónico producen `message.received` con
-`message.subject`, `message.text`, opcional `message.html`, cabezales de rosca,
-metadatos del filtro del proveedor, y archivos adjuntos almacenados en privado. HTML no está conectado
-entrada y debe ser santificado o renderizado dentro de una caja de arena.
+`message.subject`, `message.text`, `message.html` opcional, encabezados de la conversación,
+metadatos del proveedor y archivos adjuntos almacenados en privado. El HTML es contenido
+no confiable: debe sanitizarse o mostrarse en un entorno aislado.
 
 Las suscripciones de Outlook están protegidas con un Microsoft Graph aleatorio
 `clientState`, procesado asincrónicamente, y renovado antes de la caducidad.
@@ -1792,7 +1791,7 @@ El mensaje y la copia de forma son intencionadamente separados:
 | `opt_in_screen_title`, `opt_out_screen_title` | Top bar del Flow abierto. |
 | `opt_in_heading`, `opt_out_heading` | Dirigiéndose dentro del formulario. |
 | `opt_in_body`, `opt_out_body` | Explicación dentro de la forma. |
-| `footer` | Capción en la parte inferior de la forma. |
+| `footer` | Pie de texto en la parte inferior de la forma. |
 
 Configuraciones más antiguas que sólo tienen `opt_in_body` o `opt_out_body` mantener su comportamiento de envío anterior hasta que se guarde con los nuevos campos de mensajes.
 
@@ -1994,10 +1993,10 @@ Campos obligatorios para texto WhatsApp:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Número de teléfono WhatsApp propiedad del arrendatario o alias del canal Messenger/Instagram. |
-| `to` | cuerda | Número de destinatarios WhatsApp, Messenger PSID, o Instagram IGSID. |
-| `type` | cuerda | Opcional. `text`; actualmente sólo `text` es compatible. |
-| `body` | cuerda | Texto del mensaje. |
+| `from` | string | Número de teléfono WhatsApp propiedad del arrendatario o alias del canal Messenger/Instagram. |
+| `to` | string | Número de destinatarios WhatsApp, Messenger PSID, o Instagram IGSID. |
+| `type` | string | Opcional. `text`; actualmente sólo `text` es compatible. |
+| `body` | string | Texto del mensaje. |
 
 Ejemplo:
 
@@ -2256,16 +2255,16 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Propiedad de los arrendatarios `account.id`, WhatsApp teléfono de negocios, o alias de canal compatibles con retrocesos. |
-| `to` | cuerda | WhatsApp teléfono receptor o BSUID, Messenger PSID, Instagram IGSID, Telegram chat id o Mercado Libre destinatario id. |
-| `body` | cuerda | Texto del mensaje. |
+| `from` | string | Propiedad de los arrendatarios `account.id`, WhatsApp teléfono de negocios, o alias de canal compatibles con retrocesos. |
+| `to` | string | WhatsApp teléfono receptor o BSUID, Messenger PSID, Instagram IGSID, Telegram chat id o Mercado Libre destinatario id. |
+| `body` | string | Texto del mensaje. |
 
 Campos opcionales:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `at` | cuerda | Fecha/hora ISO 8601 para la entrega programada. Apoyado para WhatsApp, Messenger, Instagram, Telegram y Mercado Libre texto. |
-| `phone_id` | cuerda | Legacy Easyhook teléfono fila id. Preferencias `from`. |
+| `at` | string | Fecha/hora ISO 8601 para la entrega programada. Apoyado para WhatsApp, Messenger, Instagram, Telegram y Mercado Libre texto. |
+| `phone_id` | string | Legacy Easyhook teléfono fila id. Preferencias `from`. |
 
 Ejemplo:
 
@@ -2510,9 +2509,9 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Proveedor de propiedad de arrendatario `account.id`. Se siguen aceptando alias y nombres de usuario de Legacy. |
-| `to` | cuerda | El destinatario del proveedor id. Messenger utiliza PSID. Instagram utiliza IGSID. |
-| `body` | cuerda | Texto del mensaje. |
+| `from` | string | Proveedor de propiedad de arrendatario `account.id`. Se siguen aceptando alias y nombres de usuario de Legacy. |
+| `to` | string | El destinatario del proveedor id. Messenger utiliza PSID. Instagram utiliza IGSID. |
+| `body` | string | Texto del mensaje. |
 
 Mensajero de ejemplo:
 
@@ -2558,16 +2557,16 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | alias de canal propiedad de los arrendatarios, alias Page id, mango, alias de id Instagram, nombre de usuario de Instagram o canal conectado id. |
-| `to` | cuerda | El destinatario del proveedor id. Messenger utiliza PSID. Instagram utiliza IGSID. |
-| `type` | cuerda | `image`, `video`, `audio`, `file`. `document` se normaliza para `file`. |
-| `id` o `link` | cuerda | URL de los medios HTTPS ya existentes o HTTPS público. |
+| `from` | string | alias de canal propiedad de los arrendatarios, alias Page id, mango, alias de id Instagram, nombre de usuario de Instagram o canal conectado id. |
+| `to` | string | El destinatario del proveedor id. Messenger utiliza PSID. Instagram utiliza IGSID. |
+| `type` | string | `image`, `video`, `audio`, `file`. `document` se normaliza para `file`. |
+| `id` o `link` | string | URL de los medios HTTPS ya existentes o HTTPS público. |
 
 Campos opcionales:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `filename` | cuerda | Nombre de archivo para archivos/document adjuntos. |
+| `filename` | string | Nombre de archivo para archivos/document adjuntos. |
 
 Ejemplo:
 
@@ -2597,12 +2596,12 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Mensajero de propiedad de los arrendatarios o alias/id del canal de Instagram. |
-| `to` | cuerda | Messenger PSID o Instagram IGSID. |
-| `type` | cuerda | `image`, `video`, `audio`, `file`. |
-| `file_name` | cuerda | Nombre de archivo original. |
-| `file_type` | cuerda | Tipo MIME. |
-| `file_base64` | cuerda | Base64 bytes de archivos codificados. |
+| `from` | string | Mensajero de propiedad de los arrendatarios o alias/id del canal de Instagram. |
+| `to` | string | Messenger PSID o Instagram IGSID. |
+| `type` | string | `image`, `video`, `audio`, `file`. |
+| `file_name` | string | Nombre de archivo original. |
+| `file_type` | string | Tipo MIME. |
+| `file_base64` | string | Base64 bytes de archivos codificados. |
 
 Ejemplo:
 
@@ -2663,11 +2662,11 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `name` | cuerda | Nombre único de los medios para esta organización. Usar letras minúsculas, números, `_`, `.`, `-`. |
-| `type` | cuerda | `image`, `video`, `audio`, `document`, `sticker`. |
-| `file_name` | cuerda | Nombre de archivo original. |
-| `file_type` | cuerda | Tipo MIME. |
-| `file_base64` | cuerda | Base64 bytes de archivos codificados. |
+| `name` | string | Nombre único de los medios para esta organización. Usar letras minúsculas, números, `_`, `.`, `-`. |
+| `type` | string | `image`, `video`, `audio`, `document`, `sticker`. |
+| `file_name` | string | Nombre de archivo original. |
+| `file_type` | string | Tipo MIME. |
+| `file_base64` | string | Base64 bytes de archivos codificados. |
 
 Límites de carga soportados:
 
@@ -2796,25 +2795,25 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | WhatsApp propiedad de los arrendatarios `account.id` (Meta Número de teléfono ID) o número de teléfono de negocios. |
-| `to` | cuerda | Recipiente número de WhatsApp. |
-| `type` | cuerda | Tipo de medio: `image`, `video`, `audio`, `document`, `sticker`. |
-| `media_name`, `id`, `link` | cuerda | Easyhook reutilizable nombre multimedia, Meta media id, o URL de medios públicos. Se requiere exactamente uno. |
+| `from` | string | WhatsApp propiedad de los arrendatarios `account.id` (Meta Número de teléfono ID) o número de teléfono de negocios. |
+| `to` | string | Recipiente número de WhatsApp. |
+| `type` | string | Tipo de medio: `image`, `video`, `audio`, `document`, `sticker`. |
+| `media_name`, `id`, `link` | string | Easyhook reutilizable nombre multimedia, Meta media id, o URL de medios públicos. Se requiere exactamente uno. |
 
 Campos obligatorios para Messenger, Instagram y Telegram:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Proveedor de propiedad de arrendatario `account.id`. |
-| `to` | cuerda | Messenger PSID, Instagram IGSID o Telegram chat ID. |
-| `type` | cuerda | `image`, `video`, `audio`, `file`. `document` se normaliza para `file` cuando sea necesario. |
-| `media_name`, `id`, `link` | cuerda | Nombre de los medios reutilizables de la organización, identificación del proveedor existente o URL de los medios HTTPS públicos. |
+| `from` | string | Proveedor de propiedad de arrendatario `account.id`. |
+| `to` | string | Messenger PSID, Instagram IGSID o Telegram chat ID. |
+| `type` | string | `image`, `video`, `audio`, `file`. `document` se normaliza para `file` cuando sea necesario. |
+| `media_name`, `id`, `link` | string | Nombre de los medios reutilizables de la organización, identificación del proveedor existente o URL de los medios HTTPS públicos. |
 
 Campos opcionales:
 
 | Campo | Aplicaciones a | Descripción |
 | --- | --- | --- |
-| `caption` | `image`, `video`, `document` | Capción enviada con los medios. |
+| `caption` | `image`, `video`, `document` | Texto que acompaña al archivo. |
 | `filename` | `document` | Nombre de archivo del documento que se muestra al destinatario. |
 | `at` | todo tipo | Fecha/hora ISO 8601 para la entrega programada. |
 | `phone_id` | todo tipo | Legacy Easyhook teléfono fila id. Preferencias `from`. |
@@ -2926,8 +2925,8 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `waba_id`, `phone_id`, `from` | cuerda | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
-| `name` | cuerda | Nombre de flujo en Meta. |
+| `waba_id`, `phone_id`, `from` | string | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
+| `name` | string | Nombre de flujo en Meta. |
 | `categories` | string[] | Categorías de Meta Flow. |
 
 Campos opcionales:
@@ -2935,7 +2934,7 @@ Campos opcionales:
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
 | `flow_json` | objeto | Flow JSON definición, pasó a Meta. |
-| `endpoint_uri` | cuerda | Data-exchange endpoint URI cuando el flujo necesita backend callbacks. |
+| `endpoint_uri` | string | Data-exchange endpoint URI cuando el flujo necesita backend callbacks. |
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/flows \
@@ -2998,21 +2997,21 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Número de teléfono de negocios WhatsApp propiedad del arrendatario. |
-| `to` | cuerda | Recipiente número de WhatsApp. |
-| `flow_id`, `flow_name`, `flow_local_id` | cuerda | Referencia lenta. |
-| `body` | cuerda | Cuerpo de mensaje mostrado por encima del CTA. |
-| `cta` | cuerda | Texto del botón de flujo. |
+| `from` | string | Número de teléfono de negocios WhatsApp propiedad del arrendatario. |
+| `to` | string | Recipiente número de WhatsApp. |
+| `flow_id`, `flow_name`, `flow_local_id` | string | Referencia al Flow. |
+| `body` | string | Cuerpo de mensaje mostrado por encima del CTA. |
+| `cta` | string | Texto del botón de flujo. |
 
 Campos opcionales:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `flow_token` | cuerda | Tu token de correlación. Easyhook genera uno omitido. |
-| `flow_action` | cuerda | Defaults to `navigate`. |
+| `flow_token` | string | Tu token de correlación. Easyhook genera uno si se omite. |
+| `flow_action` | string | Defaults to `navigate`. |
 | `flow_action_payload` | objeto | La carga pasa a la acción Flow. |
 | `header` | objeto | Opcional Meta objeto de encabezado interactivo. |
-| `footer` | cuerda | Texto del pie de página opcional. |
+| `footer` | string | Texto del pie de página opcional. |
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/messages/flow \
@@ -3291,7 +3290,7 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from`, `phone_id`, `waba_id` | cuerda | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
+| `from`, `phone_id`, `waba_id` | string | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
 
 Ejemplo:
 
@@ -3364,17 +3363,17 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from`, `phone_id`, `waba_id` | cuerda | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
-| `name` | cuerda | Nombre de plantilla. Utilice letras minúsculas, números y subrayados. |
-| `language` | cuerda | Meta código de idioma, por ejemplo `es_MX` o `en_US`. |
-| `category` | cuerda | Meta plantilla de categoría, por ejemplo `UTILITY`, `MARKETING`, `AUTHENTICATION`. |
+| `from`, `phone_id`, `waba_id` | string | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
+| `name` | string | Nombre de plantilla. Utilice letras minúsculas, números y subrayados. |
+| `language` | string | Meta código de idioma, por ejemplo `es_MX` o `en_US`. |
+| `category` | string | Meta plantilla de categoría, por ejemplo `UTILITY`, `MARKETING`, `AUTHENTICATION`. |
 | `components` | array | Meta plantilla componente array. |
 
 Campos opcionales:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `parameter_format` | cuerda | `POSITIONAL` (por defecto) o `NAMED`Easyhook valida y lo envía a Meta. |
+| `parameter_format` | string | `POSITIONAL` (por defecto) o `NAMED`Easyhook valida y lo envía a Meta. |
 | `message_send_ttl_seconds` | Número | Meta Mensaje enviar TTL para las categorías de plantilla soportadas. |
 
 Enviar un establo `Idempotency-Key` header for retry-safe creation. Repita la misma llave y JSON vuelve
@@ -3505,8 +3504,8 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from`, `phone_id`, `waba_id` | cuerda | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
-| `template_id` | cuerda | Easyhook local plantilla fila id. |
+| `from`, `phone_id`, `waba_id` | string | Resolución de WABA. Preferencia `from` para las integraciones de clientes. |
+| `template_id` | string | Easyhook local plantilla fila id. |
 
 Ejemplo:
 
@@ -3529,8 +3528,8 @@ Campos obligatorios:
 
 | Campo | Tipo | Descripción |
 | --- | --- | --- |
-| `from` | cuerda | Número de teléfono de negocios WhatsApp propiedad del arrendatario. |
-| `to` | cuerda | Recipiente número de WhatsApp. |
+| `from` | string | Número de teléfono de negocios WhatsApp propiedad del arrendatario. |
+| `to` | string | Recipiente número de WhatsApp. |
 | `template` o `template_id` | objeto/estring | Referencia de plantilla pública o plantilla interna heredada hilera id. |
 
 Campos opcionales:
@@ -3540,8 +3539,8 @@ Campos opcionales:
 | `parameters` | objeto | Formato variable amigable. Conversos Easyhook a Meta `components`. |
 | `components` | array | Componentes de plantilla de Meta cruda. `parameters` cuando se envía. |
 | `media` | objeto | Medios de encabezado dinámicos. `link`, `id`, o medios reutilizables `name`; los documentos pueden incluir `filename`. |
-| `at` | cuerda | Fecha/hora ISO 8601 para la entrega programada. |
-| `phone_id` | cuerda | Legacy Easyhook teléfono fila id. Preferencias `from`. |
+| `at` | string | Fecha/hora ISO 8601 para la entrega programada. |
+| `phone_id` | string | Legacy Easyhook teléfono fila id. Preferencias `from`. |
 
 Referencia de plantilla recomendada por nombre e idioma:
 

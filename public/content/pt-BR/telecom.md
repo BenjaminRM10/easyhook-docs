@@ -309,7 +309,7 @@ para o ElevenLabs; o Easyhook não atua como proxy nem transcreve o áudio. Cada
 A sua própria ligação:
 
 - `ai_only`: o ElevenLabs atende; nenhum destino humano é oferecido.
-- `ai_then_agents`: Onze Labs recebe a primeira tentativa, em seguida, humano normal
+- `ai_then_agents`: ElevenLabs recebe a primeira tentativa, em seguida, humano normal
   O roteamento é utilizado se a tentativa de IA estiver indisponível ou expirar.
 
 `human_transfer_enabled` é independente desses modos de resposta inicial.
