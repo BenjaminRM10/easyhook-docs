@@ -148,24 +148,18 @@ Herramientas MCP disponibles:
 | `get_recent_messages` | Lea mensajes de entrada y salida con un contacto permitido. |
 | `wait_for_message` | Espere hasta cinco minutos para el siguiente mensaje de entrada de un contacto permitido. |
 
-`EASYHOOK_CONTACTS` es un array JSON `{ phone, name, description }`. Enviar y leer herramientas aceptan el nombre o el teléfono configurados. Los teléfonos con formato se normalizan a dígitos. `EASYHOOK_ALLOWED_TO` la lista separada por coma sigue siendo apoyada cuando `EASYHOOK_CONTACTS` La clave de API y el remitente nunca se convierten en argumentos de herramientas. La billetera Easyhook, ventanilla de servicio, consentimiento, plantilla y Meta aún se aplican controles de política.
+`EASYHOOK_CONTACTS` es un array JSON de objetos `{ phone, name, description }`. Las herramientas de envío y lectura aceptan el nombre o el teléfono configurado. Los teléfonos con formato se normalizan a dígitos. La lista heredada `EASYHOOK_ALLOWED_TO`, separada por comas, sigue disponible cuando no se configura `EASYHOOK_CONTACTS`. La clave de API y el remitente nunca se exponen como argumentos de las herramientas. Las reglas de wallet, ventana de servicio, consentimiento, plantillas y Meta de Easyhook siguen aplicándose.
 
-`list_conversations` y `get_recent_messages` utiliza las lecturas de API de clientes facturables.
-`wait_for_message` un tiempo de espera es un resultado normal y no debe
+`list_conversations` y `get_recent_messages` utilizan lecturas facturables de la API para clientes.
+`wait_for_message` no se factura. Un timeout de espera es un resultado normal y no debe
 ser interpretado como permiso para que un agente continúe indefinidamente.
 
-Hosted onboarding soporta WhatsApp, Messenger, Instagram, Telegram, TikTok,
-Gmail, Outlook, Mercado Libre y correo electrónico personalizado cuando sea aplicable. Desconectar un remitente no está expuesto intencionalmente como
-una herramienta MCP porque es una acción destructiva de organización-administración.
-operación organización-scopio REST `DELETE /v1/senders/{account_id}` de un aprobado
-flujo de gestión.
+El onboarding alojado admite WhatsApp, Messenger, Instagram, Telegram, TikTok,
+Gmail, Outlook, Mercado Libre y correo electrónico personalizado cuando corresponde. La desconexión de un remitente no se expone como herramienta MCP porque es una acción administrativa destructiva. Usa la operación REST limitada a la organización `DELETE /v1/senders/{account_id}` desde un flujo de gestión aprobado.
 
 ## Chatwoot
 
-Easyhook se puede utilizar como el transporte para una caja de entrada de la API de Chatwoot.
-el sistema de registro para agentes, equipos, contactos, asignaciones, etiquetas, notas,
-automatización y estado de conversación. Easyhook solo recibe eventos y eventos de proveedores
-envía respuestas de agente.
+Easyhook puede utilizarse como transporte para una bandeja de entrada API de Chatwoot. Chatwoot sigue siendo el sistema de registro para agentes, equipos, contactos, asignaciones, etiquetas, notas, automatizaciones y estado de las conversaciones. Easyhook recibe los eventos del proveedor y envía las respuestas de los agentes.
 
 ### Configuración
 

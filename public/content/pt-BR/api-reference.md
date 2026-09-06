@@ -148,17 +148,14 @@ Ferramentas MCP disponíveis:
 | `get_recent_messages` | Leia mensagens de entrada e saída com um contato autorizado. |
 | `wait_for_message` | Aguarde até cinco minutos para a próxima mensagem de entrada de um contato autorizado. |
 
-`EASYHOOK_CONTACTS` é um array JSON de `{ phone, name, description }`. As ferramentas de envio e leitura aceitam o nome configurado ou o telefone. Os telefones formatados são normalizados em dígitos. `EASYHOOK_ALLOWED_TO` A lista separada por vírgulas permanece suportada quando `EASYHOOK_CONTACTS` está ausente. A chave e o remetente da API nunca se tornam argumentos de ferramentas. As verificações da carteira, janela de serviço, consentimento, modelo e Meta política do Easyhook ainda se aplicam.
+`EASYHOOK_CONTACTS` é um array JSON de objetos `{ phone, name, description }`. As ferramentas de envio e leitura aceitam o nome ou o telefone configurado. Telefones formatados são normalizados para dígitos. A lista legada `EASYHOOK_ALLOWED_TO`, separada por vírgulas, continua disponível quando `EASYHOOK_CONTACTS` não é configurado. A chave de API e o remetente nunca são expostos como argumentos das ferramentas. As regras de carteira, janela de atendimento, consentimento, modelos e Meta do Easyhook continuam válidas.
 
-`list_conversations` e `get_recent_messages` use leituras de API do cliente billable.
-`wait_for_message` um tempo de espera é um resultado normal e não deve
+`list_conversations` e `get_recent_messages` usam leituras faturáveis da API do cliente.
+`wait_for_message` não é faturado. Um tempo limite de espera é um resultado normal e não deve
 ser interpretado como permissão para que um agente continue indefinidamente.
 
-Hosted onboarding suporta WhatsApp, Messenger, Instagram, Telegram, TikTok,
-Gmail, Outlook, Mercado Libre e e-mail personalizado, quando aplicável. Desligar um remetente não é intencionalmente exposto como
-uma ferramenta MCP porque é uma ação destrutiva do organização-administração.
-Operação REST vigiada por organizações `DELETE /v1/senders/{account_id}` a partir de um aprovado
-Fluxo de gestão.
+O onboarding hospedado oferece suporte a WhatsApp, Messenger, Instagram, Telegram, TikTok,
+Gmail, Outlook, Mercado Libre e e-mail personalizado quando aplicável. A desconexão de um remetente não é exposta como ferramenta MCP porque é uma ação administrativa destrutiva. Use a operação REST limitada à organização `DELETE /v1/senders/{account_id}` em um fluxo de gestão aprovado.
 
 ## Chatwoot
 
