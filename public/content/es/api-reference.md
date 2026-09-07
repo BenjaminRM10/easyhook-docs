@@ -491,32 +491,32 @@ Puntos finales recomendados de API de clientes:
 | `POST` | `/v1/messages/media` | `messages:write` | Envíe los medios compatibles a través de WhatsApp, Telefonía/MMS, Messenger, Instagram, Telegram o TikTok Business Messaging. TikTok actualmente soporta imágenes; el MMS programado aún no está soportado. |
 | `GET` | `/v1/telecom/capabilities` | `telephony:read` | Descubra las capacidades normalizadas de llamadas Telnyx y WhatsApp. |
 | `GET` | `/v1/call-routing?phone_id={id}` | `telephony:read` | Lea la política de distribución de llamadas del número Telnyx de propiedad de un organización; agregue `channel=whatsapp` para un teléfono de WhatsApp. |
-| `PATCH` | `/v1/call-routing?phone_id={id}` | `telephony:write` | Configure los destinos ordenados para un número. WhatsApp acepta portal/app solamente; Telnyx también acepta una etapa de teléfono externo alberca. |
-| `POST` | `/v1/call-endpoints` | `telephony:write` | Registre o latido de corazón una web, móvil, API o SIP que responda al punto final. |
+| `PATCH` | `/v1/call-routing?phone_id={id}` | `telephony:write` | Configurar los destinos ordenados de un número. WhatsApp sólo acepta portal/app; Telnyx también admite una etapa agrupada de teléfonos externos. |
+| `POST` | `/v1/call-endpoints` | `telephony:write` | Registrar o actualizar el heartbeat de un endpoint web, móvil, API o SIP que atiende llamadas. |
 | `POST` | `/v1/call-endpoints/{id}/token` | `telephony:write` | Emitir un WebRTC JWT de corta duración para un punto final existente. |
 | `POST` | `/v1/whatsapp/calling/permissions` | `telephony:write` | Envía la solicitud explícita de permiso de llamada iniciada por Meta. |
-| `POST` | `/v1/calls` | `telephony:write` | Iniciar una llamada prepagada Telnyx o WhatsApp con una duración máxima forzada; `handler: "ai"` comienza una llamada de salida consentida de OnceLabs. |
-| `POST` | `/v1/consent` | `telephony:write` o `messages:write` | Grabar la voz del organización-scopio de la opción de entrada / salida de evidencia (o el consentimiento de mensajería existente). |
+| `POST` | `/v1/calls` | `telephony:write` | Iniciar una llamada prepagada de Telnyx o WhatsApp con una duración máxima obligatoria; `handler: "ai"` inicia una llamada saliente autorizada con ElevenLabs. |
+| `POST` | `/v1/consent` | `telephony:write` o `messages:write` | Registrar evidencia de consentimiento o revocación para voz dentro de la organización (o el consentimiento existente de mensajería). |
 | `GET` | `/v1/calls/{id}` | `telephony:read` | Lea estado normalizado, duración, asignación y detalles de fallo. |
 | `GET` | `/v1/calls/{id}/signaling` | `telephony:read` | Lea la respuesta de salida WhatsApp SDP cuando esté disponible. |
-| `POST` | `/v1/calls/{id}/actions/claim` | `telephony:write` | Atómicomente reclamar una llamada ofrecida; exactamente un punto final gana. |
+| `POST` | `/v1/calls/{id}/actions/claim` | `telephony:write` | Reclamar atómicamente una llamada ofrecida; sólo un endpoint gana. |
 | `POST` | `/v1/calls/{id}/actions/pre-accept` | `telephony:write` | Pre-aceptar una llamada de WhatsApp de entrada con una respuesta SDP. |
 | `POST` | `/v1/calls/{id}/actions/accept` | `telephony:write` | Aceptar una llamada de WhatsApp reclamada. |
-| `POST` | `/v1/calls/{id}/actions/decline` | `telephony:write` | Desclina este punto final y ruta al siguiente agente disponible. |
+| `POST` | `/v1/calls/{id}/actions/decline` | `telephony:write` | Rechazar la llamada en este endpoint y dirigirla al siguiente agente disponible. |
 | `POST` | `/v1/calls/{id}/actions/hangup` | `telephony:write` | Terminar a través del proveedor subyacente. |
-| `POST` | `/v1/messages/template` | `messages:write` | Enviar o programa aprobado plantillas WhatsApp. |
+| `POST` | `/v1/messages/template` | `messages:write` | Enviar o programar plantillas aprobadas de WhatsApp. |
 | `POST` | `/v1/messages/flow` | `messages:write` | Envíe un flujo de WhatsApp publicado dentro de la ventana de 24 horas. |
-| `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Reconcile un mensaje programado, su WAMID, fallo de ejecución, y el último estado Meta. `messages:write` las teclas siguen siendo compatibles. |
+| `GET` | `/v1/scheduled-messages/{id}` | `messages:read` | Consultar un mensaje programado, su WAMID, un posible fallo de ejecución y el último estado de Meta. Las claves existentes con `messages:write` siguen siendo compatibles. |
 | `DELETE` | `/v1/scheduled-messages/{id}` | `messages:write` | Cancelar un mensaje programado que no ha comenzado a procesar. |
 | `POST` | `/v1/media` | `media:write` | Sube los medios reutilizables permanentes para la organización API-key. |
 | `GET` | `/v1/media` | `media:read` | Lista la reutilizable biblioteca de medios de la organización. |
 | `GET` | `/v1/media/{id}/download` | `media:read` | Descargar Easyhook-hosted media bytes para clientes CRMs/inboxes. |
 | `DELETE` | `/v1/media/{id}` | `media:write` | Eliminar los medios reutilizables. |
-| `GET` | `/v1/templates?from=...` | `templates:read` | Listar plantillas de WhatsApp para el WABA detrás `from`. |
-| `POST` | `/v1/templates/sync` | `templates:write` | Plantillas de sincronización de Meta en Easyhook. |
-| `POST` | `/v1/templates/classify` | `templates:write` | Regrese asesoramiento de categoría no bloqueante sin someterse a Meta. |
+| `GET` | `/v1/templates?from=...` | `templates:read` | Listar las plantillas de WhatsApp del WABA asociado a `from`. |
+| `POST` | `/v1/templates/sync` | `templates:write` | Sincronizar las plantillas de Meta con Easyhook. |
+| `POST` | `/v1/templates/classify` | `templates:write` | Obtener una recomendación de categoría sin bloquear ni enviar contenido a Meta. |
 | `POST` | `/v1/templates` | `templates:write` | Crear una plantilla de WhatsApp en Meta y almacenarla localmente. |
-| `POST` | `/v1/templates/media` | `templates:write` | Sube la imagen, el vídeo o los medios de encabezado de documentos y obtenga el mango de creación Meta. |
+| `POST` | `/v1/templates/media` | `templates:write` | Subir una imagen, video o documento de encabezado y obtener el identificador de carga de Meta. |
 | `POST` | `/v1/templates/delete` | `templates:write` | Eliminar una plantilla de WhatsApp en Meta y localmente. |
 | `GET` | `/v1/flows?from=...` | `flows:read` | List WhatsApp Flows for the WABA behind `from`. |
 | `POST` | `/v1/flows/sync` | `flows:write` | Sync WhatsApp Flujos de Meta. |
@@ -639,7 +639,7 @@ Para abrir una página como un mapa, utilice una URL HTTPS pública:
 Reglas comunes:
 
 - `buttons` contiene 1–3 artículos y cada uno `title` tiene a la mayoría 20 caracteres.
-- `reply` requiere un establo `payload` de la mayoría de 64 UTF-8 bytes.
+- `reply` requiere un `payload` estable de hasta 64 bytes UTF-8.
 - `url` requiere una URL HTTPS pública.
 - WhatsApp requiere una ventana abierta de servicio al cliente.
   plantilla aprobada.
@@ -1131,7 +1131,7 @@ Errores de espera adicionales:
 | `400` | `invalid_timeout_seconds` | El tiempo está fuera de 1-300 segundos. |
 | `429` | `too_many_active_waits` | Esta clave de API ya tiene dos esperas activas en la instancia actual de API. |
 
-## Hosted Channel Onboarding
+## Onboarding alojado de canales
 
 Uso alojado a bordo cuando un desarrollador quiere que su propio cliente conecte un
 canal sin dar acceso al cliente al portal Easyhook. La clave API
@@ -1316,7 +1316,7 @@ Authorization: Bearer eh_live_...
 o falla de red que puede ser temporal. `reauthorization_required` significa que
 activos de crédito o proveedor ya no es utilizable y el cliente debe volver a conectar
 ese canal. `checked_at`, `code`, y el sanitized `message` se incluyen para
-diagnóstico; credenciales y fichas de proveedor nunca se devuelven.
+diagnóstico; las credenciales y los tokens del proveedor nunca se devuelven.
 
 Para el monitoreo basado en empuje, suscríbete un webhook cliente
 `channel.health_changed`. Easyhook emite sólo cuando la salud normalizada
@@ -1342,7 +1342,7 @@ Respuesta de ejemplo:
 }
 ```
 
-La operación es organización-scopio e idempotente. Repetirlo después del remitente
+La operación está limitada a la organización y es idempotente. Repetirla después de que el remitente
 ya se han eliminado las devoluciones `200` con `already_disconnected: true`.
 Easyhook elimina su canal almacenado y sus credenciales; activos del lado proveedor y
 las cuentas de negocio no se eliminan.
@@ -1498,7 +1498,7 @@ Comportamiento de programación:
 - Con `at`, Easyhook almacena el mensaje y programa un envío de tareas en la nube para ese tiempo.
 - La respuesta es `202 Accepted` con una `scheduled_message.id`.
 - `client_reference` es un identificador de aplicación opcional de hasta 200 caracteres. Easyhook lo devuelve en el ciclo de vida programado y en los juegos web correlacionados.
-- Enviar un establo `Idempotency-Key` encabezado al crear un mensaje programado. Retrying the same operation devuelve el registro original en lugar de crear otra tarea de Cloud.
+- Envía un encabezado `Idempotency-Key` estable al crear un mensaje programado. Reintentar la misma operación devuelve el registro original en lugar de crear otra tarea de Cloud.
 - Programado de forma gratuita `text` y `media` debe estar dentro de la ventana de servicio al cliente 24 horas de WhatsApp en el momento programado.
 - Las plantillas programadas pueden estar fuera de la ventana de servicio al cliente las 24 horas, pero deben seguir utilizando plantillas aprobadas y satisfacer los requisitos de opt-in.
 - Si un mensaje de forma gratuita programado estaría fuera de la ventana, Easyhook vuelve `scheduled_customer_service_window_closed`.
@@ -1523,13 +1523,13 @@ Ejemplo de respuesta programada:
 }
 ```
 
-### Reconcilo Mensaje programado
+### Consultar un mensaje programado
 
 ```http
 GET /v1/scheduled-messages/{scheduled_message_id}
 ```
 
-Requisitos `messages:read`; existente `messages:write` Las teclas siguen siendo compatibles. Utilice este punto final después de los timeouts, los registros de trabajadores, o el tiempo de inactividad webhook.
+Requiere `messages:read`; las claves existentes con `messages:write` siguen siendo compatibles. Utiliza este endpoint después de timeouts, reintentos de workers o interrupciones de webhooks.
 
 ```bash
 curl https://api.easyhook.dev/v1/scheduled-messages/scheduled_message_uuid \
@@ -1883,9 +1883,9 @@ Permiso `status` valores: `opt_in`, `opt_out`, `pending_opt_out`.
 
 An `opt_in` registro debe incluir no vacío `evidence`. Almacenar suficiente información
 para demostrar lo que la persona aceptó y cuándo, como una versión de formulario,
-timetamp, fuente URL, o la comunicación externa id. Easyhook almacena la evidencia
+marca de tiempo, URL de origen o ID de la comunicación externa. Easyhook almacena la evidencia
 y aplica el estado de consentimiento resultante; no certifica que la colección
-método satisfies Meta política o derecho local. La organización utilizando la API
+el método cumple las políticas de Meta o la legislación local. La organización que utiliza la API
 sigue siendo responsable de obtener el consentimiento válido y honrar las solicitudes de exclusión.
 
 ### Obtener contacto con el estado de consentimiento
@@ -2231,11 +2231,11 @@ Cuerpo:
 }
 ```
 
-`template.language` se requiere a menos que el nombre de la plantilla sea único en que WABA y Easyhook puedan resolverlo con seguridad.
+`template.language` es obligatorio, salvo que el nombre de la plantilla sea único en ese WABA y Easyhook pueda resolverlo de forma segura.
 
 En el `n8n-nodes-easyhook` nodo comunitario, `Choose From Easyhook` sincroniza las plantillas y listas del remitente seleccionados sólo definiciones aprobadas. `Enter Manually` resuelve la misma definición de su nombre tipo y el idioma seleccionado. Ambas fuentes pueden generar automáticamente campos para el texto del encabezado o los medios, variables corporales, botones de URL dinámicos, cargas de respuesta rápida y valores de código de copia. `Custom Components (JSON)` para enviar componentes Meta crudos en su lugar.
 
-El campo n8n personalizado acepta una matriz de componentes brutos o `{ "components": [...] }`. No incluir `from`, `to`, `template`, `language` porque el nodo los suministra por separado. Los enlaces multimedia deben ser URLs HTTPS públicas, y los parámetros del botón URL contienen sólo el valor variable de plantilla dinámica. Vea el paquete README para ejemplos completos de texto y medios.
+El campo personalizado de n8n acepta un array de componentes sin procesar o `{ "components": [...] }`. No incluyas `from`, `to`, `template` ni `language`, porque el nodo los proporciona por separado. Los enlaces multimedia deben ser URLs HTTPS públicas y los parámetros de botones URL deben contener únicamente el valor de la variable dinámica de la plantilla. Consulta el README del paquete para ver ejemplos completos de texto y multimedia.
 
 ## Enviar mensaje de texto
 
@@ -2818,7 +2818,7 @@ Notas:
 - Las pegatinas y el audio no soportan leyendas.
 - Las pegatinas WhatsApp deben ser archivos WebP válidos que miden exactamente 512 x 512 px. Easyhook rechaza pegatinas reutilizables con `invalid_sticker_dimensions` antes de enviar o cargar la operación de envío. El error incluye ambos `dimensions` y `expected_dimensions`.
 - Preferir medios reutilizables gestionados por Easyhook para envíos repetidos. `id` o `link`.
-- Cuándo `media_name` se utiliza, Easyhook crea una URL firmada de corta duración interna y envía esa URL a Meta. Las aplicaciones de los clientes sólo necesitan saber el establo `media_name`.
+- Cuando se utiliza `media_name`, Easyhook crea una URL firmada interna de corta duración y la envía a Meta. Las aplicaciones de los clientes sólo necesitan conservar el `media_name` estable.
 - `media_name` resuelve un activo reutilizable en toda la organización.
   ser utilizado desde WhatsApp, Messenger, Instagram o Telegram cuando ese proveedor
   soporta el tipo de medio seleccionado.
@@ -3152,7 +3152,7 @@ Estos requieren el token de administración Easyhook y son utilizados por el por
 | `DELETE` | `/v1/integrations/chatwoot/{integration_id}` | Desconectar Chatwoot sin eliminar su actual bandeja de entrada/historia. |
 | `GET` | `/v1/integrations/chatwoot/{integration_id}/imports?tenant_id=...` | Lea el progreso de importación de contacto/historia. |
 | `POST` | `/v1/integrations/chatwoot/{integration_id}/imports` | Comienzo de una `contacts` o `history` importa. |
-| `POST` | `/v1/wallet/topups/stripe/checkout` | Cree una salida de Stripe anfitriona para una recarga de billetera MXN o USD. Ruta interna/admin. |
+| `POST` | `/v1/wallet/topups/stripe/checkout` | Crear una sesión de pago alojada por Stripe para recargar un wallet MXN o USD. Ruta interna/administrativa. |
 | `POST` | `/v1/billing/stripe/webhook` | Recibir eventos firmados de Stripe Checkout y acreditar la correspondiente cartera de organización. Llamado sólo por Stripe. |
 
 Parámetros clave de Admin API:
@@ -3205,7 +3205,7 @@ Las rutas de la cartera de Stripe no se autentican con las claves de API del cli
 
 ### Legacy WhatsApp Route Aliases
 
-Estas rutas siguen siendo implementadas para compatibilidad portal/backward, pero no se recomiendan para nuevas integraciones. `/v1/messages/*`, `/v1/templates*`, `/v1/flows*`, y `/v1/consent*` rutas en su lugar.
+Estas rutas siguen implementadas por compatibilidad con el portal y versiones anteriores, pero no se recomiendan para integraciones nuevas. Usa en su lugar `/v1/messages/*`, `/v1/templates*`, `/v1/flows*` y `/v1/consent*`.
 
 | Familia de la ruta del legado | Familia de ruta preferida |
 | --- | --- |
@@ -3278,7 +3278,7 @@ Punto final:
 POST /v1/templates/sync
 ```
 
-Requisitos `templates:write`. Tira plantillas de Meta para una WABA y almacena el estado actual, calidad, idioma, categoría y componentes en Easyhook.
+Requiere `templates:write`. Obtiene las plantillas de Meta para un WABA y guarda en Easyhook su estado, calidad, idioma, categoría y componentes actuales.
 
 Campos obligatorios:
 
@@ -3325,7 +3325,7 @@ Punto final:
 POST /v1/templates/classify
 ```
 
-Requisitos `templates:write`. Enviar `category` y la intención `components`.
+Requiere `templates:write`. Envía `category` y los `components` que planeas utilizar.
 Easyhook regresa consejos rápidos y deterministas antes de sumisión:
 
 ```json
@@ -3349,7 +3349,7 @@ Punto final:
 POST /v1/templates
 ```
 
-Requisitos `templates:write`. Crea una plantilla de WhatsApp en Meta y almacena la
+Requiere `templates:write`. Crea una plantilla de WhatsApp en Meta y guarda la
 copia local. La respuesta incluye `category_advice`; las advertencias no bloquean
 sumisión.
 
@@ -3370,7 +3370,7 @@ Campos opcionales:
 | `parameter_format` | string | `POSITIONAL` (por defecto) o `NAMED`Easyhook valida y lo envía a Meta. |
 | `message_send_ttl_seconds` | Número | Meta Mensaje enviar TTL para las categorías de plantilla soportadas. |
 
-Enviar un establo `Idempotency-Key` header for retry-safe creation. Repita la misma llave y JSON vuelve
+Envía un encabezado `Idempotency-Key` estable para crear el recurso de forma segura ante reintentos. Repetir la misma clave y JSON devuelve
 el resultado original con `idempotent_replay: true` y no llama a Meta otra vez. Reutilizando una llave con diferente
 Retorno de datos de plantilla `409 idempotency_key_reused_with_different_request`. Mantener la llave en 255 caracteres o
 menos.
@@ -3423,7 +3423,7 @@ Respuesta:
 POST /v1/templates/media
 ```
 
-Requisitos `templates:write`. Easyhook sube el archivo a través de la API de carga resumible de Meta y devuelve el
+Requiere `templates:write`. Easyhook sube el archivo mediante la API de carga reanudable de Meta y devuelve el
 `handle` requeridos en `components[].example.header_handle` al crear una imagen, un vídeo o un documento
 plantilla.
 
@@ -3492,7 +3492,7 @@ Punto final:
 POST /v1/templates/delete
 ```
 
-Requisitos `templates:write`. Elimina una plantilla en Meta y elimina el registro local de Easyhook.
+Requiere `templates:write`. Elimina una plantilla en Meta y su registro local en Easyhook.
 
 Campos obligatorios:
 
@@ -3524,7 +3524,7 @@ Campos obligatorios:
 | --- | --- | --- |
 | `from` | string | Número de teléfono de negocios WhatsApp propiedad del arrendatario. |
 | `to` | string | Recipiente número de WhatsApp. |
-| `template` o `template_id` | objeto/estring | Referencia de plantilla pública o plantilla interna heredada hilera id. |
+| `template` o `template_id` | objeto/string | Referencia pública de la plantilla o ID heredado de su registro interno. |
 
 Campos opcionales:
 
@@ -3669,7 +3669,7 @@ enlaces no-HTTPS, medios de comunicación sobre plantillas sin un encabezado mul
 Las plantillas programadas conservan la referencia de los medios seleccionados. Los medios reutilizables se resuelven y firman cuando el
 Trabajo programado ejecuta, evitando URLs expiradas.
 
-Después de editar una plantilla en Meta, llame `POST /v1/templates/sync`. Easyhook aumenta el ID actual del proveedor,
+Después de editar una plantilla en Meta, llama a `POST /v1/templates/sync`. Easyhook actualiza o inserta el ID vigente del proveedor,
 status, components, category, and quality for the same WABA/name/language. No enviar la definición editada
 hasta que el estado sincronizado regrese a `APPROVED`.
 
@@ -3717,7 +3717,7 @@ curl -X POST https://api.easyhook.dev/v1/live-chat/sessions \
 Los clientes anónimos no pueden elegir `visitor_id`; Easyhook genera un fresco
 `ehusr_...` identidad para que un navegador no pueda reclamar la historia de otro visitante.
 la respuesta también incluye `conversation_id` (`ehconv_...`), un acceso de 15 minutos
-token y un token de refresco rotativo. Almacene las fichas sólo para este navegador.
+token y un token de actualización rotativo. Guarda los tokens únicamente en ese navegador.
 
 Para un usuario de aplicación firmado, el backend del cliente crea primero un
 token de identidad de cinco minutos con la clave de Easyhook API:
@@ -3775,7 +3775,7 @@ curl -X POST https://api.easyhook.dev/v1/live-chat/sessions/refresh \
   -d '{"refresh_token":"eh_chat_refresh_xxx"}'
 ```
 
-Las fichas de referencia son de uso único. Un refrescante exitoso invalida ambos anteriores
+Los tokens de actualización son de un solo uso. Una actualización exitosa invalida ambos tokens anteriores
 Tokens y devuelve un nuevo par.
 
 Para conversaciones y grupos directos de propiedad de la aplicación, un backend confiable utiliza

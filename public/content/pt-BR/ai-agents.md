@@ -267,12 +267,12 @@ cursores de leitura e indicadores de digitação. Consulte o contrato completo d
 sessões e ações na Referência da API.
 
 Para cabeçalhos de modelos multimídia, faça upload do exemplo de aprovação com
-`POST /v1/templates/media`. Fornecimento `template_name`, `template_language`, e
-`media_type` guarda- o como activo predefinido. No momento do envio,
+`POST /v1/templates/media`. Fornecer `template_name`, `template_language` e
+`media_type` salva o arquivo como recurso padrão. No momento do envio,
 `POST /v1/messages/template` pode omitir `media` para usar esse padrão ou fornecer
-exatamente uma dinâmica `media.link`, `media.id`, ou reutilizável `media.name`. A
-A sobreposição dinâmica deve corresponder ao tipo de cabeçalho aprovado da imagem, vídeo ou documento;
-mídia de documentos também pode definir `filename`.
+exatamente uma referência dinâmica `media.link`, `media.id` ou uma referência reutilizável
+`media.name`. A referência dinâmica deve corresponder ao cabeçalho aprovado de imagem,
+vídeo ou documento; documentos também podem definir `filename`.
 
 Use o endpoint interativo padronizado quando o fluxo de trabalho precisar de até três
 botões de resposta ou URL em WhatsApp, Messenger, Instagram ou Telegram:
@@ -349,18 +349,18 @@ e os limites.
 - Não `tenant_id`, Supabase UUID, meta token de acesso, WABA ID, ou número de telefone ID
   é hardcoded a menos que o endpoint normativo o requeira explicitamente.
 - Todos os números de remetente e destinatário usam dígitos internacionais.
-- Cada escrita reexperimentável tem um estável `Idempotency-Key`.
+- Cada operação de escrita que pode ser repetida usa um `Idempotency-Key` estável.
 - O HMAC é verificado em relação a bytes brutos usando comparação de tempo constante.
-- O manipulador retorna `2xx` antes do trabalho lento do banco de dados/automatização.
+- O manipulador retorna `2xx` antes de tarefas lentas de banco de dados ou automação.
 - Mensagens e eventos são deduplicados.
 - Os envios agendados persistem `scheduled_message.id`, `client_reference`, e o
   final `message_id`; correlação webhook/status não depende de timestamps.
 - Eventos de History não acionam os bots destinados às conversas em tempo real.
-- Erro nos eventos de estado e `sync.failed` são retidos com os seus detalhes de erro.
-- Meta `status.pricing.billable` descreve Meta preço, não Easyhook faturamento.
+- Eventos de status com falha e `sync.failed` são mantidos com seus detalhes de erro.
+- `status.pricing.billable` descreve a cobrança da Meta, não a cobrança da Easyhook.
   Uma operação de API de saída pública bem-sucedida é cobrada de acordo com o
-  carteira Easyhook mesmo quando Meta etiqueta a conversa `free_customer_service`.
-- Logs redact API chaves, segredos webhook, códigos de autorização e provedor
-  fichas.
+  carteira da Easyhook mesmo quando a Meta classifica a conversa como `free_customer_service`.
+- Os logs ocultam chaves de API, segredos de webhook, códigos de autorização e tokens
+  de provedores.
 - Testes cobrem entrada, saída/eco, mídia, reação, status de falha, e em
   Pelo menos uma entrega duplicada.

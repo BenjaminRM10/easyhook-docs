@@ -2,17 +2,17 @@
 
 Última actualización: 2026-08-20
 
-Este archivo es el punto de entrada para un agente de codificación que integra Easyhook en
-es intencionalmente conciso. Los contratos normativos son:
+Este archivo es el punto de entrada para un agente de programación que integra Easyhook.
+Es intencionalmente conciso. Los contratos normativos son:
 
-1. [Public API](/api-reference): cada punto final del cliente, parámetro de solicitud,
+1. [API pública](/api-reference): cada endpoint de cliente, parámetro de solicitud,
    respuesta, error, regla de facturación, y ejemplo.
-2. [Customer Webhooks](/webhooks): API de suscripción, filtros,
-   cabeceras de seguridad, nombres de campo JSON normalizados, lotes de historia y retries.
+2. [Webhooks para clientes](/webhooks): API de suscripción, filtros,
+   encabezados de seguridad, nombres de campos JSON normalizados, lotes de historial y reintentos.
 
-No invente campos de la documentación del proveedor o utilice viejos ejemplos de Easyhook encontrados
-Easyhook acepta eventos de proveedores internamente pero expone su propio compacto,
-contrato público normalizado.
+No inventes campos a partir de la documentación del proveedor ni uses ejemplos antiguos de Easyhook.
+Easyhook acepta internamente eventos de proveedores, pero expone su propio contrato público,
+compacto y normalizado.
 
 ## Inputs de integración
 
@@ -24,22 +24,21 @@ EASYHOOK_FROM=provider-native account ID or connected WhatsApp number
 EASYHOOK_WEBHOOK_URL=https://your-app.example/webhooks/easyhook
 ```
 
-La clave de API fija la organización. Nunca enviar `tenant_id` a un público
-endpoint. `from` debe resolverse a un canal conectado que posea
-organización. Preferir el proveedor-nativo `account.id` recibido en Easyhook
-webhooks. WhatsApp también acepta su número internacional conectado; no añadir
-`page_` o `ig_` prefijos.
+La clave de API determina la organización. Nunca envíes `tenant_id` a un endpoint
+público. `from` debe resolverse a un canal conectado que pertenezca a esa organización.
+Prefiere el `account.id` nativo del proveedor recibido en los webhooks de Easyhook.
+WhatsApp también acepta el número internacional conectado; no agregues los prefijos
+`page_` o `ig_`.
 
-`channel` es normalmente opcional. `from` está conectado a más de uno
-canal compatible, Easyhook devuelve `409 ambiguous_sender` y listas
-`available_channels`; reingresar con el valor previsto, como `whatsapp` o
-`sms`. Nunca adivinar o silenciosamente caer de nuevo.
+`channel` normalmente es opcional. Si `from` está conectado a más de un canal
+compatible, Easyhook devuelve `409 ambiguous_sender` y `available_channels`;
+reintenta con el valor correcto, como `whatsapp` o `sms`. Nunca lo adivines ni
+apliques un fallback silencioso.
 
-Para WhatsApp, siempre incluye el código internacional de llamadas de país.
-acepta valores internacionales, espacios, hyphens, paréntesis, solo dígitos,
-y los puntos `00` prefijo internacional. No infiere a un país de
-número solo nacional. Mexicano `52`/`521` variantes y móviles argentinos
-`54`/`549` la notación se normaliza automáticamente.
+Para WhatsApp, incluye siempre el código internacional del país. Easyhook acepta
+valores internacionales con espacios, guiones, paréntesis, sólo dígitos o el prefijo
+internacional `00`. No infiere el país a partir de un número nacional. Las variantes
+mexicanas `52`/`521` y argentinas `54`/`549` se normalizan automáticamente.
 
 ## Minimal Send
 
@@ -55,8 +54,8 @@ curl -X POST https://api.easyhook.dev/v1/messages/text \
   }'
 ```
 
-Use un establo `Idempotency-Key` para cada escritura que la aplicación puede volver a entrar.
-No reutilizar la misma clave para dos operaciones lógicas diferentes.
+Usa un `Idempotency-Key` estable para cada escritura que la aplicación pueda reintentar.
+No reutilices la misma clave para dos operaciones lógicas diferentes.
 
 Para un mensaje programado, también envíe una solicitud de propiedad `client_reference`:
 
@@ -70,19 +69,19 @@ Para un mensaje programado, también envíe una solicitud de propiedad `client_r
 }
 ```
 
-Persiste el regreso `scheduled_message.id`. Suscribirse a ambos `scheduled.*`
-y `status.*`. `scheduled.sent` proporciona el ID del mensaje del proveedor; el estado del mensaje posterior
-de los acontecimientos `scheduled_message_id` y `client_reference`. Reconcile después de un
-timeout o webhook outage con:
+Guarda el `scheduled_message.id` devuelto. Suscríbete a `scheduled.*` y `status.*`.
+`scheduled.sent` proporciona el ID del mensaje del proveedor; los eventos de estado
+posteriores incluyen `scheduled_message_id` y `client_reference`. Después de un timeout
+o una interrupción de webhooks, reconcilia el estado con:
 
 ```http
 GET /v1/scheduled-messages/{scheduled_message_id}
 ```
 
-Nunca correlacione un mensaje programado por destinatario, nombre de plantilla o timetamp.
-`client_reference` acepta a la mayoría de 200 caracteres. Tratar la respuesta HTTP como
-el reconocimiento de la programación: una referencia generada localmente sin un retorno
-`scheduled_message.id` no prueba que Easyhook recibió la solicitud.
+Nunca correlaciones un mensaje programado por destinatario, nombre de plantilla o marca de tiempo.
+`client_reference` acepta hasta 200 caracteres. Trata la respuesta HTTP como confirmación
+de la programación: una referencia generada localmente sin un `scheduled_message.id`
+devuelto no demuestra que Easyhook recibió la solicitud.
 
 ## Configuración mínima de Webhook
 
@@ -226,17 +225,17 @@ invalidar eventos importados con éxito.
 | Enviar medios | `POST /v1/messages/media` |
 | Enviar plantilla | `POST /v1/messages/template` |
 | Subir los medios de encabezado de plantilla | `POST /v1/templates/media` |
-| Send Flow | `POST /v1/messages/flow` |
-| Mark read / show typing | `POST /v1/messages/read`, `/v1/messages/typing` |
-| Lista/conversaciones de lectura | `GET /v1/conversations...` |
+| Enviar Flow | `POST /v1/messages/flow` |
+| Marcar como leído / mostrar escritura | `POST /v1/messages/read`, `/v1/messages/typing` |
+| Listar/leer conversaciones | `GET /v1/conversations...` |
 | Esperar una respuesta urgente | `GET /v1/conversations/{contact}/messages/wait...` |
-| Reconcile/cancel mensaje programado | `GET`, `DELETE /v1/scheduled-messages/{id}` |
+| Consultar/cancelar un mensaje programado | `GET`, `DELETE /v1/scheduled-messages/{id}` |
 | Subir/lista medios reutilizables | `POST /v1/media`, `GET /v1/media?from=...` |
 | Plantillas de lista/sincronización | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
-| Manage Flows | `/v1/flows` |
+| Administrar Flows | `/v1/flows` |
 | Administrar el consentimiento | `/v1/consent` y `/v1/consent/*` |
 
-Configuración de consentimiento es por WABA. Soportes de copia `language: "es" | "en" | "pt-BR"`, epígrafes y cuerpos editables opt-in/opt-out, y una calzada. Debido a que Meta Flows son inmutables después de la publicación, guardar copia con `PATCH /v1/consent/config` y aplicarlo con `POST /v1/consent/enable`; Easyhook crea una versión determinista y las rutas futuras envían a ella. `auto_opt_in_enabled: true` Opcionalmente programa Easyhook's opt-in Flow 23 horas después de la primera interacción en vivo. No recrea ese temporizador en un agente o flujo de trabajo. Easyhook revalida la ventana de servicio y el estado actual opt-in/opt-out antes del envío. `POST /v1/consent` debe incluir evidencia auditable suministrada por el cliente.
+La configuración del consentimiento es por WABA. Admite `language: "es" | "en" | "pt-BR"`, títulos y textos editables para opt-in y opt-out, y una nota al pie. Como los Meta Flows son inmutables después de publicarse, guarda el contenido con `PATCH /v1/consent/config` y aplícalo con `POST /v1/consent/enable`; Easyhook crea una versión determinista y los envíos futuros utilizan esa versión. De forma opcional, `auto_opt_in_enabled: true` programa el Flow de opt-in de Easyhook 23 horas después de la primera interacción en vivo. No recrees ese temporizador en un agente o workflow. Easyhook vuelve a validar la ventana de servicio y el estado actual de opt-in/opt-out antes de enviar. `POST /v1/consent` debe incluir evidencia auditable proporcionada por el cliente.
 | Cliente hospedado a bordo | `POST /v1/onboarding/sessions` |
 | Gestionar suscripciones webhook | `/v1/webhooks`; actualizar sólo eventos con `PATCH /v1/webhooks/{id}` |
 | Crear una identidad de chat en vivo firmada | `POST /v1/live-chat/identity-tokens` |
@@ -257,24 +256,24 @@ atribución de agente se muestran sólo cuando una organización tiene varios mi
 La aplicación Android admite propietarios, administradores y agentes; conexión de canal,
 gestión de carteras, claves y webhooks permanecen en el portal web.
 
-Easyhook Live Chat es un canal de primera persona sin mensajería externa
-proveedor. Los clientes navegadores utilizan una clave de widget publicable más de alcance corto
-sesiones; aplicaciones autenticadas acuden a fichas de identidad de cinco minutos de sus propias
-backend. Nunca incrustar una clave normal de Easyhook API en un navegador o cliente móvil.
-Chat en vivo soporta conversaciones directas y colectivas, texto, medios, pegatinas,
-respuestas, metadatos de reenvío, reacciones, ediciones, lápidas de eliminación, leídos
-Los cursores y la escritura. Vea el contrato completo de sesión y acción en el público
-Referencia de API.
+Easyhook Live Chat es un canal propio, sin un proveedor externo de mensajería.
+Los clientes web utilizan una clave publicable del widget y sesiones de corta duración;
+las aplicaciones autenticadas generan tokens de identidad de cinco minutos desde su
+propio backend. Nunca incluyas una clave normal de la API de Easyhook en un navegador
+o cliente móvil. Live Chat admite conversaciones directas y grupales, texto,
+multimedia, stickers, respuestas, metadatos de reenvío, reacciones, ediciones,
+marcadores de eliminación, cursores de lectura e indicadores de escritura. Consulta
+el contrato completo de sesiones y acciones en la referencia pública de la API.
 
 Para los encabezados de plantilla multimedia, suba el ejemplo de aprobación con
-`POST /v1/templates/media`Suministros `template_name`, `template_language`, y
-`media_type` lo almacena como el activo predeterminado. En el tiempo de envío,
-`POST /v1/messages/template` Omit `media` utilizar ese predeterminado o proporcionar
-exactamente una dinámica `media.link`, `media.id`, o reutilizable `media.name`A
-anulación dinámica debe coincidir con el tipo de imagen, vídeo o encabezado de documento aprobado;
-documentos medios de comunicación también pueden establecer `filename`.
+`POST /v1/templates/media`. Proporcionar `template_name`, `template_language` y
+`media_type` lo guarda como recurso predeterminado. Al enviar,
+`POST /v1/messages/template` puede omitir `media` para utilizar ese valor predeterminado o proporcionar
+exactamente una referencia dinámica `media.link`, `media.id` o una referencia reutilizable
+`media.name`. La referencia dinámica debe coincidir con el encabezado de imagen, video
+o documento aprobado; los documentos también pueden establecer `filename`.
 
-Utilice el punto final interactivo estandarizado cuando el flujo de trabajo necesita hasta tres
+Utiliza el endpoint interactivo estandarizado cuando el flujo de trabajo necesite hasta tres
 botones de respuesta o URL a través de WhatsApp, Messenger, Instagram o Telegram:
 
 ```json
@@ -319,7 +318,7 @@ campos.
 La lista de plantillas, sincronización y respuestas a la creación incluyen `meta_waba_id`. Tratar eso como
 el identificador del proveedor WABA; nunca sustituya el Easyhook interno `waba_id`
 UUID. La creación de la plantilla acepta `parameter_format` como tal `POSITIONAL` o `NAMED`.
-Las integraciones seguras de la retry deben enviar un establo `Idempotency-Key`.
+Las integraciones que permiten reintentos seguros deben enviar un `Idempotency-Key` estable.
 
 Para cada operación de plantilla, prefiera `from` como el único selector de cuenta.
 API llave fija la organización y Easyhook deriva el WABA exacto de que
@@ -347,21 +346,21 @@ límites.
 ## Lista de verificación de aceptación
 
 - La clave de API sigue siendo lado servidor.
-- No. `tenant_id`, Supabase UUID, Meta access token, WABA ID, o número de teléfono ID
-  está codificado a menos que el punto final normativo lo requiera explícitamente.
+- Ningún `tenant_id`, UUID de Supabase, token de acceso de Meta, ID de WABA o ID de teléfono
+  está codificado, salvo que el endpoint normativo lo requiera explícitamente.
 - Todos los números del remitente y del receptor usan dígitos internacionales.
-- Cada escritura retráctil tiene un establo `Idempotency-Key`.
+- Cada escritura reintentable tiene un `Idempotency-Key` estable.
 - HMAC se comprueba contra los bytes crudos usando comparación de tiempo constante.
-- Handler devuelve `2xx` antes de la lenta base de datos / trabajo de automatización.
+- El handler devuelve `2xx` antes del trabajo lento de base de datos o automatización.
 - Los mensajes y eventos son deduplicados.
 - Los envíos programados persisten `scheduled_message.id`, `client_reference`, y
   final `message_id`; correlación webhook/status no depende de las marcas temporales.
 - La historia no desencadena bots en vivo.
-- Failed status events and `sync.failed` son retenidos con sus datos de error.
-- Meta `status.pricing.billable` describe Meta pricing, no Easyhook billing.
-  Una operación de API de salida pública exitosa se carga de acuerdo con
-  Cartera Easyhook incluso cuando Meta etiqueta la conversación `free_customer_service`.
-- Logs redact API keys, webhook secrets, códigos de autorización y proveedor
-  Tokens.
-- Los exámenes cubren la entrada, salida/echo, medios de comunicación, reacción, estado fallido, y en
+- Los eventos de estado fallidos y `sync.failed` se conservan con sus datos de error.
+- Meta `status.pricing.billable` describe los precios de Meta, no la facturación de Easyhook.
+  Una operación exitosa de la API pública de salida se cobra según el wallet de Easyhook,
+  incluso cuando Meta etiqueta la conversación como `free_customer_service`.
+- Los logs ocultan claves de API, secretos de webhooks, códigos de autorización y tokens
+  de proveedores.
+- Las pruebas cubren entrada, salida/eco, multimedia, reacciones, estados fallidos y al
   menos una entrega duplicada.

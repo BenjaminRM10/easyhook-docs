@@ -1336,7 +1336,7 @@ Con los precios actuales del mensaje, Meta puede omitir el legado `conversation`
 
 Los campos de consentimiento en un Flow presentado continúan actualizando el estado de consentimiento de Easyhook antes de la entrega.
 
-## Hosted Onboarding
+## Onboarding alojado
 
 Suscríbete `onboarding.*` para recibir eventos de ciclo de vida de registro organizados:
 
