@@ -179,7 +179,7 @@ Assíncrona.
 - `message.direction: in` significa que o contato enviou a mensagem.
 - `message.direction: out` significa que a conta conectada enviou a mensagem.
 - `message.source: history` é uma importação, não uma ação de cliente ao vivo.
-  responder automaticamente a ele por padrão.
+  Nunca responda automaticamente a ele por padrão.
 - Campos desconhecidos, valores de enum desconhecidos, e `event.received` deve ser ignorado
   Em segurança.
 - Blocos opcionais são omitidos em vez de enviados como `null`.
