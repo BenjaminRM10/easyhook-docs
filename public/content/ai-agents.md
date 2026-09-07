@@ -235,11 +235,11 @@ invalidate successfully imported events.
 | List/sync templates | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
 | Manage Flows | `/v1/flows` |
 | Manage consent | `/v1/consent` and `/v1/consent/*` |
-
-Consent configuration is per WABA. Copy supports `language: "es" | "en" | "pt-BR"`, editable opt-in/opt-out headings and bodies, and a footer. Because Meta Flows are immutable after publication, save copy with `PATCH /v1/consent/config` and apply it with `POST /v1/consent/enable`; Easyhook creates a deterministic version and routes future sends to it. `auto_opt_in_enabled: true` optionally schedules Easyhook's opt-in Flow 23 hours after the first live inbound interaction. Do not recreate that timer in an agent or workflow. Easyhook revalidates the service window and current opt-in/opt-out state before dispatch. External consent recorded through `POST /v1/consent` must include auditable evidence supplied by the customer.
 | Hosted customer onboarding | `POST /v1/onboarding/sessions` |
 | Manage webhook subscriptions | `/v1/webhooks`; update only events with `PATCH /v1/webhooks/{id}` |
 | Create a signed Live Chat identity | `POST /v1/live-chat/identity-tokens` |
+
+Consent configuration is per WABA. Copy supports `language: "es" | "en" | "pt-BR"`, editable opt-in/opt-out headings and bodies, and a footer. Because Meta Flows are immutable after publication, save copy with `PATCH /v1/consent/config` and apply it with `POST /v1/consent/enable`; Easyhook creates a deterministic version and routes future sends to it. `auto_opt_in_enabled: true` optionally schedules Easyhook's opt-in Flow 23 hours after the first live inbound interaction. Do not recreate that timer in an agent or workflow. Easyhook revalidates the service window and current opt-in/opt-out state before dispatch. External consent recorded through `POST /v1/consent` must include auditable evidence supplied by the customer.
 
 ## Inbox, Teams, Mobile, And Live Chat
 

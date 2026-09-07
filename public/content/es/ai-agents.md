@@ -83,7 +83,7 @@ Nunca correlaciones un mensaje programado por destinatario, nombre de plantilla 
 de la programación: una referencia generada localmente sin un `scheduled_message.id`
 devuelto no demuestra que Easyhook recibió la solicitud.
 
-## Configuración mínima de Webhook
+## Configuración mínima de webhooks
 
 Descubre las opciones válidas primero:
 
@@ -92,7 +92,7 @@ curl "https://api.easyhook.dev/v1/webhooks/options?provider=whatsapp&scope_type=
   -H "Authorization: Bearer $EASYHOOK_API_KEY"
 ```
 
-Crear la suscripción:
+Crea la suscripción:
 
 ```bash
 curl -X POST https://api.easyhook.dev/v1/webhooks \
@@ -111,9 +111,9 @@ curl -X POST https://api.easyhook.dev/v1/webhooks \
   }'
 ```
 
-Almacene el devuelto `secret` De inmediato, Easyhook lo devuelve sólo una vez.
+Guarda inmediatamente el `secret` devuelto; Easyhook sólo lo muestra una vez.
 
-Validar el cuerpo HTTP crudo exacto:
+Valida el cuerpo HTTP bruto exacto:
 
 ```ts
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -175,8 +175,8 @@ el evento de forma asíncrona.
   proveedor según la política de consolidación de contactos de la aplicación.
 - `message.direction: in` significa que el contacto envió el mensaje.
 - `message.direction: out` significa que la cuenta conectada envió el mensaje.
-- `message.source: history` es una importación, no una acción de cliente en vivo. Nunca
-  auto-reply a él por defecto.
+- `message.source: history` es una importación, no una acción del cliente en vivo.
+  Nunca respondas automáticamente de forma predeterminada.
 - Los campos y valores enum desconocidos, así como `event.received`, deben ignorarse
   de forma segura.
 - Los bloques opcionales se omiten en vez de enviarse como `null`.
@@ -186,7 +186,7 @@ el evento de forma asíncrona.
 Suscríbete a `history.*` y `smb_app_state_sync.*` antes de solicitar una
 sincronización de coexistencia.
 
-La historia llega como:
+El historial llega como:
 
 ```json
 {
@@ -215,11 +215,11 @@ los eventos importados correctamente.
 
 | Objetivo | Punto final |
 | --- | --- |
-| Clave validada | `GET /v1/me` |
-| Envíos de listas | `GET /v1/senders` |
+| Validar la clave | `GET /v1/me` |
+| Listar remitentes | `GET /v1/senders` |
 | Desconectar un remitente después de confirmación explícita | `DELETE /v1/senders/{account_id}` |
 | Enviar texto | `POST /v1/messages/text` |
-| Enviar Mensajero/Instagram respuestas rápidas | `POST /v1/messages/quick-replies` |
+| Enviar respuestas rápidas de Messenger/Instagram | `POST /v1/messages/quick-replies` |
 | Enviar texto multicanal humanizado | `POST /v1/messages/humanized-text` (WhatsApp, Messenger, Instagram o Telegram; los controles de presencia son el mejor esfuerzo) |
 | Enviar medios | `POST /v1/messages/media` |
 | Enviar plantilla | `POST /v1/messages/template` |
@@ -229,31 +229,32 @@ los eventos importados correctamente.
 | Listar/leer conversaciones | `GET /v1/conversations...` |
 | Esperar una respuesta urgente | `GET /v1/conversations/{contact}/messages/wait...` |
 | Consultar/cancelar un mensaje programado | `GET`, `DELETE /v1/scheduled-messages/{id}` |
-| Subir/lista medios reutilizables | `POST /v1/media`, `GET /v1/media?from=...` |
-| Plantillas de lista/sincronización | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
+| Subir/listar medios reutilizables | `POST /v1/media`, `GET /v1/media?from=...` |
+| Listar/sincronizar plantillas | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
 | Administrar Flows | `/v1/flows` |
 | Administrar el consentimiento | `/v1/consent` y `/v1/consent/*` |
+| Onboarding alojado para clientes | `POST /v1/onboarding/sessions` |
+| Gestionar suscripciones de webhooks | `/v1/webhooks`; actualizar sólo eventos con `PATCH /v1/webhooks/{id}` |
+| Crear una identidad firmada de Live Chat | `POST /v1/live-chat/identity-tokens` |
 
 La configuración del consentimiento es por WABA. Admite `language: "es" | "en" | "pt-BR"`, títulos y textos editables para opt-in y opt-out, y una nota al pie. Como los Meta Flows son inmutables después de publicarse, guarda el contenido con `PATCH /v1/consent/config` y aplícalo con `POST /v1/consent/enable`; Easyhook crea una versión determinista y los envíos futuros utilizan esa versión. De forma opcional, `auto_opt_in_enabled: true` programa el Flow de opt-in de Easyhook 23 horas después de la primera interacción en vivo. No recrees ese temporizador en un agente o workflow. Easyhook vuelve a validar la ventana de servicio y el estado actual de opt-in/opt-out antes de enviar. `POST /v1/consent` debe incluir evidencia auditable proporcionada por el cliente.
-| Cliente hospedado a bordo | `POST /v1/onboarding/sessions` |
-| Gestionar suscripciones webhook | `/v1/webhooks`; actualizar sólo eventos con `PATCH /v1/webhooks/{id}` |
-| Crear una identidad de chat en vivo firmada | `POST /v1/live-chat/identity-tokens` |
 
-## Caja de entrada, Equipos, Móviles y Chat en vivo
+## Inbox, equipos, aplicación móvil y Live Chat
 
-La aplicación de Easyhook Inbox y Android utilizan las mismas conversaciones normalizadas,
-biblioteca de medios, estados de entrega, reacciones, respuestas, plantillas, recibos leídos,
-escribiendo señales, pines, estado no leído, y el libro mayor de cartera como la API pública.
-acción del proveedor enviada desde cualquiera Inbox es facturable en la operación normal
-precio; navegación, filtros, caché local, refrescos en tiempo real y notificación
-La entrega no se factura.
+El Inbox web y la aplicación Android de Easyhook utilizan las mismas conversaciones
+normalizadas, biblioteca multimedia, estados de entrega, reacciones, respuestas,
+plantillas, confirmaciones de lectura, indicadores de escritura, elementos fijados,
+estado no leído y registro del wallet que la API pública. Las acciones del proveedor
+enviadas desde cualquiera de los dos se cobran al precio normal de la operación;
+la navegación, los filtros, la caché local, las actualizaciones en tiempo real y la
+entrega de notificaciones no se cobran.
 
-Las organizaciones pueden invitar a los miembros como `administrator`, `developer`, `agent`.
-Las funciones son abarcadas por organización: una persona puede administrar una organización
-y actuar como agente en otro. Asignación, presencia, conversaciones de equipo, y
-atribución de agente se muestran sólo cuando una organización tiene varios miembros.
-La aplicación Android admite propietarios, administradores y agentes; conexión de canal,
-gestión de carteras, claves y webhooks permanecen en el portal web.
+Las organizaciones pueden invitar miembros como `administrator`, `developer` o `agent`.
+Los roles se asignan por organización: una persona puede administrar una organización
+y actuar como agente en otra. La asignación, presencia, conversaciones de equipo y
+atribución de agentes sólo se muestran cuando una organización tiene varios miembros.
+La aplicación Android admite propietarios, administradores y agentes; la conexión de
+canales y la gestión del wallet, las claves y los webhooks permanecen en el portal web.
 
 Easyhook Live Chat es un canal propio, sin un proveedor externo de mensajería.
 Los clientes web utilizan una clave publicable del widget y sesiones de corta duración;
@@ -264,13 +265,13 @@ multimedia, stickers, respuestas, metadatos de reenvío, reacciones, ediciones,
 marcadores de eliminación, cursores de lectura e indicadores de escritura. Consulta
 el contrato completo de sesiones y acciones en la referencia pública de la API.
 
-Para los encabezados de plantilla multimedia, suba el ejemplo de aprobación con
-`POST /v1/templates/media`. Proporcionar `template_name`, `template_language` y
-`media_type` lo guarda como recurso predeterminado. Al enviar,
-`POST /v1/messages/template` puede omitir `media` para utilizar ese valor predeterminado o proporcionar
-exactamente una referencia dinámica `media.link`, `media.id` o una referencia reutilizable
-`media.name`. La referencia dinámica debe coincidir con el encabezado de imagen, video
-o documento aprobado; los documentos también pueden establecer `filename`.
+Para encabezados de plantillas multimedia, sube el ejemplo de aprobación con
+`POST /v1/templates/media`. Si proporcionas `template_name`, `template_language` y
+`media_type`, se guarda como recurso predeterminado. Al enviar con
+`POST /v1/messages/template`, puedes omitir `media` para usar ese recurso o proporcionar
+exactamente una referencia dinámica `media.link`, `media.id` o la referencia reutilizable
+`media.name`. La referencia dinámica debe coincidir con el encabezado aprobado de imagen,
+video o documento; los documentos también pueden establecer `filename`.
 
 Utiliza el endpoint interactivo estandarizado cuando el flujo de trabajo necesite hasta tres
 botones de respuesta o URL a través de WhatsApp, Messenger, Instagram o Telegram:
@@ -287,12 +288,11 @@ botones de respuesta o URL a través de WhatsApp, Messenger, Instagram o Telegra
 }
 ```
 
-Enviar este cuerpo a `POST /v1/messages/interactive`. WhatsApp acepta o bien arriba
-a tres respuestas o una URL y no puede mezclar ambos tipos.
-evento de selección. Responder selecciones de los cuatro proveedores utilizan
-`message.quick_reply.payload`.
+Envía este cuerpo a `POST /v1/messages/interactive`. WhatsApp acepta hasta tres
+respuestas o una URL y no permite mezclar ambos tipos. Las selecciones de respuesta
+de los cuatro proveedores utilizan `message.quick_reply.payload`.
 
-Messenger e Instagram también comparten un menú de respuesta rápida temporal más grande
+Messenger e Instagram también admiten un menú temporal de respuestas rápidas más amplio
 a través de `POST /v1/messages/quick-replies`:
 
 ```json
@@ -343,17 +343,17 @@ límites.
 
 ## Lista de verificación de aceptación
 
-- La clave de API sigue siendo lado servidor.
+- La clave de API permanece únicamente en el servidor.
 - Ningún `tenant_id`, UUID de Supabase, token de acceso de Meta, ID de WABA o ID de teléfono
   está codificado, salvo que el endpoint normativo lo requiera explícitamente.
 - Todos los números del remitente y del receptor usan dígitos internacionales.
 - Cada escritura reintentable tiene un `Idempotency-Key` estable.
-- HMAC se comprueba contra los bytes crudos usando comparación de tiempo constante.
+- El HMAC se valida contra los bytes brutos mediante una comparación de tiempo constante.
 - El handler devuelve `2xx` antes del trabajo lento de base de datos o automatización.
 - Los mensajes y eventos son deduplicados.
-- Los envíos programados persisten `scheduled_message.id`, `client_reference`, y
-  final `message_id`; correlación webhook/status no depende de las marcas temporales.
-- La historia no desencadena bots en vivo.
+- Los envíos programados conservan `scheduled_message.id`, `client_reference` y el
+  `message_id` final; la correlación entre webhooks y estados no depende de marcas de tiempo.
+- El historial no activa bots destinados a conversaciones en vivo.
 - Los eventos de estado fallidos y `sync.failed` se conservan con sus datos de error.
 - Meta `status.pricing.billable` describe los precios de Meta, no la facturación de Easyhook.
   Una operación exitosa de la API pública de salida se cobra según el wallet de Easyhook,

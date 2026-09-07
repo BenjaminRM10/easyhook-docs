@@ -112,7 +112,7 @@ curl -X POST https://api.easyhook.dev/v1/webhooks \
   }'
 ```
 
-Armazenar o retornado `secret` O Easyhook devolve-o apenas uma vez.
+Guarde imediatamente o `secret` retornado; a Easyhook o exibe apenas uma vez.
 
 Validar o corpo HTTP em bruto:
 
@@ -184,12 +184,12 @@ Assíncrona.
   Em segurança.
 - Blocos opcionais são omitidos em vez de enviados como `null`.
 
-## História e contatos
+## Histórico e contatos
 
 Subscrever a ambos `history.*` e `smb_app_state_sync.*` antes de solicitar uma
 sincronização da coexistência.
 
-A história chega como:
+O histórico chega como:
 
 ```json
 {
@@ -218,7 +218,7 @@ invalidar os eventos importados com sucesso.
 | Objetivo | Ponto final |
 | --- | --- |
 | Validar a chave | `GET /v1/me` |
-| Senderistas de listas | `GET /v1/senders` |
+| Listar remetentes | `GET /v1/senders` |
 | Desconectar um remetente após confirmação explícita | `DELETE /v1/senders/{account_id}` |
 | Enviar texto | `POST /v1/messages/text` |
 | Enviar respostas rápidas do Messenger/Instagram | `POST /v1/messages/quick-replies` |
@@ -229,26 +229,26 @@ invalidar os eventos importados com sucesso.
 | Enviar Fluxo | `POST /v1/messages/flow` |
 | Marcar leitura / mostrar digitação | `POST /v1/messages/read`, `/v1/messages/typing` |
 | Listar/ler conversas | `GET /v1/conversations...` |
-| Aguarde a resposta de entrada | `GET /v1/conversations/{contact}/messages/wait...` |
+| Aguardar uma resposta recebida | `GET /v1/conversations/{contact}/messages/wait...` |
 | Reconciliar/cancelar a mensagem agendada | `GET`, `DELETE /v1/scheduled-messages/{id}` |
 | Enviar/listar mídia reutilizável | `POST /v1/media`, `GET /v1/media?from=...` |
-| Modelos de lista/sincronização | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
+| Listar/sincronizar modelos | `GET /v1/templates?from=...`, `POST /v1/templates/sync` |
 | Gerenciar Fluxos | `/v1/flows` |
 | Gerenciar o consentimento | `/v1/consent` e `/v1/consent/*` |
-
-A configuração do consentimento é por WABA. Suportes de cópia `language: "es" | "en" | "pt-BR"`, editável opt-in/opt-out cabeçalhos e corpos, e um rodapé. Porque Meta Fluxos são imutáveis após a publicação, salvar cópia com `PATCH /v1/consent/config` e aplicá-lo com `POST /v1/consent/enable`; Easyhook cria uma versão determinística e encaminha futuros envios para ele. `auto_opt_in_enabled: true` Opcionalmente agenda o fluxo de entrada do Easyhook 23 horas após a primeira interação de entrada ao vivo. Não recrie esse temporizador em um agente ou fluxo de trabalho. O Easyhook revida a janela de serviço e o estado atual de opt-in/opt-out antes do despacho. `POST /v1/consent` Devem incluir provas auditáveis fornecidas pelo cliente.
-| Cliente hospedado onboarding | `POST /v1/onboarding/sessions` |
-| Gerenciar assinaturas do webhook | `/v1/webhooks`; atualizar apenas eventos com `PATCH /v1/webhooks/{id}` |
+| Onboarding hospedado para clientes | `POST /v1/onboarding/sessions` |
+| Gerenciar assinaturas de webhooks | `/v1/webhooks`; atualizar apenas eventos com `PATCH /v1/webhooks/{id}` |
 | Criar uma identidade de chat ao vivo assinada | `POST /v1/live-chat/identity-tokens` |
+
+A configuração de consentimento é definida por WABA. O conteúdo aceita `language: "es" | "en" | "pt-BR"`, títulos e textos editáveis de opt-in e opt-out e um rodapé. Como os Meta Flows são imutáveis depois de publicados, salve o conteúdo com `PATCH /v1/consent/config` e aplique-o com `POST /v1/consent/enable`; a Easyhook cria uma versão determinística e direciona os envios futuros para ela. Opcionalmente, `auto_opt_in_enabled: true` agenda o Flow de opt-in da Easyhook 23 horas depois da primeira interação recebida ao vivo. Não recrie esse temporizador em um agente ou workflow. Antes do envio, a Easyhook revalida a janela de atendimento e o estado atual de opt-in/opt-out. O consentimento externo registrado com `POST /v1/consent` deve incluir evidências auditáveis fornecidas pelo cliente.
 
 ## Inbox, equipes, celular e bate-papo ao vivo
 
-O aplicativo de entrada da Easyhook e Android usam as mesmas conversas normalizadas,
-biblioteca de mídia, estados de entrega, reações, respostas, modelos, recibos de leitura,
-digitando sinais, pinos, estado não lido e registro de carteira como API pública. A
-A ação do provedor enviada de qualquer uma das caixas de entrada está disponível na operação normal
-preço; navegação, filtros, cache local, atualizações em tempo real e notificação
-A entrega não é cobrada.
+O Inbox web e o aplicativo Android da Easyhook usam as mesmas conversas normalizadas,
+biblioteca de mídia, estados de entrega, reações, respostas, modelos, confirmações de
+leitura, indicadores de digitação, itens fixados, estado não lido e registro da carteira
+que a API pública. Uma ação do provedor enviada por qualquer um deles é cobrada pelo
+preço normal da operação; navegação, filtros, cache local, atualizações em tempo real e
+entrega de notificações não são cobrados.
 
 Organizações podem convidar membros como `administrator`, `developer`, ou `agent`.
 Os papéis são abrangidos por organização: uma pessoa pode administrar uma organização
@@ -309,8 +309,8 @@ através `POST /v1/messages/quick-replies`:
 }
 ```
 
-Subscrever `message.quick_reply` e rota por
-`message.quick_reply.payload`Continue. `message.text` apenas para exibição.
+Assine `message.quick_reply` e encaminhe a ação por
+`message.quick_reply.payload`. Mantenha `message.text` apenas para exibição.
 
 Leia a seção correspondente em `public-api.md` Antes de implementar uma
 endpoint. Esse documento define todos os parâmetros aceitos e mutuamente exclusivos
