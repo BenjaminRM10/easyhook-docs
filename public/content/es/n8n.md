@@ -354,7 +354,7 @@ producir un artículo.
 Los ganchos Messenger e Instagram están configurados en el portal Easyhook con el filtro del proveedor. En n8n también se puede etiquetar un disparador como `messenger.message.*` o `instagram.message.*` para la claridad del flujo de trabajo.
 
 Para un contrato común a través de WhatsApp, Messenger, Instagram y Telegram, use
-**Mensaje Acción <unk> Enviar Botones** y añadir hasta tres botones de respuesta o URL.
+**Acción de mensaje > Enviar botones** y añade hasta tres botones de respuesta o URL.
 WhatsApp acepta hasta tres respuestas o una URL sin mezclar ambos tipos.
 Messenger e Instagram exponen además **Enviar Respuestas Rápidas** para menús de
 hasta 13 opciones de texto. Respuesta de ruta selecciones utilizando

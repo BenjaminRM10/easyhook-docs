@@ -163,11 +163,11 @@ Easyhook puede utilizarse como transporte para una bandeja de entrada API de Cha
 
 ### Configuración
 
-1. En Chatwoot, abrir **Configuración de archivos <unk> Access Token** y copiar una API de usuario
+1. En Chatwoot, abre **Configuración de perfil > Access Token** y copia un token de API de usuario
    token con acceso a la cuenta de destino.
 2. Copiar el ID de cuenta numérico de una URL de Chatwoot, como
    `/app/accounts/7/...`.
-3. En Easyhook, abierto **Integraciones <unk> Chatwoot**.
+3. En Easyhook, abre **Integraciones > Chatwoot**.
 4. Introduzca la URL de Chatwoot, ID de cuenta y token de API, a continuación, seleccione uno, varios,
    o todos los canales de Easyhook disponibles.
 5. Easyhook crea una caja independiente de API de Chatwoot por canal seleccionado,
@@ -222,7 +222,7 @@ cruce los límites del canal.
 - El correo electrónico y Telegram no utilizan la ventana de servicio al cliente de WhatsApp las 24 horas.
   Las políticas de entrega específicas de los proveedores y anti-spam todavía se aplican.
 - Los contactos y la historia de la coexistencia sólo se importan cuando una organización
-  administrador los solicita de **Integraciones <unk> Chatwoot**.
+  administrador los solicita desde **Integraciones > Chatwoot**.
 - La entrega es idempotente por el ID de evento Easyhook y el ID de mensaje Chatwoot. Webhook
   los registros no crean un segundo mensaje Chatwoot.
 - Las entregas en vivo utilizan una caja de salida persistente con retries automáticos.
@@ -788,7 +788,7 @@ Easyhook.
 
 Grabar una captura de pantalla continua y silenciosa con etiquetas cortas en pantalla:
 
-1. Inicie sesión en Easyhook y abra **Connect <unk> Gmail**.
+1. Inicia sesión en Easyhook y abre **Conectar > Gmail**.
 2. Haga clic en **Connect Gmail** y muestre la pantalla de consentimiento de Google, incluyendo la
    cuenta y pidió permiso de Gmail.
 3. Consentimiento completo y mostrar la cuenta Gmail conectada en Easyhook.
@@ -884,7 +884,7 @@ Telegrama. Estos canales pueden enviar en cualquier momento permitido por su pro
 
 ## Telegram
 
-Conectar un bot de Telegram desde **Connect <unk> Telegram** usando el token creado por
+Conecta un bot de Telegram desde **Conectar > Telegram** usando el token creado por
 BotFather. Easyhook valida el token, lo almacena en el organización cifrado
 bóveda secreta, y configura un Webhook Telegram protegido por Telegram
 `X-Telegram-Bot-Api-Secret-Token` Cabeza.
@@ -911,9 +911,9 @@ almacenamiento y una URL de descarga pública Easyhook no son parte de la primer
 Desconectar un canal de Telegram elimina su webhook protegido de Telegram antes
 Easyhook elimina el token de bot cifrado.
 
-## Medición de negocios de TikTok
+## Mensajería empresarial de TikTok
 
-Conectar TikTok de **Connect <unk> TikTok Business Messaging**. Easyhook utiliza
+Conecta TikTok desde **Conectar > TikTok Business Messaging**. Easyhook utiliza
 El flujo de autorización de los contables de TikTok.
 `message.list.read`, `message.list.send`, y `message.list.manage` para
 mensajería, más `user.info.basic`, `user.account.type`, `user.info.username`,

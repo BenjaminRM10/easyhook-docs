@@ -132,61 +132,59 @@ export function validEasyhookSignature(
 }
 ```
 
-Validar antes de parir JSON. Responder con HTTP `2xx` rápido y proceso
-asincrónicamente.
+Valida antes de interpretar el JSON. Responde rápidamente con HTTP `2xx` y procesa
+el evento de forma asíncrona.
 
-## Reglas de rotación
+## Reglas de enrutamiento
 
-- Uso `type` para elegir el bloque de carga útil.
-- Uso `channel` para distinguir `whatsapp`, `messenger`, `instagram`, `telegram`,
+- Usa `type` para elegir el bloque del payload.
+- Usa `channel` para distinguir `whatsapp`, `messenger`, `instagram`, `telegram`,
   `gmail`, `outlook`, `imap_smtp`, `mercadolibre`, y `tiktok`.
-- Para WhatsApp, use `account.id + ":" + (contact.user_id ?? contact.id)` como el
-  Identidad de conversación. `contact.id`, `message.from`, `message.to`, y estado
-  los receptores pueden ser BSUIDs opacos en lugar de números de teléfono.
-  `contact.phone` por separado cuando presente y nunca tira cartas o puntuaciones
-  de un BSUID.
-  Parent BSUIDs también puede aparecer como `contact.parent_user_id`; preservarlos como
-  opaque aliases y enviarlos sin cambios a través de Easyhook `to` campo.
-- Uso `message.id` como la clave de la idempotencia del mensaje.
+- Para WhatsApp, usa `account.id + ":" + (contact.user_id ?? contact.id)` como
+  identidad de la conversación. `contact.id`, `message.from`, `message.to` y los
+  destinatarios de estados pueden ser BSUID opacos en lugar de números telefónicos.
+  Conserva `contact.phone` por separado cuando exista y nunca elimines letras o
+  signos de puntuación de un BSUID. Los BSUID padre también pueden aparecer como
+  `contact.parent_user_id`; consérvalos como alias opacos y envíalos sin cambios en
+  el campo `to` de Easyhook.
+- Usa `message.id` como clave de idempotencia del mensaje.
 - Para TikTok, conserva el opaco `account.id`, estable `contact.id`,
-  `message.thread_id`, y `message.id`. No añadir prefijos o tratarlos como
-  Números de teléfono. `contact.id` o `message.thread_id` como tal `to`A
-  empresa puede enviar a la mayoría de 10 respuestas dentro de 48 horas después de cada mensaje de usuario
-  y no puede iniciar una conversación.
-- Use webhook `id` como la clave de idempotencia para eventos no-mensaje.
-- Para `message.type: button`, automatización de rutas con `message.button.payload`
-  y uso `message.button.text`/`message.text` como la etiqueta visible.
-- Para `message.type: interactive`, ruta rápida respuestas y listas con
+  `message.thread_id` y `message.id`. No agregues prefijos ni los trates como
+  números telefónicos. Usa `contact.id` o `message.thread_id` como `to`. Una
+  empresa puede enviar como máximo 10 respuestas durante las 48 horas posteriores
+  a cada mensaje del usuario y no puede iniciar una conversación.
+- Usa el `id` del webhook como clave de idempotencia para eventos que no sean mensajes.
+- Para `message.type: button`, dirige la automatización con `message.button.payload`
+  y usa `message.button.text`/`message.text` como etiqueta visible.
+- Para `message.type: interactive`, dirige respuestas rápidas y listas con
   `message.interactive.button_reply.id` o
-  `message.interactive.list_reply.id`; no inferir una selección de la plantilla
-  orden de botón o título.
-- Cuándo `message.type` es `edit`, actualizar la fila identificada por
-  `message.edit.original_message_id` con `message.edit.text`; no insertar una
+  `message.interactive.list_reply.id`; no deduzcas una selección por el orden o
+  título de los botones de una plantilla.
+- Cuando `message.type` sea `edit`, actualiza la fila identificada por
+  `message.edit.original_message_id` con `message.edit.text`; no insertes un
   segundo mensaje.
-- Para WhatsApp, Messenger e Instagram, utilice las mismas estructuras opcionales cuando
-  presentes: `message.reply_to.message_id`, `message.reaction.message_id` más
+- Para WhatsApp, Messenger e Instagram, usa las mismas estructuras opcionales cuando
+  estén presentes: `message.reply_to.message_id`, `message.reaction.message_id` más
   `action`/`emoji`, y `message.edit.original_message_id` más `text`.
-  Las capacidades difieren por proveedor; nunca inferir una reacción desaparecida, editar, responder,
-  o supresión del texto o el tiempo.
-- Cuándo `message.type` es `revoke`, marcar la fila identificada por
-  `message.revoke.original_message_id` como revocado y ocultar su contenido; no
-  inserte un mensaje independiente.
-- Cuándo `message.type` es `system`, show `message.system.body` como un
-  aviso informativo. `user_changed_number`, uso `message.system.wa_id`
-  como la nueva identidad del proveedor según el contacto de la aplicación
-  política.
+  Las capacidades varían por proveedor; nunca deduzcas una reacción, edición,
+  respuesta o eliminación ausente a partir del texto o del tiempo.
+- Cuando `message.type` sea `revoke`, marca como revocada la fila identificada por
+  `message.revoke.original_message_id` y oculta su contenido; no insertes un mensaje independiente.
+- Cuando `message.type` sea `system`, muestra `message.system.body` como aviso informativo.
+  Para `user_changed_number`, usa `message.system.wa_id` como nueva identidad del
+  proveedor según la política de consolidación de contactos de la aplicación.
 - `message.direction: in` significa que el contacto envió el mensaje.
 - `message.direction: out` significa que la cuenta conectada envió el mensaje.
 - `message.source: history` es una importación, no una acción de cliente en vivo. Nunca
   auto-reply a él por defecto.
-- Campos desconocidos, valores enum desconocidos, y `event.received` debe ser ignorado
-  con seguridad.
-- Los bloques opcionales se omiten en lugar de ser enviados `null`.
+- Los campos y valores enum desconocidos, así como `event.received`, deben ignorarse
+  de forma segura.
+- Los bloques opcionales se omiten en vez de enviarse como `null`.
 
-## Historia y Contactos
+## Historial y contactos
 
-Suscribirse a ambos `history.*` y `smb_app_state_sync.*` antes de solicitar un
-Sincronización de la convivencia.
+Suscríbete a `history.*` y `smb_app_state_sync.*` antes de solicitar una
+sincronización de coexistencia.
 
 La historia llega como:
 
@@ -204,13 +202,14 @@ La historia llega como:
 }
 ```
 
-Ámbito `events`. Un lote contiene en la mayoría de 100 eventos normalizados.
-al menos una vez, así que los mensajes más firmes `message.id` y contactos del proveedor
-identidad. Ordenar mensajes importados por `message.timestamp`, no la hora de llegada.
+Recorre `events`. Un lote contiene como máximo 100 eventos normalizados. La entrega
+es al menos una vez, por lo que debes insertar o actualizar mensajes por `message.id`
+y contactos por la identidad del proveedor. Ordena los mensajes importados por
+`message.timestamp`, no por la hora de llegada.
 
 `message.media_available` actualiza el mensaje existente con el mismo
-`message.id`; no es un nuevo mensaje de conversación. `sync.failed` no
-invalidar eventos importados con éxito.
+`message.id`; no es un nuevo mensaje de conversación. `sync.failed` no invalida
+los eventos importados correctamente.
 
 ## Selección de API
 
@@ -308,38 +307,37 @@ a través de `POST /v1/messages/quick-replies`:
 }
 ```
 
-Suscríbete `message.quick_reply` y ruta por
-`message.quick_reply.payload`. `message.text` sólo para ser exhibida.
+Suscríbete a `message.quick_reply` y dirige la acción mediante
+`message.quick_reply.payload`. Conserva `message.text` sólo para mostrarlo.
 
-Lea la sección correspondiente en `public-api.md` antes de aplicar una
-endpoint. Ese documento define todos los parámetros aceptados y mutuamente excluyentes
-campos.
+Lee la sección correspondiente en `public-api.md` antes de implementar un endpoint.
+Ese documento define todos los parámetros aceptados y los campos mutuamente excluyentes.
 
-La lista de plantillas, sincronización y respuestas a la creación incluyen `meta_waba_id`. Tratar eso como
-el identificador del proveedor WABA; nunca sustituya el Easyhook interno `waba_id`
-UUID. La creación de la plantilla acepta `parameter_format` como tal `POSITIONAL` o `NAMED`.
+Las respuestas al listar, sincronizar y crear plantillas incluyen `meta_waba_id`.
+Trátalo como el identificador del WABA en el proveedor; nunca sustituyas el UUID
+interno `waba_id` de Easyhook. La creación acepta `parameter_format` como `POSITIONAL` o `NAMED`.
 Las integraciones que permiten reintentos seguros deben enviar un `Idempotency-Key` estable.
 
-Para cada operación de plantilla, prefiera `from` como el único selector de cuenta.
-API llave fija la organización y Easyhook deriva el WABA exacto de que
-teléfono de propiedad de arrendatario. Si una solicitud incluye ambos `from` y `waba_id`, deben
-resolver a la misma WABA; de lo contrario Easyhook vuelve
-`409 sender_waba_mismatch`. Un desconocido `from` Devoluciones `404 phone_not_found`
-sin caer de nuevo a la WABA suministrada. Nunca vuelva a entrar ni un error contra un
-diferentes WABA automáticamente.
+Para cada operación de plantilla, prefiere `from` como único selector de cuenta.
+La clave de API fija la organización y Easyhook obtiene el WABA exacto a partir de
+ese teléfono perteneciente al tenant. Si una solicitud incluye `from` y `waba_id`,
+ambos deben resolverse al mismo WABA; de lo contrario, Easyhook devuelve
+`409 sender_waba_mismatch`. Un `from` desconocido devuelve `404 phone_not_found`
+sin recurrir al WABA proporcionado. Nunca reintentes automáticamente ninguno de estos
+errores contra un WABA distinto.
 
 ## Agentes de voz con ElevenLabs
 
-ElevenLabs es una integración opcional para números Easyhook con voz.
-organización conecta su propia API key en **Portal <unk> Integraciones** y asignación
-un agente para llamadas entrantes. Puede asignar un segundo agente, distinto,
+ElevenLabs es una integración opcional para números de Easyhook con voz. La
+organización conecta su propia clave de API en **Portal > Integraciones** y asigna
+un agente a las llamadas entrantes. Puede asignar un segundo agente, distinto,
 para llamadas salientes: sus instrucciones y primer mensaje normalmente no son
 los mismos que los de quien contesta.
 
 Easyhook conserva el número, el enrutamiento, el consentimiento y el cobro. El
-audio viaja directamente entre Telnyx y ElevenLabs; n8n atender las herramientas
+audio viaja directamente entre Telnyx y ElevenLabs; n8n puede atender las herramientas
 del agente sin entrar en el bucle de audio. Las campañas salientes usan
-`POST /v1/calls` contingentes `handler: "ai"` y requieren opt-in de voz explícito para
+`POST /v1/calls` con `handler: "ai"` y requieren opt-in de voz explícito para
 ese número y contacto. Consulta [Telefonía](/telecom) para el contrato y los
 límites.
 
