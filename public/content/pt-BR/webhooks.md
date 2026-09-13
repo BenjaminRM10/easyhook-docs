@@ -873,13 +873,15 @@ As cargas do histórico são confirmadas e persistidas antes do processamento
 assíncrono. A Easyhook processa e entrega no máximo 100 eventos por lote. IDs
 de mensagem duplicados da Meta não criam mensagens armazenadas duplicadas.
 
-O histórico inicial e a sincronização do App State estão incluídos sem custo
-adicional. Apenas uma sincronização pode ser executada por número do WhatsApp
-por vez. Uma organização pode processar até dois números simultaneamente; esse
-é um limite de equidade, não de números conectados nem de importações totais.
-Assine `history.*` e `smb_app_state_sync.*` antes de conectar ou solicitar a
-sincronização, mantenha o endpoint disponível e considere que contas grandes
-podem continuar importando em segundo plano após o onboarding.
+A sincronização inicial do App State faz parte do onboarding. Importar mensagens
+históricas é uma operação explícita com cobrança única de `USD 2` ou `MXN 40`
+por número da Meta; importações existentes são preservadas sem cobrança, e
+reconectar ou continuar lotes armazenados não cobra novamente. Apenas uma
+importação histórica pode ser executada por número do WhatsApp por vez. Uma
+organização pode processar até dois números simultaneamente; esse é um limite
+de equidade, não de números conectados nem de importações totais. Assine
+`history.*` e `smb_app_state_sync.*` antes de solicitá-la, mantenha o endpoint
+disponível e considere que contas grandes podem continuar em segundo plano.
 
 A Meta documenta o histórico como uma importação de até aproximadamente 180
 dias, sem conversas em grupo. Ele não é um backup completo do iCloud ou Google

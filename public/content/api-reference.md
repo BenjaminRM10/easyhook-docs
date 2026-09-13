@@ -398,6 +398,8 @@ Not billable:
 - Meta template/message charges. Those stay between the customer and Meta.
 - Media storage upload itself.
 
+Each benefit identity receives 100 outbound message sends per calendar month without an Easyhook platform fee. The allowance is shared by every organization created by the same original owner; adding members or API keys does not create another allowance. Provider/carrier charges, SMS/MMS carrier reservations, number purchases, calls, and history imports are excluded. Normal wallet billing resumes after the allowance is exhausted.
+
 `Probar API` is free only through the authenticated portal flow. The portal
 requires a single-use Cloudflare Turnstile verification, applies shared per-IP,
 per-user, and per-organization burst limits, and sends a short-lived
@@ -420,12 +422,12 @@ Included media quotas in V1:
 
 | Quota | Included |
 | --- | --- |
-| Media transfer | `10 GB / month / tenant` |
-| Reusable media storage | `1 GB / organization` |
-| Received chat media storage | `100 GB / tenant` |
+| Media transfer | `10 GB / month / benefit identity` |
+| Reusable media storage | `1 GB / benefit identity` |
+| Received chat media storage | `100 GB / benefit identity` |
 | Received chat media retention | `6 months` |
 
-Media transfer includes customer API downloads and Easyhook-hosted reusable media served to providers when a customer sends by `media_name`. Received chat media is stored for up to `6 months`; storage is included until the tenant has more than `100 GB` of active received media. Reusable media does not expire; storage is included up to `1 GB` per organization. Template media is managed separately.
+Media transfer includes customer API downloads and Easyhook-hosted reusable media served to providers when a customer sends by `media_name`. Received chat media is stored for up to `6 months`; storage is included until the benefit identity has more than `100 GB` of active received media. Reusable media does not expire; storage is included up to `1 GB` per benefit identity. Creating or sharing additional organizations does not multiply these quotas. Existing media and channel connections are not removed or modified. Template media is managed separately.
 
 Media overages are charged monthly from the organization wallet by a scheduled Supabase cron job. The cron runs on the first day of each month and bills the previous month using the idempotent admin billing function:
 
@@ -2339,7 +2341,7 @@ WhatsApp Cloud API does not expose a customer typing webhook in Easyhook V1.
 
 ### Coexistence History
 
-Coexistence history callbacks are accepted quickly and processed asynchronously through Cloud Tasks. Easyhook persists normalized chunks before processing, works in batches of at most 100 events, and treats the Meta message ID as an idempotency key. Synchronization is included at no additional charge. Only one active synchronization is accepted per number, while an organization can process two numbers concurrently; additional numbers remain queued and resume automatically without consuming failure attempts. Another request for the same number returns `409 coexistence_sync_in_progress` with the current progress.
+Coexistence history callbacks are accepted quickly and processed asynchronously through Cloud Tasks. Easyhook persists normalized chunks before processing, works in batches of at most 100 events, and treats the Meta message ID as an idempotency key. Current app/contact state sync remains part of onboarding. Importing historical messages is an explicit, one-time operation priced at `USD 2` or `MXN 40` per Meta phone number; existing imports are grandfathered, and reconnecting or resuming stored batches never charges again. Only one active history synchronization is accepted per number, while an organization can process two numbers concurrently; additional numbers remain queued and resume automatically without consuming failure attempts. Another active history request for the same number returns `409 coexistence_sync_in_progress` with the current progress.
 
 Historical messages do not execute live consent keyword handling or replay Flow submission side effects.
 
@@ -2347,7 +2349,7 @@ Historical inbound messages are delivered as `message.received`; historical outb
 
 The subscription filter is `history.*`, but each event inside the batch uses the normalized public `type` `message.received` or `message.echo`. The delivery body is `{ "type": "sync.batch", "sync": {...}, "events": [...] }`; batches contain at most 100 events. A consumer must process every element of `events` and deduplicate using `message.id`.
 
-Create the customer webhook subscription with the `history.*` filter before connecting the coexistence number or requesting synchronization if the integration needs the historical import. The portal endpoint `POST /v1/meta/whatsapp/phones/coexistence-sync` starts the initial Meta synchronization after onboarding consent. It is not an unrestricted historical export and must be used during Meta's onboarding eligibility window. Once completed, use Easyhook replay instead of requesting the import from Meta again.
+Create the customer webhook subscription with the `history.*` filter before requesting synchronization if the integration needs the historical import. The portal endpoint `POST /v1/meta/whatsapp/phones/coexistence-sync` confirms and charges the one-time import, then starts Meta synchronization after onboarding consent. It is not an unrestricted historical export and must be used during Meta's onboarding eligibility window. Once completed, use Easyhook replay instead of requesting or paying for the import again.
 
 During coexistence onboarding, the business must allow history sharing in the WhatsApp Business App and should keep the app open while the initial synchronization starts. Meta error `2593109` means history sharing is disabled; Easyhook normalizes it as `type: sync.failed` for `history.*` subscribers.
 
@@ -2744,7 +2746,7 @@ Endpoint:
 GET /v1/media/{media_asset_id}/download
 ```
 
-Requires `media:read`. Streams the stored bytes from Easyhook storage. This request does not call Meta and is intended for customer-built inboxes or CRMs that need to render media from Easyhook. Downloads are logged in `media_access_logs` for transfer metering. Each tenant includes `10 GB/month` of media transfer; additional transfer is billed monthly at `3 MXN/GB`.
+Requires `media:read`. Streams the stored bytes from Easyhook storage. This request does not call Meta and is intended for customer-built inboxes or CRMs that need to render media from Easyhook. Downloads are logged in `media_access_logs` for transfer metering. Each benefit identity includes `10 GB/month` of media transfer across its organizations; additional transfer is billed monthly at `3 MXN/GB` or `0.20 USD/GB`.
 
 Example:
 

@@ -394,6 +394,8 @@ Não gera cobrança da Easyhook:
 - Meta template/cargas de mensagem. Esses ficam entre o cliente e Meta.
 - Carregamento de armazenamento de mídia em si.
 
+Cada identidade beneficiária recebe 100 envios de saída por mês-calendário sem tarifa de plataforma da Easyhook. A cota é compartilhada por todas as organizações criadas pelo mesmo proprietário original; adicionar membros ou chaves de API não cria outra cota. Custos de provedor ou operadora, reservas de SMS/MMS, compra de números, chamadas e importações de histórico não estão incluídos. Quando a cota termina, aplica-se a cobrança normal da carteira.
+
 `Probar API` é gratuito somente pelo fluxo autenticado do portal. O portal exige
 uma verificação de uso único do Cloudflare Turnstile, aplica limites de rajada
 compartilhados por IP, usuário e organização, e envia à API da Easyhook uma
@@ -417,12 +419,12 @@ Incluiu quotas de mídia em V1:
 
 | Contingente | Incluído |
 | --- | --- |
-| Transferência de mídia | `10 GB / month / tenant` |
-| Armazenamento de mídia reutilizável | `1 GB / organization` |
-| Armazenamento de mídia de chat recebido | `100 GB / tenant` |
+| Transferência de mídia | `10 GB / month / benefit identity` |
+| Armazenamento de mídia reutilizável | `1 GB / benefit identity` |
+| Armazenamento de mídia de chat recebido | `100 GB / benefit identity` |
 | Retenção de mídia de chat recebida | `6 months` |
 
-A transferência de mídia inclui downloads de API do cliente e mídia reutilizável hospedada em Easyhook servia para provedores quando um cliente envia `media_name`. Mídia de chat recebida é armazenada para até `6 months`; armazenamento está incluído até que o organização tem mais de `100 GB` de mídia ativa recebida. Mídia reutilizável não expira; o armazenamento está incluído até `1 GB` por organização. A mídia de modelo é gerenciada separadamente.
+A transferência inclui downloads pela API e mídia reutilizável fornecida a provedores quando o cliente envia por `media_name`. A mídia recebida é mantida por até `6 months`; até `100 GB` ativos são incluídos por identidade beneficiária. A mídia reutilizável não expira e inclui `1 GB` por identidade beneficiária. Criar ou compartilhar mais organizações não multiplica essas cotas. Arquivos e conexões existentes não são removidos nem modificados. A mídia de modelos é gerenciada separadamente.
 
 Os excessos de mídia são cobrados mensalmente da carteira da organização por um trabalho programado do cron Supabase. O cron é executado no primeiro dia de cada mês e fatura no mês anterior usando a função de faturamento do administrador idempotente:
 
@@ -2337,7 +2339,7 @@ WhatsApp Cloud API não expõe um cliente digitando webhook em Easyhook V1.
 
 ### Histórico de coexistência
 
-As chamadas de histórico de coexistência são aceitas rapidamente e processadas assíncronamente através de Tarefas na Nuvem. O Easyhook persiste com blocos normalizados antes de processar, funciona em lotes de no máximo 100 eventos e trata o Meta message ID como uma chave de idempotência. A sincronização é incluída sem custo adicional. Apenas uma sincronização ativa é aceita por número, enquanto uma organização pode processar dois números concomitantemente; números adicionais permanecem em fila e retomam automaticamente sem consumir tentativas de falha. Outra solicitação para o mesmo número retorna `409 coexistence_sync_in_progress` com o progresso atual.
+Os callbacks de histórico da Coexistence são aceitos rapidamente e processados de forma assíncrona pelo Cloud Tasks. A Easyhook persiste blocos normalizados antes do processamento, trabalha em lotes de até 100 eventos e usa o ID da mensagem da Meta como chave de idempotência. A sincronização do estado e dos contatos atuais faz parte do onboarding. Importar mensagens históricas é uma operação explícita com cobrança única de `USD 2` ou `MXN 40` por número da Meta; importações existentes são preservadas sem cobrança, e reconectar ou continuar lotes armazenados não cobra novamente. Apenas uma importação histórica ativa é aceita por número; outra solicitação ativa retorna `409 coexistence_sync_in_progress` com o progresso atual.
 
 Mensagens históricas não executam live consent keyword management ou replay Flow submission efeitos colaterais.
 
@@ -2345,7 +2347,7 @@ Mensagens de entrada históricas são entregues como `message.received`; mensage
 
 O filtro de assinatura é `history.*`, mas cada evento dentro do lote usa o público normalizado `type` `message.received` ou `message.echo`. O corpo de entrega é `{ "type": "sync.batch", "sync": {...}, "events": [...] }`Os lotes contêm, no máximo, 100 eventos. O consumidor deve processar todos os elementos de `events` e desduplicar usando `message.id`.
 
-Crie a assinatura webhook do cliente com o `history.*` filtrar antes de conectar o número de coexistência ou solicitar sincronização se a integração precisar da importação histórica. O endpoint do portal `POST /v1/meta/whatsapp/phones/coexistence-sync` inicia a sincronização meta inicial após o consentimento de integração. Não é uma exportação histórica irrestrita e deve ser usada durante a janela de elegibilidade de integração do Meta. Uma vez concluída, use a repetição do Easyhook em vez de solicitar a importação do Meta novamente.
+Crie a assinatura do webhook com o filtro `history.*` antes de solicitar a importação. O endpoint `POST /v1/meta/whatsapp/phones/coexistence-sync` confirma e cobra o valor único e depois inicia a sincronização da Meta. Não é uma exportação irrestrita e deve ser usado durante a janela de elegibilidade da Meta. Depois da conclusão, use o reenvio da Easyhook em vez de solicitar ou pagar novamente pela importação.
 
 Durante a coexistência, o negócio deve permitir o compartilhamento do histórico no aplicativo WhatsApp Business e manter o aplicativo aberto enquanto a sincronização inicial começa. `2593109` significa que o compartilhamento de histórico está desabilitado; Easyhook o normaliza como `type: sync.failed` em vez de `history.*` assinantes.
 
@@ -2749,7 +2751,7 @@ Ponto final:
 GET /v1/media/{media_asset_id}/download
 ```
 
-Requer `media:read`. Transmite os bytes armazenados do armazenamento Easyhook. Esta solicitação não chama Meta e destina-se a caixas de entrada construídas pelo cliente ou CRMs que precisam renderizar mídia do Easyhook. Os downloads estão logados `media_access_logs` para a medição de transferência. `10 GB/month` de transferência de mídia; transferência adicional é faturada mensalmente em `3 MXN/GB`.
+Requer `media:read`. Transmite os bytes armazenados na Easyhook. Esta solicitação não chama a Meta e destina-se a caixas de entrada ou CRMs criados por clientes. Os downloads são registrados em `media_access_logs`. Cada identidade beneficiária inclui `10 GB/month` de transferência entre suas organizações; a transferência adicional é faturada mensalmente a `3 MXN/GB` ou `0.20 USD/GB`.
 
 Exemplo:
 

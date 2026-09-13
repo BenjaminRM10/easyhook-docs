@@ -25,13 +25,13 @@ Use a coexistência quando o negócio precisa manter o número em WhatsApp Busin
 - Meta determina se o número é elegível.
 - Você deve abrir o WhatsApp Business pelo menos uma vez a cada 14 dias.
 - Um código QR é escaneado durante o registro.
-- Você pode autorizar a sincronização inicial de contatos e histórico.
+- O estado atual pode ser sincronizado durante o onboarding. A importação opcional do histórico custa uma única vez `USD 2` ou `MXN 40` por número; reconectar ou continuar não cobra novamente.
 
 ### Passo a passo da Coexistence
 
 1. No Easyhook, abra **Conectar > WhatsApp Coexistence** e revise os requisitos.
 2. Na janela oficial da Meta, selecione o portfólio, a conta e o número corretos.
-3. Autorize contatos e histórico somente se quiser importá-los.
+3. Autorize o compartilhamento do histórico somente se pretende comprar a importação opcional.
 4. Abra o WhatsApp Business no telefone e leia o QR em **Dispositivos conectados**.
 5. Volte ao Easyhook e confirme que o canal aparece ativo em **Organização**.
 
