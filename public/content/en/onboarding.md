@@ -129,8 +129,10 @@ The operation can only affect channels belonging to the organization that owns
 the API key and requires `onboarding:write`; existing keys with only
 `messages:write` cannot disconnect channels. Disconnecting removes Easyhook's
 credentials, stops Easyhook-managed refreshes and webhooks, and does not delete
-previously received history. Use this call only after explicit user
-confirmation; it is not exposed as a destructive MCP tool.
+previously received history. It also disconnects any Chatwoot transport scoped
+to that sender without deleting the existing Chatwoot inbox or history. Use
+this call only after explicit user confirmation; it is not exposed as a
+destructive MCP tool.
 
 TikTok opens Business Account OAuth and requests only
 `message.list.read`, `message.list.send` and `message.list.manage`. The account must

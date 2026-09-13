@@ -1347,7 +1347,10 @@ Respuesta de ejemplo:
 La operación está limitada a la organización y es idempotente. Repetirla después de que el remitente
 ya se han eliminado las devoluciones `200` con `already_disconnected: true`.
 Easyhook elimina su canal almacenado y sus credenciales; activos del lado proveedor y
-las cuentas de negocio no se eliminan.
+las cuentas de negocio no se eliminan. Si el remitente tiene una integración
+con Chatwoot, Easyhook también vacía el callback de la API Inbox y elimina su
+mapeo y webhook asociados. La bandeja, los contactos, las conversaciones y el
+historial existentes permanecen en Chatwoot.
 
 Esta operación REST es el contrato de automatización soportado. También está disponible
 en el portal API explorer como una solicitud copiable, pero la ejecución permanece desactivada

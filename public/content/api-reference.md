@@ -1354,7 +1354,10 @@ Example response:
 The operation is tenant-scoped and idempotent. Repeating it after the sender
 has already been removed returns `200` with `already_disconnected: true`.
 Easyhook removes its stored channel and credentials; provider-side assets and
-business accounts are not deleted.
+business accounts are not deleted. If the sender has a Chatwoot integration,
+Easyhook also clears the API Inbox callback and removes its scoped Chatwoot
+mapping and webhook. The existing Chatwoot inbox, contacts, conversations, and
+history remain in Chatwoot.
 
 This REST operation is the supported automation contract. It is also available
 in the portal API explorer as a copyable request, but execution stays disabled

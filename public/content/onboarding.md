@@ -125,8 +125,10 @@ La operación sólo puede afectar canales de la organización dueña de la API k
 y requiere `onboarding:write`; las keys existentes con `messages:write`
 conservan compatibilidad. La desconexión elimina credenciales de Easyhook,
 detiene renovaciones y webhooks administrados por Easyhook, y no borra el
-historial ya recibido. Usa esta llamada únicamente después de una confirmación
-explícita del usuario; no se expone como herramienta destructiva del MCP.
+historial ya recibido. También desconecta cualquier transporte de Chatwoot
+asociado a ese remitente sin borrar su bandeja ni su historial en Chatwoot. Usa
+esta llamada únicamente después de una confirmación explícita del usuario; no
+se expone como herramienta destructiva del MCP.
 
 TikTok abre el OAuth de cuenta Business y solicita únicamente
 `message.list.read`, `message.list.send` y `message.list.manage`. La cuenta debe

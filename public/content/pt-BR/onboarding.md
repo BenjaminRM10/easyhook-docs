@@ -129,8 +129,10 @@ A operação só pode afetar os canais da organização proprietária da chave d
 e exige `onboarding:write`; chaves apenas com `messages:write` não podem
 desconectar canais. A desconexão remove as credenciais da Easyhook, interrompe
 renovações e webhooks administrados pela Easyhook e não exclui o histórico já
-recebido. Use esta chamada somente após a confirmação explícita do usuário; ela
-não é exposta como uma ferramenta destrutiva do MCP.
+recebido. Ela também desconecta qualquer transporte do Chatwoot associado a
+esse remetente sem excluir a caixa de entrada nem o histórico existentes no
+Chatwoot. Use esta chamada somente após a confirmação explícita do usuário;
+ela não é exposta como uma ferramenta destrutiva do MCP.
 
 O TikTok abre o OAuth da conta empresarial e solicita apenas
 `message.list.read`, `message.list.send` e `message.list.manage`. A conta deve
