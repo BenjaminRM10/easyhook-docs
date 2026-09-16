@@ -3334,6 +3334,13 @@ A resposta inclui os modelos retornados pelo Meta após o status local ter sido 
 }
 ```
 
+Se a conta do WhatsApp conectada estiver temporariamente inacessível, a
+Easyhook não contata a Meta nem cobra a operação de sincronização. A resposta
+é HTTP `503` com `error: whatsapp_channel_unreachable`, `retryable: true`,
+`retry_after_seconds: 7200` e o cabeçalho `Retry-After` equivalente. O cliente
+deve pausar a sincronização automática durante esse intervalo em vez de fazer
+consultas repetidas.
+
 ## Verificar a Categoria do Modelo
 
 Ponto final:

@@ -3329,6 +3329,12 @@ The response includes the templates returned by Meta after their local status ha
 }
 ```
 
+If the connected WhatsApp account is temporarily unreachable, Easyhook does
+not contact Meta or charge the sync operation. It returns HTTP `503` with
+`error: whatsapp_channel_unreachable`, `retryable: true`,
+`retry_after_seconds: 7200`, and the equivalent `Retry-After` header. Clients
+must pause automatic synchronization for that interval instead of polling.
+
 ## Check Template Category
 
 Endpoint:
