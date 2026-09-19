@@ -671,8 +671,10 @@ proporciona el evento subyacente:
 - Editar: `message.edit.original_message_id`, `text`, y opcional `num_edit`.
 
 Las capacidades de los proveedores no son idénticas. Meta actualmente expone
-reacciones y ediciones de Messenger e Instagram, además de referencias de respuesta
-en Instagram. Meta no expone la eliminación o anulación de envío de Messenger o
+reacciones y ediciones de Messenger e Instagram. Los mensajes entrantes de WhatsApp
+e Instagram pueden incluir referencias al mensaje citado. Easyhook normaliza
+`context.id` de WhatsApp y `reply_to.mid` de Instagram como
+`message.reply_to.message_id`. Meta no expone la eliminación o anulación de envío de Messenger o
 Instagram como un webhook equivalente, por lo que Easyhook no infiere ni fabrica
 esos eventos. Ignora los campos opcionales desconocidos y procesa sólo los eventos
 que realmente se entregaron.

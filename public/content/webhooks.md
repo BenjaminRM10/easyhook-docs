@@ -669,10 +669,12 @@ provides the underlying event:
 - Edit: `message.edit.original_message_id`, `text`, and optional `num_edit`.
 
 Provider capabilities are not identical. Meta currently exposes Messenger and
-Instagram reactions and edits, and Instagram inline reply references. Meta does
-not expose Messenger or Instagram message deletion/unsend as an equivalent
-webhook, so Easyhook does not infer or fabricate those events. Always ignore
-unknown optional fields and only process events that were actually delivered.
+Instagram reactions and edits. WhatsApp and Instagram inbound messages can
+include inline reply references; Easyhook normalizes WhatsApp's `context.id`
+and Instagram's `reply_to.mid` as `message.reply_to.message_id`. Meta does not
+expose Messenger or Instagram message deletion/unsend as an equivalent webhook,
+so Easyhook does not infer or fabricate those events. Always ignore unknown
+optional fields and only process events that were actually delivered.
 
 ### WhatsApp deletions and system notices
 
