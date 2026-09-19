@@ -678,6 +678,19 @@ A Meta não expõe exclusão ou cancelamento de envio do Messenger ou Instagram 
 webhook equivalente; por isso, a Easyhook não deduz nem fabrica esses eventos.
 Ignore campos opcionais desconhecidos e processe somente eventos realmente entregues.
 
+As referências a mensagens citadas também usam `message.reply_to.message_id`
+para respostas no mesmo chat do Telegram, mensagens referenciadas do TikTok e
+respostas do Easyhook Live Chat. O campo é omitido quando o evento recebido não
+contém uma referência. A referência não inclui o texto da mensagem original;
+resolva-a na mesma conta e conversa. Os IDs de mensagens do Telegram pertencem
+ao seu chat. O email mantém suas referências RFC em `message.in_reply_to` e
+`message.references`. SMS/MMS não fornece referência a uma mensagem citada.
+
+Nenhuma assinatura ou configuração adicional da conta é necessária. O n8n
+preserva esse campo tanto em eventos normais quanto em lotes expandidos do
+History. Eventos já entregues não são reenviados automaticamente quando a
+normalização muda.
+
 ### Exclusões WhatsApp e avisos de sistema
 
 Assine os eventos do provedor `message.revoke` e `message.system`. Eles são eventos

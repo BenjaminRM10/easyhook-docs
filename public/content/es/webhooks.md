@@ -679,6 +679,20 @@ Instagram como un webhook equivalente, por lo que Easyhook no infiere ni fabrica
 esos eventos. Ignora los campos opcionales desconocidos y procesa sólo los eventos
 que realmente se entregaron.
 
+Las referencias a mensajes citados también usan `message.reply_to.message_id`
+para respuestas dentro del mismo chat de Telegram, mensajes referenciados de
+TikTok y respuestas de Easyhook Live Chat. El campo se omite cuando el evento
+entrante no contiene una referencia. La referencia no incluye el texto del
+mensaje original; resuélvela dentro de la misma cuenta y conversación. Los ID
+de mensajes de Telegram pertenecen a su chat. Email conserva sus referencias
+RFC en `message.in_reply_to` y `message.references`. SMS/MMS no proporciona una
+referencia a un mensaje citado.
+
+No se requiere ninguna suscripción ni configuración adicional de la cuenta.
+n8n conserva este campo tanto en eventos normales como en lotes de History
+expandidos. Los eventos ya entregados no se reenvían automáticamente cuando
+cambia la normalización.
+
 ### Eliminaciones de WhatsApp y avisos del sistema
 
 Suscríbete a los eventos del proveedor `message.revoke` y `message.system`.

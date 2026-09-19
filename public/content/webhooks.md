@@ -676,6 +676,18 @@ expose Messenger or Instagram message deletion/unsend as an equivalent webhook,
 so Easyhook does not infer or fabricate those events. Always ignore unknown
 optional fields and only process events that were actually delivered.
 
+Quoted-message references also use `message.reply_to.message_id` for Telegram
+same-chat replies, TikTok referenced messages, and Easyhook Live Chat replies.
+The field is omitted when the incoming event contains no reference. A reference
+does not include the original message text; resolve it within the same account
+and conversation. Telegram message IDs are scoped to their chat. Email keeps
+its RFC reference in `message.in_reply_to` and `message.references`. SMS/MMS
+does not provide a quoted-message reference.
+
+No extra subscription or account setting is required. n8n preserves this field
+in both ordinary events and expanded History batches. Already-delivered events
+are not automatically resent when normalization changes.
+
 ### WhatsApp deletions and system notices
 
 Subscribe to the provider event names `message.revoke` and `message.system`.
