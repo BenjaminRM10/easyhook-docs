@@ -106,7 +106,7 @@ Easyhook provides a standalone Model Context Protocol server for Codex, Claude, 
 easyhook-mcp-server
 ```
 
-The server does not expose the API key or sender as tool arguments. They are fixed in the MCP process environment, and every read or outbound destination is checked against a required contact list before an Easyhook API request is made. Each contact includes a name and description so the agent knows who it may contact and when.
+The server does not expose the API key or sender as tool arguments. They are fixed in the MCP process environment. By default, every read or outbound destination is checked against a required contact list before an Easyhook API request is made. Each contact includes a name and description so the agent knows who it may contact and when. Operators may explicitly set `EASYHOOK_CONTACT_ACCESS=organization` to let the agent read all conversations of the fixed sender and use unlisted international phone numbers (7–15 digits). Named contacts remain optional hints in that mode. This wider access can reveal customer messages and incur normal API and wallet charges; use it only with a trusted agent and an appropriately scoped organization key.
 
 Install it in Codex:
 
@@ -137,6 +137,8 @@ Available MCP tools:
 | Tool | Purpose |
 | --- | --- |
 | `list_contacts` | List permitted contacts with their names and usage descriptions. |
+| `list_senders` | List organization-owned senders and health in organization mode. |
+| `get_sender_health` | Check the fixed sender's health in organization mode. |
 | `send_text` | Send standard, humanized, or scheduled text. |
 | `send_media` | Send media by reusable name, Meta media id, or public URL. |
 | `send_template` | Send an approved WhatsApp template. |
@@ -145,11 +147,11 @@ Available MCP tools:
 | `list_templates` | List templates resolved from the configured sender. |
 | `list_media` | List reusable media resolved from the configured sender. |
 | `list_flows` | List Flows resolved from the configured sender. |
-| `list_conversations` | List recent conversations for the configured sender, filtered to configured contacts. |
-| `get_recent_messages` | Read inbound and outbound messages with one allowlisted contact. |
-| `wait_for_message` | Wait up to five minutes for the next inbound message from one allowlisted contact. |
+| `list_conversations` | List recent conversations for the configured sender; filtered to configured contacts in default mode. |
+| `get_recent_messages` | Read inbound and outbound messages with one permitted contact. |
+| `wait_for_message` | Wait up to five minutes for the next inbound message from one permitted contact. |
 
-`EASYHOOK_CONTACTS` is a JSON array of `{ phone, name, description }`. Send and read tools accept either the configured name or phone. Formatted phones are normalized to digits. The legacy `EASYHOOK_ALLOWED_TO` comma-separated list remains supported when `EASYHOOK_CONTACTS` is absent. The API key and sender never become tool arguments. The Easyhook wallet, service-window, consent, template, and Meta policy checks still apply.
+`EASYHOOK_CONTACTS` is a JSON array of `{ phone, name, description }`. It is required with the default `EASYHOOK_CONTACT_ACCESS=allowlist`; the legacy `EASYHOOK_ALLOWED_TO` comma-separated list remains supported when `EASYHOOK_CONTACTS` is absent. With `EASYHOOK_CONTACT_ACCESS=organization`, the list is optional, names remain usable, and unlisted international phones can be read or messaged through the fixed sender. Unknown names and non-phone identifiers are rejected locally. Formatted phones are normalized to digits. The API key and sender never become tool arguments. The Easyhook wallet, service-window, consent, template, and Meta policy checks still apply. The wider mode does not expose arbitrary HTTP, payment, key management or sender disconnection tools.
 
 `list_conversations` and `get_recent_messages` use billable customer API reads.
 `wait_for_message` is not billed. A wait timeout is a normal result and must not

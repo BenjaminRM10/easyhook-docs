@@ -105,7 +105,7 @@ Easyhook fornece um servidor de protocolo de contexto de modelo independente par
 easyhook-mcp-server
 ```
 
-O servidor não expõe a chave ou o remetente da API como argumentos de ferramenta. Eles são corrigidos no ambiente de processo MCP, e cada destino lido ou de saída é verificado com uma lista de contatos necessária antes de uma solicitação de API Easyhook ser feita. Cada contato inclui um nome e descrição para que o agente saiba quem ele pode contatar e quando.
+O servidor não expõe a chave de API nem o remetente como argumentos de ferramenta. Ambos ficam fixos no ambiente do processo MCP. Por padrão, cada destino de leitura ou envio é verificado em uma lista obrigatória de contatos antes da chamada à API do Easyhook. Cada contato tem nome e descrição para orientar o agente. O operador pode ativar explicitamente `EASYHOOK_CONTACT_ACCESS=organization` para ler todas as conversas do remetente fixo e usar números internacionais não cadastrados (de 7 a 15 dígitos). Contatos nomeados continuam sendo dicas opcionais nesse modo. Esse acesso ampliado pode expor mensagens de clientes e gerar cobranças normais de API e carteira; use-o apenas com um agente confiável e uma chave da organização com os escopos adequados.
 
 Instale-o no Codex:
 
@@ -136,6 +136,8 @@ Ferramentas MCP disponíveis:
 | Ferramenta | Objetivo |
 | --- | --- |
 | `list_contacts` | Lista contatos permitidos com seus nomes e descrições de uso. |
+| `list_senders` | Lista remetentes e seu estado na organização no modo ampliado. |
+| `get_sender_health` | Consulta o estado do remetente fixo no modo ampliado. |
 | `send_text` | Envie texto padrão, humanizado ou agendado. |
 | `send_media` | Enviar mídia por nome reutilizável, ID de mídia Meta, ou URL público. |
 | `send_template` | Envie um modelo WhatsApp aprovado. |
@@ -144,11 +146,11 @@ Ferramentas MCP disponíveis:
 | `list_templates` | Modelos de lista resolvidos a partir do remetente configurado. |
 | `list_media` | Lista de mídia reutilizável resolvida a partir do remetente configurado. |
 | `list_flows` | Fluxos de Lista resolvidos a partir do remetente configurado. |
-| `list_conversations` | Lista conversas recentes para o remetente configurado, filtrado para contatos configurados. |
-| `get_recent_messages` | Leia mensagens de entrada e saída com um contato autorizado. |
-| `wait_for_message` | Aguarde até cinco minutos para a próxima mensagem de entrada de um contato autorizado. |
+| `list_conversations` | Lista conversas recentes do remetente; no modo padrão, filtra os contatos configurados. |
+| `get_recent_messages` | Lê mensagens de entrada e saída de um contato permitido. |
+| `wait_for_message` | Aguarda até cinco minutos pela próxima mensagem de entrada de um contato permitido. |
 
-`EASYHOOK_CONTACTS` é um array JSON de objetos `{ phone, name, description }`. As ferramentas de envio e leitura aceitam o nome ou o telefone configurado. Telefones formatados são normalizados para dígitos. A lista legada `EASYHOOK_ALLOWED_TO`, separada por vírgulas, continua disponível quando `EASYHOOK_CONTACTS` não é configurado. A chave de API e o remetente nunca são expostos como argumentos das ferramentas. As regras de carteira, janela de atendimento, consentimento, modelos e Meta do Easyhook continuam válidas.
+`EASYHOOK_CONTACTS` é um array JSON de objetos `{ phone, name, description }`. É obrigatório no modo padrão `EASYHOOK_CONTACT_ACCESS=allowlist`; a lista legada `EASYHOOK_ALLOWED_TO`, separada por vírgulas, continua disponível quando `EASYHOOK_CONTACTS` não é configurado. Com `EASYHOOK_CONTACT_ACCESS=organization`, a lista é opcional, os nomes ainda funcionam e números internacionais não cadastrados podem ser lidos ou receber mensagens pelo remetente fixo. Nomes desconhecidos e identificadores que não sejam telefones são rejeitados localmente. Telefones formatados são normalizados para dígitos. A chave de API e o remetente nunca viram argumentos de ferramentas. As regras de carteira, janela de atendimento, consentimento, modelos e Meta continuam válidas. O modo ampliado não expõe HTTP arbitrário, pagamentos, gestão de chaves nem desconexão de canais.
 
 `list_conversations` e `get_recent_messages` usam leituras faturáveis da API do cliente.
 `wait_for_message` não é faturado. Um tempo limite de espera é um resultado normal e não deve
