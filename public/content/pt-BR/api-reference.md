@@ -137,7 +137,7 @@ Ferramentas MCP disponíveis:
 | --- | --- |
 | `list_contacts` | Lista contatos permitidos com seus nomes e descrições de uso. |
 | `list_senders` | Lista remetentes e seu estado na organização no modo ampliado. |
-| `get_sender_health` | Consulta o estado do remetente fixo no modo ampliado. |
+| `get_sender_health` | Consulta o estado de um remetente da organização pelo `account_id` canônico obtido com `list_senders`, no modo ampliado. |
 | `send_text` | Envie texto padrão, humanizado ou agendado. |
 | `send_media` | Enviar mídia por nome reutilizável, ID de mídia Meta, ou URL público. |
 | `send_template` | Envie um modelo WhatsApp aprovado. |

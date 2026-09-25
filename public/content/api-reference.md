@@ -138,7 +138,7 @@ Available MCP tools:
 | --- | --- |
 | `list_contacts` | List permitted contacts with their names and usage descriptions. |
 | `list_senders` | List organization-owned senders and health in organization mode. |
-| `get_sender_health` | Check the fixed sender's health in organization mode. |
+| `get_sender_health` | Check an owned sender's health by canonical `account_id` from `list_senders` in organization mode. |
 | `send_text` | Send standard, humanized, or scheduled text. |
 | `send_media` | Send media by reusable name, Meta media id, or public URL. |
 | `send_template` | Send an approved WhatsApp template. |
