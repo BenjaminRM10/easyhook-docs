@@ -360,6 +360,10 @@ e os limites.
 - `status.pricing.billable` descreve a cobrança da Meta, não a cobrança da Easyhook.
   Uma operação de API de saída pública bem-sucedida é cobrada de acordo com o
   carteira da Easyhook mesmo quando a Meta classifica a conversa como `free_customer_service`.
+- A partir de 1º de outubro de 2026, cada número do WhatsApp Business tem 1.000 mensagens
+  de serviço entregues gratuitamente por mês. A Meta cobra as mensagens posteriores e
+  os templates de utilidade entregues dentro da janela conforme o mercado do destinatário.
+  O método de pagamento da Meta e essa cota são independentes da carteira Easyhook.
 - Os logs ocultam chaves de API, segredos de webhook, códigos de autorização e tokens
   de provedores.
 - Testes cobrem entrada, saída/eco, mídia, reação, status de falha, e em

@@ -40,9 +40,15 @@ Inbox names come from the connected channel. You can rename them later in Chatwo
 
 ## Import contacts and history
 
-The initial import described here applies only to WhatsApp Coexistence contacts
-and history that Easyhook received from Meta during onboarding. Other channels
-start with the events available after they are connected.
+WhatsApp import includes incoming and outgoing messages saved in Easyhook,
+including previous connections of the same number within this organization.
+Contacts and messages are imported separately. Messages predating the initial
+connection require authorized WhatsApp Coexistence history supplied by Meta.
+Other channels start with events available after they are connected.
+
+If there are no saved messages, an explanation is shown and an empty import is
+not started. Repeating this action does not request new Meta history or incur
+another WhatsApp history-import charge.
 
 - Keep the original dates.
 - It does not send messages back to WhatsApp.

@@ -241,9 +241,12 @@ la bandeja de entrada Chatwoot, contactos o conversaciones.
 
 Cada caja de entrada de WhatsApp conectado tiene contactos independientes **Import** y **Import
 historia** acciones. Los contactos están aumentados en Chatwoot por su estable Easyhook
-Identificador. La historia solo está disponible para la coexistencia de App Business
-números cuyo propietario autorizó el intercambio de historia durante el a bordo y cuyo
-La historia normalizada todavía está disponible en Easyhook.
+identificador. La importación incluye mensajes entrantes y salientes de WhatsApp
+guardados en Easyhook, incluso de conexiones anteriores del mismo número dentro
+de la misma organización. Los mensajes anteriores a la conexión inicial solo están
+disponibles si Meta los compartió mediante el historial autorizado de Coexistence.
+Esta importación no solicita una nueva sincronización a Meta. Si no hay mensajes
+guardados, devuelve `chatwoot_history_not_available` en lugar de crear una importación vacía exitosa.
 
 La importación de historia tiene estas garantías:
 
@@ -373,7 +376,9 @@ Easyhook está basado en el uso. No hay requisito mensual de plan de plataforma.
 
 Cada organización tiene su propio equilibrio, moneda de facturación, contabilidad de uso, top-ups, gastos de API y gastos de sobreage de medios. Si el mismo cliente crea múltiples organizaciones, cada organización se financia por separado. La moneda de facturación se fija por el primer top-up financiado y no se puede mezclar mientras que la billetera tiene balance o historial pagado.
 
-Los clientes pagan Meta directamente por las tasas de plantilla de WhatsApp. La cartera Easyhook sólo paga por el uso de la plataforma Easyhook.
+Los clientes pagan directamente a Meta los cargos de mensajería de WhatsApp. Desde el 1 de octubre de 2026, cada número de WhatsApp Business recibe una cuota compartida de 1,000 mensajes de servicio entregados gratis por mes calendario. Después de esa cuota, Meta cobra los mensajes de servicio según la tarifa del país del destinatario. Las plantillas de utilidad entregadas dentro de la ventana de atención de 24 horas también quedan sujetas al cobro por mensaje de Meta desde esa fecha. Los mensajes entrantes del cliente siguen siendo gratuitos bajo esta regla. La cuota se reinicia cada mes, no se acumula y es independiente del wallet de Easyhook y de su beneficio introductorio. El cliente debe agregar un método de pago válido en WhatsApp Manager; Easyhook no puede agregarlo ni administrarlo.
+
+El wallet de Easyhook solo cubre el uso de la plataforma Easyhook. Que Easyhook acepte un envío no garantiza que Meta lo entregue si la cuenta de facturación de Meta no tiene un método de pago válido o ya agotó su cuota gratuita de servicio.
 
 Billable en V1:
 
@@ -390,7 +395,7 @@ No facturable:
 - Portal Solo acciones UI, incluyendo búsqueda de Inbox, filtros, navegación, pins, refrescos en tiempo real, administración de plantillas, gestión de flujos, configuración de consentimiento, registros, sincronización de conexión y pruebas manuales de **Probar API**.
 - Metas webhooks utilizados internamente para actualizar el estado de Easyhook.
 - Los mensajes entrantes y cada entrega Easyhook a las suscripciones de webhook del cliente, incluyendo mensajes, estado, plantilla, flujo, a bordo, cuenta y eventos de contacto.
-- Cargos de meta plantilla/mensaje. Los que permanecen entre el cliente y Meta.
+- Cargos de plantillas y mensajes de Meta. Permanecen entre el cliente y Meta, incluidos los cargos de mensajes de servicio después de la cuota mensual de 1,000 mensajes.
 - El almacenamiento de medios se sube.
 
 Cada identidad beneficiaria recibe 100 envíos salientes por mes calendario sin cargo de plataforma de Easyhook. La cuota se comparte entre todas las organizaciones creadas por el mismo propietario original; agregar miembros o claves de API no crea otra cuota. No cubre cargos de proveedores u operadores, reservas de SMS/MMS, compra de números, llamadas ni importaciones de historial. Al agotarse, se aplica el cobro normal del wallet.

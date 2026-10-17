@@ -248,9 +248,12 @@ the Chatwoot inbox, contacts or conversations.
 
 Each connected WhatsApp inbox has independent **Import contacts** and **Import
 history** actions. Contacts are upserted in Chatwoot by their stable Easyhook
-identifier. History is available only for WhatsApp Business App coexistence
-numbers whose owner authorized history sharing during onboarding and whose
-normalized history is still available in Easyhook.
+identifier. Message import includes saved inbound and outbound WhatsApp traffic,
+including retained messages from earlier connections of the same business number
+inside the same organization. Messages from before the initial Easyhook connection
+are available only if Meta supplied them through authorized Coexistence history sharing.
+The import does not request a new Meta sync. With no saved messages, it returns
+`chatwoot_history_not_available` instead of creating an empty successful import.
 
 History import has these guarantees:
 
@@ -380,7 +383,9 @@ Easyhook is usage-based. There is no monthly platform-plan requirement. Telecom 
 
 Wallets are scoped by organization/tenant. Each organization has its own balance, billing currency, usage ledger, top-ups, API charges, and media overage charges. If the same customer creates multiple organizations, each organization is funded separately. The billing currency is fixed by the first funded top-up and cannot be mixed while the wallet has balance or paid history.
 
-Customers pay Meta directly for WhatsApp template fees. The Easyhook wallet only pays for Easyhook platform usage.
+Customers pay Meta directly for WhatsApp messaging fees. Starting October 1, 2026, each WhatsApp Business phone number receives a shared allowance of 1,000 delivered service messages per calendar month. Meta charges service messages after that allowance at the applicable recipient-market rate. Utility templates delivered inside an open 24-hour customer-service window are also subject to Meta's per-message pricing from that date. Incoming customer messages remain free under this rule. The allowance resets monthly, does not roll over, and is separate from Easyhook's wallet and introductory platform allowance. Customers must add a valid payment method in WhatsApp Manager; Easyhook cannot add or manage that Meta payment method.
+
+The Easyhook wallet only pays for Easyhook platform usage. A successful Easyhook send does not prove that Meta will deliver the message if the customer's Meta billing account has no valid payment method or has exceeded its free service allowance.
 
 Billable in V1:
 
@@ -397,7 +402,7 @@ Not billable:
 - Portal UI-only actions, including Inbox search, filters, navigation, pins, realtime refreshes, template management, Flow management, consent setup, logs, connection sync, and manual testing from **Probar API**.
 - Meta webhooks used internally to update Easyhook state.
 - Incoming messages and every Easyhook delivery to customer webhook subscriptions, including message, status, template, Flow, onboarding, account, and contact events.
-- Meta template/message charges. Those stay between the customer and Meta.
+- Meta template/message charges. Those stay between the customer and Meta, including service-message pricing after the 1,000-message monthly allowance above.
 - Media storage upload itself.
 
 Each benefit identity receives 100 outbound message sends per calendar month without an Easyhook platform fee. The allowance is shared by every organization created by the same original owner; adding members or API keys does not create another allowance. Provider/carrier charges, SMS/MMS carrier reservations, number purchases, calls, and history imports are excluded. Normal wallet billing resumes after the allowance is exhausted.

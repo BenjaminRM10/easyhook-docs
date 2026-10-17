@@ -244,9 +244,12 @@ a Inbox do Chatwoot, contatos ou conversas.
 
 Cada Inbox do WhatsApp conectada tem contatos independentes **Import** e **Import
 histórico** ações. Contatos são upserted em Chatwoot por seu Easyhook estável
-identificador. O histórico está disponível apenas para a coexistência do WhatsApp Business App
-números cujo proprietário autorizou o compartilhamento do histórico durante a integração e cujos
-histórico normalizado ainda está disponível em Easyhook.
+identificador. A importação inclui mensagens recebidas e enviadas do WhatsApp
+salvas na Easyhook, inclusive de conexões anteriores do mesmo número dentro da
+mesma organização. As mensagens anteriores à conexão inicial só estão disponíveis
+se a Meta as compartilhou pelo histórico autorizado do Coexistence. A importação
+não solicita uma nova sincronização à Meta. Sem mensagens salvas, retorna
+`chatwoot_history_not_available` em vez de criar uma importação vazia bem-sucedida.
 
 A importação histórica tem as seguintes garantias:
 
@@ -376,7 +379,9 @@ O Easyhook é baseado no uso. Não há necessidade de plano de plataforma mensal
 
 As carteiras são exploradas pela organização/tenant. Cada organização tem seu próprio saldo, moeda de faturamento, registro de uso, top-ups, taxas de API e encargos de sobrecarga de mídia. Se o mesmo cliente cria várias organizações, cada organização é financiada separadamente. A moeda de faturamento é fixada pelo primeiro top-up financiado e não pode ser misturada enquanto a carteira tem saldo ou histórico pago.
 
-Os clientes pagam Meta diretamente pelas taxas do modelo WhatsApp. A carteira Easyhook só paga pelo uso da plataforma Easyhook.
+Os clientes pagam diretamente à Meta as tarifas de mensagens do WhatsApp. A partir de 1º de outubro de 2026, cada número do WhatsApp Business recebe uma cota compartilhada de 1.000 mensagens de serviço entregues gratuitamente por mês. Depois dessa cota, a Meta cobra as mensagens de serviço conforme a tarifa do país do destinatário. Templates de utilidade entregues dentro da janela de atendimento de 24 horas também ficam sujeitos à cobrança por mensagem da Meta a partir dessa data. As mensagens recebidas do cliente continuam gratuitas sob esta regra. A cota é reiniciada mensalmente, não acumula e é independente da carteira Easyhook e da cota introdutória da plataforma. O cliente precisa adicionar um método de pagamento válido no WhatsApp Manager; a Easyhook não pode adicionar nem administrar esse método.
+
+A carteira Easyhook paga apenas pelo uso da plataforma Easyhook. Um envio aceito pela Easyhook não garante que a Meta entregará a mensagem se a conta de cobrança da Meta não tiver um método de pagamento válido ou já tiver usado a cota gratuita de serviço.
 
 Facturável em V1:
 
@@ -393,7 +398,7 @@ Não gera cobrança da Easyhook:
 - Ações somente de UI do Portal, incluindo pesquisa de Inbox, filtros, navegação, pinos, atualizações em tempo real, gerenciamento de modelo, gerenciamento de fluxo, configuração de consentimento, logs, sincronização de conexão e testes manuais de ** API Probar**.
 - Meta webhooks usados internamente para atualizar o estado do Easyhook.
 - Recebendo mensagens e cada entrega Easyhook para as assinaturas do cliente webhook, incluindo mensagem, status, modelo, Flow, onboarding, conta e eventos de contato.
-- Meta template/cargas de mensagem. Esses ficam entre o cliente e Meta.
+- Tarifas de templates e mensagens da Meta. Elas ficam entre o cliente e a Meta, incluindo as tarifas de mensagens de serviço depois da cota mensal de 1.000 mensagens.
 - Carregamento de armazenamento de mídia em si.
 
 Cada identidade beneficiária recebe 100 envios de saída por mês-calendário sem tarifa de plataforma da Easyhook. A cota é compartilhada por todas as organizações criadas pelo mesmo proprietário original; adicionar membros ou chaves de API não cria outra cota. Custos de provedor ou operadora, reservas de SMS/MMS, compra de números, chamadas e importações de histórico não estão incluídos. Quando a cota termina, aplica-se a cobrança normal da carteira.

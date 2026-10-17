@@ -41,9 +41,15 @@ Os nomes das caixas de entrada vêm do canal conectado. Você pode renomeá-los 
 
 ## Importar contatos e histórico
 
-A importação inicial descrita aqui se aplica somente aos contatos e ao histórico
-do WhatsApp Coexistence que a Easyhook recebeu da Meta durante o onboarding. Os
-outros canais começam com os eventos disponíveis depois da conexão.
+A importação do WhatsApp inclui mensagens recebidas e enviadas salvas na Easyhook,
+inclusive de conexões anteriores do mesmo número dentro desta organização.
+Contatos e mensagens são importados separadamente. Mensagens anteriores à conexão
+inicial exigem o histórico autorizado do WhatsApp Coexistence fornecido pela Meta.
+Os outros canais começam com os eventos disponíveis depois da conexão.
+
+Se não houver mensagens salvas, uma explicação será exibida e uma importação vazia
+não será iniciada. Repetir essa ação não solicita um novo histórico à Meta nem
+gera outra cobrança pela importação do histórico do WhatsApp.
 
 - Mantenha as datas originais.
 - Ela não envia mensagens de volta para o WhatsApp.

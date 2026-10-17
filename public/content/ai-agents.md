@@ -361,6 +361,11 @@ límites.
 - Meta `status.pricing.billable` describes Meta pricing, not Easyhook billing.
   A successful public outbound API operation is charged according to the
   Easyhook wallet even when Meta labels the conversation `free_customer_service`.
+- From October 1, 2026, each WhatsApp Business phone number has 1,000 free
+  delivered service messages per calendar month. Meta bills service messages
+  after that allowance, and qualifying in-window utility templates, according
+  to the recipient market. The customer's Meta payment method and this
+  allowance are separate from Easyhook wallet billing.
 - Logs redact API keys, webhook secrets, authorization codes, and provider
   tokens.
 - Tests cover inbound, outbound/echo, media, reaction, failed status, and at
