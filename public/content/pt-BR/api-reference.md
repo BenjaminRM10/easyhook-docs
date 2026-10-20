@@ -918,8 +918,20 @@ curl -X POST https://api.easyhook.dev/v1/messages/text \
 Imagens de Telegram, vídeo, áudio e documentos podem ser enviados através
 `POST /v1/messages/media` com um público `link`. Recebendo atualizações de Telegram são
 normalizado para o mesmo `message.received` contrato utilizado pelos outros canais.
-A mídia que recebe atualmente inclui metadados de arquivos do Telegram; arquivo automático
-armazenamento e uma URL pública de download Easyhook não fazem parte da primeira versão.
+Áudios (inclusive mensagens de voz), imagens, vídeos, documentos e stickers
+recebidos são armazenados de forma privada quando o Telegram permite o download.
+`message.media` inclui `id`, `mime_type`, `filename` quando conhecido, `caption`
+quando fornecido, `storage_status` e uma `url` autenticada da Easyhook após o
+armazenamento. Baixe essa URL pelo servidor com a API key da mesma organização
+(`media:read`); nunca exponha o token do bot. O limite de download na nuvem é
+20 MiB. Em caso de falha, os metadados permanecem com `storage_status: "failed"`
+e um `error` diagnóstico, sem inventar uma URL. Aplicam-se as regras normais de
+retenção e transferência de mídia.
+
+Reconectar a mesma conta na mesma organização atualiza a conexão existente.
+Contas ativas em outra organização retornam `channel_already_connected`.
+A seleção de páginas do Messenger revalida as permissões do recurso e exige
+uma assinatura de mensagens bem-sucedida antes de salvar a conexão.
 
 Desligar um canal de Telegram remove seu webhook de Telegram protegido antes
 O Easyhook apaga o token de bot criptografado.
