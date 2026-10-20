@@ -898,6 +898,16 @@ releases the complete hold.
 The WhatsApp 24-hour customer-service window does not apply to email or
 Telegram. These channels can send at any time permitted by their provider.
 
+### Messenger and Instagram outbound echoes
+
+For Messenger and Instagram replies, including audio and other attachments,
+`message.reply_to.message_id` is preserved when Meta supplies it. Subscribe to
+`message_echo.*` to receive outbound echoes as `message.echo`, with direction
+`out` and source `meta_echo`. Append the filter to existing webhook events with
+`PATCH /v1/webhooks/{id}`. `message.*` remains inbound-only; `*` includes echoes.
+Never auto-reply to echoes; deduplicate by event and message IDs. See Webhooks
+for availability, subscription and billing details.
+
 ## Telegram
 
 Connect a Telegram bot from **Connect > Telegram** using the token created by

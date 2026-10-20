@@ -895,6 +895,16 @@ liberta o reserva completo.
 A janela WhatsApp 24 horas cliente-serviço não se aplica a e-mail ou
 Telegram. Esses canais podem enviar mensagens a qualquer momento permitido pelo provedor.
 
+### Ecos de saída do Messenger e Instagram
+
+Respostas do Messenger e Instagram, inclusive áudios e outros anexos, preservam
+`message.reply_to.message_id` quando a Meta o fornece. Assine `message_echo.*`
+para receber ecos de saída como `message.echo`, com direção `out` e origem
+`meta_echo`. Acrescente o filtro aos eventos atuais com `PATCH /v1/webhooks/{id}`.
+`message.*` continua sendo de entrada; `*` inclui ecos. Nunca responda
+automaticamente a ecos e deduplicate por ID do evento e da mensagem. Consulte
+Webhooks para disponibilidade, assinatura e cobrança.
+
 ## Telegram
 
 Conecte um bot Telegram de **Conectar > Telegram** usando o token criado por

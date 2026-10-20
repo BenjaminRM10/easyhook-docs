@@ -360,6 +360,24 @@ separadamente para conversas importadas. Estas famílias nunca se sobrepõem.
 
 ## Tipos de Eventos
 
+### Respostas e ecos do Messenger e Instagram
+
+Respostas de texto e mídia preservam `message.reply_to.message_id` quando
+a Meta fornece a referência à mensagem citada. Assine separadamente
+`message_echo.*` com os provedores `messenger` e `instagram` para receber ecos
+de saída como `type: "message.echo"`, `message.direction: "out"` e
+`message.source: "meta_echo"`. `account.id` identifica a empresa e `contact.id`
+o cliente. Os ecos podem vir dos aplicativos da Meta ou de envios pela API;
+a disponibilidade depende dos eventos emitidos pela Meta. Nunca responda
+automaticamente a um eco.
+
+`message.*` continua sendo apenas de entrada; `*` inclui ecos. Acrescente
+`message_echo.*` aos filtros atuais com `PATCH /v1/webhooks/{id}`, preservando
+os outros eventos desejados. A opção também aparece no seletor dinâmico do n8n.
+Deduplicate por `id` do evento e `message.id`; a entrega é pelo menos uma vez.
+Receber um eco não cobra um envio de saída; as políticas normais de entrega e
+cota de webhooks continuam válidas. Alterar a assinatura não reenvia ecos antigos.
+
 | Público `type` | Bloco principal |
 | --- | --- |
 | `message.received` | `message` |

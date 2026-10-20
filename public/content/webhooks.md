@@ -360,6 +360,23 @@ separately for imported conversations. These families never overlap.
 
 ## Event Types
 
+### Messenger and Instagram replies and echoes
+
+Text and multimedia replies preserve `message.reply_to.message_id` whenever
+Meta supplies the quoted-message reference. Subscribe separately to
+`message_echo.*` for providers `messenger` and `instagram` to receive outbound
+echoes as `type: "message.echo"`, `message.direction: "out"`, and
+`message.source: "meta_echo"`. `account.id` is the business and `contact.id` is
+the customer. Meta echoes may originate from its apps or from API sends;
+availability depends on the events Meta emits. Never auto-reply to an echo.
+
+`message.*` remains inbound-only; `*` includes echoes. Append `message_echo.*`
+to the existing filters with `PATCH /v1/webhooks/{id}`, preserving other desired
+events. The filter is also in n8n's dynamic event selector. Deduplicate by
+event `id` and `message.id`; delivery is at-least-once. Receiving an echo does
+not charge an outbound send; normal webhook allowance/delivery policies apply.
+Changing the subscription does not replay old echoes.
+
 | Public `type` | Main block |
 | --- | --- |
 | `message.received` | `message` |

@@ -891,6 +891,16 @@ libera la suspensión completa.
 La ventana de servicio al cliente de WhatsApp 24 horas no se aplica al correo electrónico o
 Telegrama. Estos canales pueden enviar en cualquier momento permitido por su proveedor.
 
+### Ecos salientes de Messenger e Instagram
+
+Las respuestas de Messenger e Instagram, incluidos audios y otros adjuntos,
+conservan `message.reply_to.message_id` cuando Meta lo proporciona. Suscríbete
+a `message_echo.*` para recibir ecos salientes como `message.echo`, con dirección
+`out` y origen `meta_echo`. Agrega el filtro a los eventos actuales mediante
+`PATCH /v1/webhooks/{id}`. `message.*` sigue siendo entrante; `*` incluye ecos.
+No respondas automáticamente a ecos y deduplica por ID de evento y mensaje.
+Consulta Webhooks para detalles de disponibilidad, suscripción y cobros.
+
 ## Telegram
 
 Conecta un bot de Telegram desde **Conectar > Telegram** usando el token creado por
