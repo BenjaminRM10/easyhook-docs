@@ -3352,12 +3352,33 @@ La respuesta incluye las plantillas devueltas por Meta después de que su estado
 }
 ```
 
-Si la cuenta de WhatsApp conectada está temporalmente inaccesible, Easyhook no
-contacta a Meta ni cobra la operación de sincronización. Responde HTTP `503`
-con `error: whatsapp_channel_unreachable`, `retryable: true`,
-`retry_after_seconds: 7200` y el encabezado `Retry-After` equivalente. El
-cliente debe pausar la sincronización automática durante ese intervalo en vez
-de consultar repetidamente.
+El estado guardado `unreachable` no bloquea la sincronización ni el envío de
+plantillas. Decide la respuesta de la solicitud real a Meta. El estado explícito
+`reauthorization_required` sigue requiriendo reconexión. Conserva los errores
+del proveedor y sus indicaciones de reintento; evita consultas repetitivas.
+
+### Vigencia y recuperación segura de mensajes programados
+
+Texto, multimedia y plantillas programados admiten `expires_at`: fecha ISO-8601
+con zona horaria, posterior a `at`. Sin ella, vencen 15 minutos después de `at`,
+también los registros antiguos en cola. Las respuestas y webhooks `scheduled.*`
+incluyen este límite. El vencimiento impide iniciar un envío, pero no puede
+retirar un mensaje ya aceptado por el proveedor.
+
+Solo se reintenta automáticamente con `delivery_state: not_sent`, hasta cinco
+intentos en total y dentro de la vigencia. Una entrega anterior incierta detiene
+los reintentos (`scheduled_previous_delivery_unknown`); un trabajo vencido falla
+con `scheduled_message_expired`. Consulta primero
+`GET /v1/scheduled-messages/{id}` y concilia su ID y estado de entrega. No recrees
+recordatorios vencidos, aceptados o inciertos. Reutilizar la clave `Idempotency-Key`
+de programación devuelve el registro original; no ordena reenviarlo. En envíos
+inmediatos, la idempotencia evita cobros duplicados, no necesariamente mensajes
+duplicados.
+
+La salud es orientativa: un fallo interno de base de datos o secretos no demuestra
+una caída de WhatsApp. Suscríbete a `channel.health_changed`, deduplica por ID de
+evento y concilia con `checked_at`; las observaciones pueden repetirse o llegar
+fuera de orden.
 
 ## Plantilla de verificación Categoría
 

@@ -3363,12 +3363,33 @@ A resposta inclui os modelos retornados pelo Meta após o status local ter sido 
 }
 ```
 
-Se a conta do WhatsApp conectada estiver temporariamente inacessível, a
-Easyhook não contata a Meta nem cobra a operação de sincronização. A resposta
-é HTTP `503` com `error: whatsapp_channel_unreachable`, `retryable: true`,
-`retry_after_seconds: 7200` e o cabeçalho `Retry-After` equivalente. O cliente
-deve pausar a sincronização automática durante esse intervalo em vez de fazer
-consultas repetidas.
+O estado armazenado `unreachable` não bloqueia a sincronização nem o envio de
+modelos. A resposta da solicitação real à Meta determina o resultado. O estado
+explícito `reauthorization_required` continua exigindo reconexão. Preserve os
+erros do provedor e as orientações de repetição; evite consultas excessivas.
+
+### Validade e recuperação segura de mensagens agendadas
+
+Textos, mídias e modelos agendados aceitam `expires_at`: data ISO-8601 com fuso
+horário, posterior a `at`. Sem esse campo, a validade termina 15 minutos após
+`at`, inclusive para registros antigos na fila. Respostas e webhooks `scheduled.*`
+incluem esse prazo. A expiração impede iniciar um envio, mas não retira uma
+mensagem já aceita pelo provedor.
+
+Novas tentativas automáticas exigem `delivery_state: not_sent`, têm limite de
+cinco tentativas no total e respeitam a validade. Uma entrega anterior incerta
+interrompe as tentativas (`scheduled_previous_delivery_unknown`); um agendamento
+vencido falha com `scheduled_message_expired`. Consulte primeiro
+`GET /v1/scheduled-messages/{id}` e confira o ID e o status de entrega. Não recrie
+lembretes vencidos, aceitos ou incertos. Reutilizar a chave `Idempotency-Key` do
+agendamento retorna o registro original; não solicita reenvio. Em envios
+imediatos, a idempotência evita cobranças duplicadas, não necessariamente mensagens
+duplicadas.
+
+A saúde é indicativa: uma falha interna no banco ou nos segredos não comprova
+uma indisponibilidade do WhatsApp. Assine `channel.health_changed`, elimine
+duplicatas pelo ID do evento e concilie por `checked_at`; as observações podem
+se repetir ou chegar fora de ordem.
 
 ## Verificar a Categoria do Modelo
 

@@ -1,6 +1,6 @@
 # Easyhook Public API
 
-Last updated: 2026-08-27
+Last updated: 2026-11-13
 
 This document is the source of truth for customer-facing API behavior. Every API change must update this file in the same change set.
 
@@ -3357,11 +3357,18 @@ The response includes the templates returned by Meta after their local status ha
 }
 ```
 
-If the connected WhatsApp account is temporarily unreachable, Easyhook does
-not contact Meta or charge the sync operation. It returns HTTP `503` with
-`error: whatsapp_channel_unreachable`, `retryable: true`,
-`retry_after_seconds: 7200`, and the equivalent `Retry-After` header. Clients
-must pause automatic synchronization for that interval instead of polling.
+Cached `unreachable` does not block template synchronization or template sends.
+The actual Meta request determines the result. Explicit
+`reauthorization_required` still requires reconnection. Preserve provider errors
+and applicable retry hints; do not poll aggressively.
+
+### Scheduled delivery safety
+
+Scheduled text, media and templates accept `expires_at`: an ISO-8601 timestamp with timezone, strictly after `at`. Without it, validity ends 15 minutes after `at`, including older queued records. Expiration prevents a new provider request, not delivery of an already accepted message. Responses and `scheduled.*` webhooks include the deadline.
+
+Automatic retries require `delivery_state: not_sent`, stop at five attempts total, and never start after expiry. Unknown previous delivery stops automatic retries (`scheduled_previous_delivery_unknown`); expired work fails with `scheduled_message_expired`. First reconcile `GET /v1/scheduled-messages/{id}` and the provider message ID/status. Never recreate expired, accepted or uncertain reminders. Reusing a scheduling `Idempotency-Key` returns the original record, not a new attempt. Immediate-send idempotency prevents duplicate usage charges, not necessarily duplicate messages.
+
+WhatsApp health is advisory: internal database/secret-storage errors do not establish a provider outage. Subscribe to `channel.health_changed`, deduplicate event IDs and reconcile by `checked_at`; observations may arrive more than once or out of order.
 
 ## Check Template Category
 
